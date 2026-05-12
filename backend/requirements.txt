@@ -6,3 +6,16 @@
 SQLAlchemy==2.0.36
 alembic==1.14.0
 psycopg2-binary==2.9.10
+
+# vca-api (FastAPI)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# vca-poller (APScheduler + market calendar)
+APScheduler==3.11.0
+pandas-market-calendars==4.4.2
+
+# Polygon.io HTTP client (used by both poller and the API's new-ticker
+# background task)
+httpx==0.28.1
