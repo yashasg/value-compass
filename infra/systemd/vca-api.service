@@ -1,0 +1,12 @@
+[Unit]
+Description=value-compass FastAPI service (vca-api)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/value-compass/backend
+ExecStart=/opt/value-compass/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
