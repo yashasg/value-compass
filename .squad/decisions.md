@@ -44,6 +44,10 @@ The combined v1 technical specification has been split into three focused docume
 
 2. **Tech Spec Split (16:12 UTC):** The project should have separate technical specifications for app, services, and database rather than one combined tech spec.
 
+3. **Tess UI/UX Design (16:30 UTC):** Tess should design the user flow, screens, color scheme, dark mode and light mode, and fonts for the app, using Swift and Apple design systems.
+
+4. **Small Incremental Issues (16:34 UTC):** GitHub implementation issues for services and database work should be small, incremental issues that build on top of each other rather than one massive issue.
+
 ### 2026-05-12: App Implementation — Offline-First Backend Sync Alignment
 **Author:** Basher (iOS Dev) | **Status:** Adopted
 
@@ -90,3 +94,25 @@ V1 backend is optional sync persistence for portfolios and flattened holdings.
 - All meaningful changes require team consensus
 - Document architectural decisions here
 - Keep history focused on work, decisions focused on direction
+
+## Backlog Issues — DB & Services Implementation
+
+**Created 2026-05-12 from tech specs. Small incremental issues per user directive.**
+
+**Database Issues (Rusty):**
+- #16: Flatten SwiftData categories into backend holdings
+- #17: Validate portfolio-wide ticker uniqueness/weights before sync
+- #18: Test local-only fields never sync
+- #19: Test backend DB model/migration invariants
+- #20: Document/test hybrid DB boundary mapping
+
+**Services Issues (Linus):**
+- #21: FastAPI/OpenAPI source-of-truth workflow
+- #22: Generated Swift OpenAPI client workflow
+- #23: Optional offline-first PortfolioSyncing boundary
+- #24: Category-to-holdings sync safeguards
+- #25: Cached market-data API
+- #26: Poller stock_cache refresh flow
+- #27: Async new-ticker fetch trigger
+- #28: Structured service error contract
+- #29: Service integration/contract tests
