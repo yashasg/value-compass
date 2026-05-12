@@ -1,0 +1,50 @@
+name: backend-ci
+
+# Lints and tests the Python backend on every PR that touches backend code.
+# No deployment side effects — see backend-deploy.yml for that.
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "alembic.ini"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "alembic.ini"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Compile-check all Python sources
+        run: python -m compileall -q backend
+
+      - name: Run tests (if any)
+        run: |
+          if [ -d backend/tests ] || find backend -name 'test_*.py' -print -quit | grep -q .; then
+            pip install pytest
+            pytest backend
+          else
+            echo "No tests yet — skipping pytest."
+          fi
