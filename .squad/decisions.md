@@ -44,6 +44,47 @@ The combined v1 technical specification has been split into three focused docume
 
 2. **Tech Spec Split (16:12 UTC):** The project should have separate technical specifications for app, services, and database rather than one combined tech spec.
 
+### 2026-05-12: App Implementation — Offline-First Backend Sync Alignment
+**Author:** Basher (iOS Dev) | **Status:** Adopted
+
+The app implements v1 as hybrid/offline-first: SwiftData is the primary runtime source of truth and all core UX works offline, while backend sync runs when configured and available.
+
+**Key Constraints:**
+- Manual/local market inputs are the v1 source for current value and moving-average fields.
+- Categories remain local-only in v1.
+- Backend sync flattens local category/ticker state into backend holdings without preserving names, order, or grouping.
+- Contribution history is local-only and never syncs to backend storage.
+- The real VCA algorithm remains user-owned and should not be implemented by the team yet.
+
+### 2026-05-12: Tess Joins Squad as iOS/iPadOS Designer
+**By:** Coordinator | **Status:** Active
+
+Tess added to Squad with focus on iOS/iPadOS design. Priorities: smooth onboarding and app usage. User directive: prioritize smooth onboarding and app usage.
+
+### 2026-05-12: Services Boundaries — Hybrid/Offline-First
+**Author:** Linus (Integration Engineering) | **Status:** Adopted
+
+V1 is hybrid/offline-first: the app runs fully offline from local data; optional backend availability syncs eligible portfolio/configuration data.
+
+**Boundaries:**
+- `ContributionCalculating` remains app-local; algorithm user-owned.
+- `MarketDataProviding` uses manual local current value / moving-average fields in v1.
+- `PortfolioSyncing` is optional and separate; sync failures do not block calculation.
+- Future Swift networking is generated from FastAPI/OpenAPI; generated clients are not hand-edited.
+- API serves cached market data; poller refreshes `stock_cache`; API may trigger async fetches for new tickers.
+
+### 2026-05-12: Database Constraints — Hybrid/Offline-First V1
+**Author:** Rusty (Backend Dev) | **Status:** Adopted
+
+V1 backend is optional sync persistence for portfolios and flattened holdings.
+
+**Constraints:**
+- Categories remain local-only. Backend sync flattens: `holding.weight = category.weight / category.tickers.count`.
+- Duplicate ticker symbols disallowed within one portfolio across all categories.
+- Contribution history, snapshots, manual current values, manual moving-average inputs are local-only and never sync.
+- Backend Postgres schema (flat holdings) is sufficient; v1 does not block offline app execution.
+- iOS preserves local categories as the richer source of truth; backend holdings are a lossy sync projection.
+
 ## Governance
 
 - All meaningful changes require team consensus
