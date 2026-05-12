@@ -1,3 +1,8 @@
 # Backend Python dependencies for value-compass
 # Shared by backend/api (FastAPI) and backend/poller (APScheduler).
 # Pin versions when adding dependencies.
+
+# Database (Supabase Postgres)
+SQLAlchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
