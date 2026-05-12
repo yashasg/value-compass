@@ -1,0 +1,9 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Value Compass",
+    "version": "0.0.0",
+    "description": "Build-time copy of the repo-root openapi.json. Kept in sync by CI; never edit by hand. The backend's FastAPI app emits the real document — until any routes are exposed, both this file and the root openapi.json contain only the bare minimum required fields."
+  },
+  "paths": {}
+}
