@@ -45,7 +45,8 @@ struct ForcedUpdateView: View {
            let url = URL(string: "itms-apps://itunes.apple.com/app/id\(id)") {
             return url
         }
-        return URL(string: "https://apps.apple.com/")
-            ?? URL(fileURLWithPath: "/")
+        // Static, known-good URL literal. `URL(string:)` only returns nil
+        // for malformed strings; this one is well-formed.
+        return URL(string: "https://apps.apple.com/search?term=Value+Compass")!
     }
 }

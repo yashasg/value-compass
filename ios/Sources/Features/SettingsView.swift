@@ -7,7 +7,7 @@ struct SettingsView: View {
         Form {
             Section("About") {
                 LabeledContent("Version", value: Self.appVersionString)
-                LabeledContent("Device ID", value: String(DeviceIDProvider.deviceID().prefix(8)) + "…")
+                LabeledContent("Device ID", value: String(DeviceIDProvider.deviceID().prefix(8)) + "\u{2026}")
             }
 
             Section("Disclaimer") {
