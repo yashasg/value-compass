@@ -1,0 +1,3 @@
+# Backend Python dependencies for value-compass
+# Shared by backend/api (FastAPI) and backend/poller (APScheduler).
+# Pin versions when adding dependencies.

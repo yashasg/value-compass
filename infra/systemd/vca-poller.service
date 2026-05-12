@@ -1,0 +1,12 @@
+[Unit]
+Description=value-compass nightly poller (vca-poller)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/value-compass/backend
+ExecStart=/opt/value-compass/.venv/bin/python -m poller
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
