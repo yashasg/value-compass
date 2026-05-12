@@ -47,3 +47,72 @@ value-compass/
 - `openapi.json` is the contract between backend and iOS, never edited manually.
 - `backend/common` and `backend/db` are shared between `api` and `poller` — they never drift.
 - Generated Swift networking code lives in `Networking/`, never edited manually.
+
+## CI/CD
+
+All deployments are git-event driven — no manual SSH after the initial
+VM setup. Workflows live in `.github/workflows/`:
+
+| Workflow             | Trigger                                  | Purpose                                                |
+|----------------------|------------------------------------------|--------------------------------------------------------|
+| `backend-ci.yml`     | PR / push to `main` touching `backend/`  | Install deps, compile-check, run tests.                |
+| `backend-deploy.yml` | Push to `main` or `backend-v*` tag       | SSH to Azure VM, pull, install, **migrate**, restart, health-check, tag. |
+| `ios-ci.yml`         | PR / push to `main` touching `ios/`      | `xcodebuild` on macOS (no signing).                    |
+| `ios-deploy.yml`     | Push of `ios-v*` tag                     | Sign, archive, export, upload to App Store Connect.    |
+
+### Required GitHub Secrets
+
+| Secret                           | Used by           |
+|----------------------------------|-------------------|
+| `AZURE_VM_SSH_KEY`               | `backend-deploy`  |
+| `AZURE_VM_HOST`                  | `backend-deploy`  |
+| `SUPABASE_URL`                   | Backend runtime   |
+| `POLYGON_API_KEY`                | Backend runtime   |
+| `APNS_CERT`                      | Backend runtime   |
+| `APPLE_DEV_CERTIFICATE`          | `ios-deploy`      |
+| `APPLE_DEV_CERTIFICATE_PASSWORD` | `ios-deploy`      |
+| `APP_STORE_CONNECT_API_KEY`      | `ios-deploy`      |
+| `APP_STORE_CONNECT_API_KEY_ID`   | `ios-deploy`      |
+| `APP_STORE_CONNECT_ISSUER_ID`    | `ios-deploy`      |
+
+Backend runtime secrets (`SUPABASE_URL`, `POLYGON_API_KEY`, `APNS_CERT`)
+are not consumed by the workflow itself — they are read by the systemd
+units on the VM and are set during the one-time VM bootstrap.
+
+### Deploy invariants
+
+1. Database migrations (`alembic upgrade head`) **always** run before
+   `vca-api` / `vca-poller` are restarted.
+2. The `/health` endpoint must return `200` before a release tag is
+   created — a failed health check fails the workflow.
+3. Secrets are never stored in code; only GitHub Secrets.
+
+### Rollback
+
+Re-tag a previous good commit with a new release tag and push it:
+
+```sh
+git tag backend-v$(date -u +%Y%m%d-%H%M%S) <previous-good-sha>
+git push origin backend-v<...>
+# or for iOS:
+git tag ios-v$(date -u +%Y%m%d-%H%M%S) <previous-good-sha>
+git push origin ios-v<...>
+```
+
+Pushing the tag re-runs the deploy workflow at that commit.
+
+### Initial VM setup (one time, manual)
+
+1. Provision Azure VM (B1s) via the Azure Portal.
+2. SSH in.
+3. Install Python 3.11+.
+4. Clone the repo to `/opt/value-compass` and create the venv at
+   `/opt/value-compass/.venv`.
+5. `pip install -r backend/requirements.txt`.
+6. Symlink the units in `infra/systemd/` into `/etc/systemd/system/`
+   and `systemctl enable` them.
+7. Set environment variables (from GitHub Secrets) for the systemd
+   units (e.g. via `/etc/systemd/system/vca-api.service.d/override.conf`).
+8. Configure the Azure firewall to allow port 443 from Cloudflare IP
+   ranges only.
+9. All subsequent deploys are automated by `backend-deploy.yml`.

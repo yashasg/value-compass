@@ -1,0 +1,40 @@
+name: ios-ci
+
+# Builds the iOS app on every PR that touches iOS sources.
+# Runs on macOS so xcodebuild is available.
+
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      - "openapi.json"
+      - ".github/workflows/ios-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - "openapi.json"
+      - ".github/workflows/ios-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build (no signing)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project VCA.xcodeproj \
+            -scheme VCA \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
