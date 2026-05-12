@@ -1,0 +1,287 @@
+"""FastAPI application for vca-api.
+
+Implements the endpoints documented in ``backend/api/README.md`` and the
+original services spec:
+
+* ``GET  /health``              — liveness + DB reachability
+* ``GET  /portfolio/status``    — last_modified / next_modified, cacheable
+* ``GET  /portfolio/data``      — full portfolio allocation for the device
+* ``GET  /schema/version``      — current API schema version
+* ``POST /portfolio/holdings``  — add a ticker; queues a background fetch
+
+The app reads from Postgres only and **never** calls Polygon directly,
+with one explicit exception: ``POST /portfolio/holdings`` queues an
+asyncio background task to populate ``stock_cache`` for a brand-new
+ticker — see the New Ticker Flow in the README.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+from uuid import UUID
+
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
+from pydantic import BaseModel, Field
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from common import config, db as common_db
+from db.models import Holding, Portfolio, StockCache
+
+log = logging.getLogger("vca.api")
+
+app = FastAPI(
+    title="vca-api",
+    version="1.0.0",
+    description=(
+        "value-compass FastAPI service. Reads from Postgres only; never "
+        "calls Polygon directly except via the /portfolio/holdings "
+        "background task for brand-new tickers."
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+def get_db() -> Session:  # pragma: no cover - thin wrapper, exercised in tests via override
+    """FastAPI dependency yielding a SQLAlchemy session."""
+    with common_db.get_session() as session:
+        yield session
+
+
+async def require_app_attest(
+    x_app_attest: Optional[str] = Header(default=None, alias="X-App-Attest"),
+) -> str:
+    """Validate the App Attest header on every request.
+
+    The actual cryptographic verification is performed by Cloudflare /
+    Apple App Attest infrastructure in production; here we only enforce
+    that the header is present and non-empty so that an unauthenticated
+    request never reaches the database. Endpoints that should not
+    require attestation (only ``/health``) opt out explicitly.
+    """
+    if not x_app_attest:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="missing X-App-Attest header",
+        )
+    return x_app_attest
+
+
+# ---------------------------------------------------------------------------
+# Response-headers middleware
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_standard_headers(request: Request, call_next):
+    """Set the spec-mandated response headers on every response.
+
+    * ``Cache-Control: max-age=<CACHE_MAX_AGE>``
+    * ``Last-Modified: <UTC RFC 7231 timestamp>``
+    * ``X-Min-App-Version: <minimum supported iOS app version>``
+    """
+    response: Response = await call_next(request)
+    response.headers.setdefault(
+        "Cache-Control", f"max-age={config.CACHE_MAX_AGE}"
+    )
+    response.headers.setdefault(
+        "Last-Modified",
+        datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+    )
+    response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+class HealthResponse(BaseModel):
+    status: str = Field(default="ok")
+
+
+class SchemaVersionResponse(BaseModel):
+    version: int
+
+
+class PortfolioStatusResponse(BaseModel):
+    last_modified: Optional[datetime]
+    next_modified: Optional[datetime]
+
+
+class HoldingOut(BaseModel):
+    ticker: str
+    weight: float
+    current_price: Optional[float]
+    sma_50: Optional[float]
+    sma_200: Optional[float]
+
+
+class PortfolioDataResponse(BaseModel):
+    portfolio_id: UUID
+    name: str
+    monthly_budget: float
+    ma_window: int
+    holdings: list[HoldingOut]
+
+
+class AddHoldingRequest(BaseModel):
+    device_uuid: UUID
+    ticker: str = Field(min_length=1, max_length=10)
+    weight: float = Field(gt=0, le=1)
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+@app.get("/health", response_model=HealthResponse)
+def health(db: Session = Depends(get_db)) -> HealthResponse:
+    """Return 200 if the API process is up and Postgres is reachable."""
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        log.warning("health check failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="database unreachable",
+        )
+    return HealthResponse(status="ok")
+
+
+@app.get("/schema/version", response_model=SchemaVersionResponse)
+def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
+    return SchemaVersionResponse(version=config.SCHEMA_VERSION)
+
+
+@app.get("/portfolio/status", response_model=PortfolioStatusResponse)
+def portfolio_status(
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> PortfolioStatusResponse:
+    """Return the freshest ``last_modified`` / ``next_modified`` across
+    the cache. Lightweight and Cloudflare-cacheable."""
+    row = db.execute(
+        select(StockCache.last_modified, StockCache.next_modified)
+        .order_by(StockCache.last_modified.desc())
+        .limit(1)
+    ).first()
+    if row is None:
+        return PortfolioStatusResponse(last_modified=None, next_modified=None)
+    return PortfolioStatusResponse(last_modified=row[0], next_modified=row[1])
+
+
+@app.get("/portfolio/data", response_model=PortfolioDataResponse)
+def portfolio_data(
+    device_uuid: UUID,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> PortfolioDataResponse:
+    """Return the full portfolio allocation for the calling device.
+
+    Only called by the iOS client on a cache miss.
+    """
+    portfolio = db.execute(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).scalar_one_or_none()
+    if portfolio is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="portfolio not found for device",
+        )
+
+    holdings_out: list[HoldingOut] = []
+    for holding in portfolio.holdings:
+        cache = db.get(StockCache, holding.ticker)
+        holdings_out.append(
+            HoldingOut(
+                ticker=holding.ticker,
+                weight=float(holding.weight),
+                current_price=float(cache.current_price) if cache else None,
+                sma_50=float(cache.sma_50) if cache else None,
+                sma_200=float(cache.sma_200) if cache else None,
+            )
+        )
+    return PortfolioDataResponse(
+        portfolio_id=portfolio.id,
+        name=portfolio.name,
+        monthly_budget=float(portfolio.monthly_budget),
+        ma_window=portfolio.ma_window,
+        holdings=holdings_out,
+    )
+
+
+@app.post("/portfolio/holdings", status_code=status.HTTP_202_ACCEPTED)
+def add_holding(
+    payload: AddHoldingRequest,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> Response:
+    """Add a holding to the calling device's portfolio.
+
+    If the ticker is not yet in ``stock_cache`` the request schedules an
+    asyncio background task that fetches the ticker from Polygon and
+    pushes via APNs once the cache is populated. The response is
+    ``202 Accepted`` either way — the client shows a spinner until the
+    APNs push arrives.
+    """
+    portfolio = db.execute(
+        select(Portfolio).where(Portfolio.device_uuid == payload.device_uuid)
+    ).scalar_one_or_none()
+    if portfolio is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="portfolio not found for device",
+        )
+
+    db.add(
+        Holding(
+            portfolio_id=portfolio.id,
+            ticker=payload.ticker,
+            weight=payload.weight,
+        )
+    )
+    db.commit()
+
+    cached = db.get(StockCache, payload.ticker) is not None
+    if not cached:
+        background.add_task(
+            _fetch_new_ticker, payload.ticker, payload.device_uuid
+        )
+
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+# ---------------------------------------------------------------------------
+# Background tasks
+# ---------------------------------------------------------------------------
+async def _fetch_new_ticker(ticker: str, device_uuid: UUID) -> None:
+    """Populate ``stock_cache`` for a brand-new ticker, then APNs-push.
+
+    This is the **only** code path in vca-api that calls Polygon. It is
+    deliberately kept thin so the same fetch/push helpers can be reused
+    by ``backend/poller`` — the implementations live in
+    :mod:`poller.polygon` and :mod:`poller.apns` to keep this module
+    free of network code at import time.
+    """
+    # Imported lazily to avoid pulling Polygon / APNs deps into the API
+    # process at startup, and to break the api → poller import cycle.
+    from poller.polygon import fetch_and_cache_ticker  # noqa: WPS433
+    from poller.apns import push_to_device  # noqa: WPS433
+
+    try:
+        await fetch_and_cache_ticker(ticker)
+        await push_to_device(device_uuid)
+    except Exception:  # noqa: BLE001 — log and swallow; client retries via spinner timeout
+        log.exception("background fetch for new ticker %s failed", ticker)
