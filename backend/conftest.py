@@ -1,7 +1,7 @@
 """Shared pytest configuration for backend tests.
 
 The production processes are launched from inside the ``backend/``
-directory (see ``infra/systemd/*.service``), so the source modules
+directory (see ``backend/infra/systemd/*.service``), so the source modules
 import each other as ``api``, ``poller``, ``db``, ``common`` — without
 the ``backend.`` prefix. We mirror that here by inserting ``backend/``
 on ``sys.path`` so tests can ``import api.main`` etc. regardless of the

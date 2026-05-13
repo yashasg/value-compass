@@ -4,7 +4,7 @@ APScheduler job. Fetches stock data from Polygon and writes to Postgres,
 then sends an APNs push to affected devices on completion. The poller is
 the **only** writer to `stock_cache`.
 
-Runs as systemd service: **`vca-poller.service`** (see `infra/systemd/`).
+Runs as systemd service: **`vca-poller.service`** (see `backend/infra/systemd/`).
 
 ## Schedule
 

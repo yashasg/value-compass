@@ -3,7 +3,7 @@
 All values are read from environment variables — no secrets in source.
 Production environment variables are set on the host by the systemd
 ``Environment=`` / ``EnvironmentFile=`` directives of the corresponding
-service unit (see ``infra/systemd/``).
+service unit (see ``backend/infra/systemd/``).
 """
 
 from __future__ import annotations
