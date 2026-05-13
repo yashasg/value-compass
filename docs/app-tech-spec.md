@@ -63,13 +63,13 @@ Env overrides: `DEVICE_KIND` (iphone|ipad), `IOS_VERSION`, `IPADOS_VERSION`, `IP
 
 The app should prefer simple, testable seams: SwiftUI views render state, view models coordinate validation and actions, SwiftData repositories/persistence helpers own local storage, service protocols hide calculation and market-data sources, and any backend sync adapter observes local changes without becoming the source of truth.
 
-### App Design and Scaffolding Principles
+### App Design Principles
 
-The `stitch_value_compass_vca_calculator` Stitch designs serve as **functional scaffolding only**, not as the final visual specification:
+The app technical specification and SwiftUI implementation are the canonical sources for v1 behavior and layout. Early generated Stitch exports were functional references only and should not remain as maintained source code or design assets in the repository.
 
-- **Stitch content is placeholder.** Screen layouts, information hierarchy, and interaction patterns are provided to validate the functional flow end-to-end. The user does not prefer the current Stitch color scheme; it is a starting point only.
-- **Tess owns final design.** Tess (iOS/iPadOS Designer) reviews Stitch scaffolding and approves or revises the design system (colors, typography, spacing, dark mode support, animations).
-- **Use Stitch-mentioned fonts for scaffolding.** When selecting fonts for views, prefer fonts mentioned in Stitch (e.g., system fonts, accessible defaults) for consistency during functional build-out. Do not hardcode SF Pro Display or SF Mono unless Stitch explicitly specifies them.
+- **Generated design exports are placeholder material.** Screen layouts, information hierarchy, and interaction patterns are captured in this spec and implemented in SwiftUI rather than maintained as generated HTML/images.
+- **Tess owns final design.** Tess (iOS/iPadOS Designer) reviews the app implementation and approves or revises the design system (colors, typography, spacing, dark mode support, animations).
+- **Prefer accessible system typography unless a design-system decision says otherwise.** Do not hardcode SF Pro Display or SF Mono without an explicit approved design requirement.
 - **iPhone and iPad support from v1.** All screens must be functional on both iPhone (compact width, `NavigationStack`) and iPad (regular width, `NavigationSplitView`). Responsive layouts and adaptive navigation are required, not post-v1 additions.
 - **Light and dark mode required.** Implement both light and dark color schemes from v1 to avoid rework.
 
