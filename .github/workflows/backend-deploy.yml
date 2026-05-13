@@ -2,30 +2,22 @@ name: backend-deploy
 
 # Deploys the backend to the Azure VM.
 #
-# Triggers (per CI/CD spec — all deploys are git-event driven, no manual SSH):
-#   * push to main touching backend/ or infra/ — normal forward deploy.
-#   * push of a tag matching `backend-v*`     — release / rollback deploy.
-#       Rollback procedure: re-tag a previous good commit with a new
-#       `backend-v<timestamp>` tag and push it.
-#   * workflow_dispatch                        — manual re-run of an existing ref.
+# MVP deploy policy: manual-only until deployment prerequisites are ready.
+#
+# Trigger:
+#   * workflow_dispatch — manual deploy of a selected ref.
+#
+# Rollback procedure: manually dispatch this workflow with a previous good
+# commit SHA, branch, or tag as the `ref` input.
 #
 # Invariants enforced by this workflow:
 #   1. Database migrations (`alembic upgrade head`) run BEFORE services
 #      restart.
 #   2. Health check (`GET /health`) must return 200 before the run is
-#      marked successful and a release tag is created.
+#      marked successful.
 #   3. No secrets in code — all credentials come from GitHub Secrets.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - "infra/**"
-      - "alembic.ini"
-      - ".github/workflows/backend-deploy.yml"
-    tags:
-      - "backend-v*"
   workflow_dispatch:
     inputs:
       ref:
@@ -43,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      contents: write  # required to create the release tag on success
+      contents: read
     steps:
       - name: Checkout target ref
         uses: actions/checkout@v4
@@ -118,15 +110,3 @@ jobs:
           done
           echo "Health check did not pass after 10 attempts." >&2
           exit 1
-
-      - name: Tag successful release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEPLOY_SHA: ${{ steps.sha.outputs.sha }}
-        run: |
-          # Tag every successful main-branch deploy so rollback is just
-          # "re-tag a previous commit" (per spec).
-          TAG="backend-v$(date -u +%Y%m%d-%H%M%S)-${DEPLOY_SHA:0:7}"
-          git tag "$TAG" "$DEPLOY_SHA"
-          git push origin "$TAG"
