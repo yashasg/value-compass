@@ -28,6 +28,7 @@ backend/
   poller/            # APScheduler nightly job — see poller/README.md
   db/                # SQLAlchemy models + Alembic migrations
   common/            # Shared config, constants, utilities
+  infra/systemd/     # Host service units for backend processes
   requirements.txt   # Pinned dependencies for both services
 ```
 
