@@ -367,7 +367,7 @@ struct PortfolioRowView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(portfolio.name)
-        .font(.headline)
+        .valueCompassTextStyle(.headlineMedium)
 
       HStack {
         Label(
@@ -375,7 +375,7 @@ struct PortfolioRowView: View {
           systemImage: "dollarsign.circle")
         Label("\(portfolio.maWindow)-day MA", systemImage: "chart.line.uptrend.xyaxis")
       }
-      .font(.caption)
+      .valueCompassTextStyle(.labelCaps)
       .foregroundStyle(.secondary)
     }
     .accessibilityElement(children: .combine)
@@ -536,13 +536,18 @@ struct PortfolioDetailView: View {
   private var summarySection: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Summary")
-        .font(.title2.bold())
+        .valueCompassTextStyle(.headlineMedium)
 
       LabeledContent(
-        "Monthly Budget", value: "$\(PortfolioFormDraft.displayText(for: portfolio.monthlyBudget))")
+        "Monthly Budget", value: "$\(PortfolioFormDraft.displayText(for: portfolio.monthlyBudget))"
+      )
+      .valueCompassTextStyle(.data)
       LabeledContent("Moving Average", value: "\(portfolio.maWindow) days")
+        .valueCompassTextStyle(.data)
       LabeledContent("Categories", value: "\(portfolio.categories.count)")
+        .valueCompassTextStyle(.data)
       LabeledContent("Market Data", value: marketDataCompletionText)
+        .valueCompassTextStyle(.data)
     }
     .padding()
     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -559,7 +564,7 @@ struct PortfolioDetailView: View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
         Text("Holdings")
-          .font(.title2.bold())
+          .valueCompassTextStyle(.headlineMedium)
 
         Spacer()
 
@@ -581,25 +586,26 @@ struct PortfolioDetailView: View {
           VStack(alignment: .leading, spacing: 6) {
             HStack {
               Text(category.displayName)
-                .font(.headline)
+                .valueCompassTextStyle(.bodyLarge)
               Spacer()
               Text("\(category.weightPercentText)%")
+                .valueCompassTextStyle(.data)
                 .foregroundStyle(.secondary)
             }
 
             if category.tickers.isEmpty {
               Label("Warning: no tickers", systemImage: "exclamationmark.circle")
                 .foregroundStyle(.orange)
-                .font(.caption)
+                .valueCompassTextStyle(.labelCaps)
                 .accessibilityIdentifier("portfolio.detail.holdings.warning")
             } else {
               ForEach(category.tickers, id: \.id) { (ticker: TickerDraft) in
                 HStack {
                   Text(ticker.normalizedSymbol)
-                    .font(.caption.bold())
+                    .valueCompassTextStyle(.labelCaps)
                   Spacer()
                   Text(marketDataSummary(for: ticker))
-                    .font(.caption)
+                    .valueCompassTextStyle(.data)
                     .foregroundStyle(ticker.hasCompleteMarketData ? Color.secondary : Color.orange)
                 }
                 .accessibilityIdentifier("portfolio.detail.tickerMarketData")
@@ -634,7 +640,7 @@ struct PortfolioDetailView: View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
         Label("Calculate", systemImage: "function")
-          .font(.title2.bold())
+          .valueCompassTextStyle(.headlineMedium)
 
         Spacer()
 
@@ -665,7 +671,7 @@ struct PortfolioDetailView: View {
             Text(
               "Monthly contribution: $\(PortfolioFormDraft.displayText(for: calculationOutput.totalAmount))"
             )
-            .font(.headline)
+            .valueCompassTextStyle(.data)
             Text("\(calculationOutput.allocations.count) ticker allocations ready.")
               .foregroundStyle(.secondary)
             Button("View Result") {
@@ -750,11 +756,11 @@ struct ContributionResultView: View {
   private var resultSummary: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Total Monthly Contribution")
-        .font(.headline)
+        .valueCompassTextStyle(.labelCaps)
         .foregroundStyle(.secondary)
 
       Text("$\(decimalText(output.totalAmount))")
-        .font(.system(size: 48, weight: .bold, design: .rounded))
+        .valueCompassTextStyle(.displayLarge)
         .minimumScaleFactor(0.7)
         .accessibilityIdentifier("contribution.result.total")
     }
@@ -766,16 +772,16 @@ struct ContributionResultView: View {
   private var categoryBreakdown: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Breakdown")
-        .font(.title2.bold())
+        .valueCompassTextStyle(.headlineMedium)
 
       ForEach(Array(output.categoryBreakdown.enumerated()), id: \.offset) { _, category in
         VStack(alignment: .leading, spacing: 8) {
           HStack {
             Text(category.categoryName)
-              .font(.headline)
+              .valueCompassTextStyle(.bodyLarge)
             Spacer()
             Text("$\(decimalText(category.amount))")
-              .font(.headline)
+              .valueCompassTextStyle(.data)
           }
 
           ForEach(
@@ -785,10 +791,12 @@ struct ContributionResultView: View {
           ) { _, allocation in
             HStack {
               Text(allocation.tickerSymbol)
-                .font(.body.weight(.semibold))
+                .valueCompassTextStyle(.labelCaps)
               Spacer()
               Text("$\(decimalText(allocation.amount))")
+                .valueCompassTextStyle(.data)
               Text("\(percentText(allocation.allocatedWeight))%")
+                .valueCompassTextStyle(.data)
                 .foregroundStyle(.secondary)
             }
             .accessibilityIdentifier("contribution.result.ticker")
@@ -824,7 +832,7 @@ struct ContributionResultView: View {
   private func calculationErrorView(_ error: LocalizedError) -> some View {
     VStack(alignment: .leading, spacing: 16) {
       Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
-        .font(.headline)
+        .valueCompassTextStyle(.bodyLarge)
         .foregroundStyle(.orange)
         .accessibilityIdentifier("contribution.result.error")
 
@@ -972,15 +980,16 @@ struct ContributionHistoryRowView: View {
     HStack {
       VStack(alignment: .leading, spacing: 4) {
         Text(ContributionHistoryDateFormatters.day.string(from: record.date))
-          .font(.headline)
+          .valueCompassTextStyle(.bodyLarge)
         Text("\(record.tickerAllocations.count) ticker allocations")
+          .valueCompassTextStyle(.bodySmall)
           .foregroundStyle(.secondary)
       }
 
       Spacer()
 
       Text("$\(decimalText(record.totalAmount))")
-        .font(.headline)
+        .valueCompassTextStyle(.data)
     }
     .accessibilityElement(children: .combine)
   }
@@ -1013,12 +1022,13 @@ struct ContributionHistoryDetailView: View {
           VStack(alignment: .leading, spacing: 4) {
             HStack {
               Text(allocation.tickerSymbol)
-                .font(.headline)
+                .valueCompassTextStyle(.labelCaps)
               Spacer()
               Text("$\(decimalText(allocation.amount))")
-                .font(.headline)
+                .valueCompassTextStyle(.data)
             }
             Text(allocation.categoryName)
+              .valueCompassTextStyle(.bodySmall)
               .foregroundStyle(.secondary)
           }
           .accessibilityIdentifier("contribution.history.detail.ticker")

@@ -16,7 +16,7 @@ struct ForcedUpdateView: View {
         .accessibilityHidden(true)
 
       Text("Update Required")
-        .font(.largeTitle.bold())
+        .valueCompassTextStyle(.displayLarge)
 
       if let minimumVersion {
         Text("\(AppBrand.displayName) \(minimumVersion) or later is required to continue.")
