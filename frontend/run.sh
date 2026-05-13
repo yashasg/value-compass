@@ -17,6 +17,7 @@ DEVICE_KIND="${DEVICE_KIND:-iphone}" # iphone or ipad
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-}"
+VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
@@ -135,6 +136,7 @@ build_app() {
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \
+    VCA_API_BASE_URL="$VCA_API_BASE_URL" \
     build
 }
 

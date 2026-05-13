@@ -15,11 +15,12 @@ import Foundation
 /// and the generated `Client` type that's produced at build time.
 final class APIClient {
     static let shared = APIClient()
+    private static let fallbackBaseURL = URL(string: "https://api.valuecompass.app")!
 
     let session: URLSession
     let baseURL: URL
 
-    init(baseURL: URL = URL(string: "https://api.valuecompass.app")!,
+    init(baseURL: URL = APIClient.configuredBaseURL(),
          session: URLSession? = nil) {
         self.baseURL = baseURL
         if let session {
@@ -31,6 +32,26 @@ final class APIClient {
             config.timeoutIntervalForRequest = 30
             self.session = URLSession(configuration: config)
         }
+    }
+
+    static func configuredBaseURL(infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> URL {
+        guard let rawValue = infoDictionary["VCAAPIBaseURL"] as? String else {
+            return fallbackBaseURL
+        }
+
+        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else {
+            return fallbackBaseURL
+        }
+
+        guard let url = URL(string: value),
+              let scheme = url.scheme,
+              !scheme.isEmpty,
+              url.host != nil else {
+            preconditionFailure("Invalid VCAAPIBaseURL value: \(value)")
+        }
+
+        return url
     }
 
     enum APIError: Error {
