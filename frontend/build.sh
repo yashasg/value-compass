@@ -17,11 +17,12 @@ PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
+RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
@@ -30,7 +31,7 @@ Defaults:
   IPHONE_DEVICE=$IPHONE_DEVICE
   IPAD_DEVICE=$IPAD_DEVICE
 
-This script builds and tests the iOS app on explicit simulator destinations.
+This script runs Xcode analyze, build, and tests on explicit simulator destinations.
 USAGE
 }
 
@@ -129,6 +130,14 @@ should_run_tests() {
   esac
 }
 
+should_run_analyze() {
+  case "$RUN_ANALYZE" in
+    true|1|yes) return 0 ;;
+    false|0|no) return 1 ;;
+    *) fail "Unknown RUN_ANALYZE '$RUN_ANALYZE'. Use true or false." ;;
+  esac
+}
+
 run_xcodebuild() {
   local action="$1"
   local device="$2"
@@ -156,6 +165,9 @@ run_for_platform() {
       os_version="$(resolve_ios_version "$IOS_VERSION")"
       validate_runtime "$os_version"
       ensure_simulator "$IPHONE_DEVICE" "$os_version"
+      if should_run_analyze; then
+        run_xcodebuild analyze "$IPHONE_DEVICE" "$os_version"
+      fi
       run_xcodebuild build "$IPHONE_DEVICE" "$os_version"
       if should_run_tests; then
         run_xcodebuild test "$IPHONE_DEVICE" "$os_version"
@@ -168,6 +180,9 @@ run_for_platform() {
       os_version="$(resolve_ios_version "$IPADOS_VERSION")"
       validate_runtime "$os_version"
       ensure_simulator "$IPAD_DEVICE" "$os_version"
+      if should_run_analyze; then
+        run_xcodebuild analyze "$IPAD_DEVICE" "$os_version"
+      fi
       run_xcodebuild build "$IPAD_DEVICE" "$os_version"
       if should_run_tests; then
         run_xcodebuild test "$IPAD_DEVICE" "$os_version"
