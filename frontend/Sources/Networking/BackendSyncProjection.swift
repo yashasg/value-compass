@@ -21,7 +21,10 @@ struct BackendHoldingPayload: Equatable {
 }
 
 enum BackendSyncProjectionError: Error, Equatable {
+  case duplicateTickerSymbols([String])
   case emptyCategory(categoryName: String)
+  case emptyTickerSymbol
+  case invalidHoldingWeight(ticker: String, weight: Decimal)
   case invalidMAWindow(Int)
   case nonPositiveBudget
 }
@@ -51,6 +54,11 @@ enum BackendSyncProjection {
       return $0.id.uuidString < $1.id.uuidString
     }
 
+    let duplicateSymbols = portfolio.duplicateTickerSymbols()
+    if !duplicateSymbols.isEmpty {
+      throw BackendSyncProjectionError.duplicateTickerSymbols(duplicateSymbols)
+    }
+
     let holdings = try categories.flatMap { category in
       let tickers = category.tickers.sorted {
         if $0.sortOrder != $1.sortOrder {
@@ -69,11 +77,25 @@ enum BackendSyncProjection {
         throw BackendSyncProjectionError.emptyCategory(categoryName: category.name)
       }
 
+      let normalizedSymbols = tickers.map(\.normalizedSymbol)
+      for normalizedSymbol in normalizedSymbols {
+        guard !normalizedSymbol.isEmpty else {
+          throw BackendSyncProjectionError.emptyTickerSymbol
+        }
+      }
+
       let holdingWeight = category.weight / Decimal(tickers.count)
-      return tickers.map { ticker in
+      guard isBackendHoldingWeight(holdingWeight) else {
+        throw BackendSyncProjectionError.invalidHoldingWeight(
+          ticker: normalizedSymbols[0],
+          weight: holdingWeight
+        )
+      }
+
+      return normalizedSymbols.map { normalizedSymbol in
         BackendHoldingPayload(
           portfolioID: portfolio.id,
-          ticker: ticker.symbol.trimmingCharacters(in: .whitespacesAndNewlines),
+          ticker: normalizedSymbol,
           weight: holdingWeight
         )
       }
@@ -90,5 +112,9 @@ enum BackendSyncProjection {
       ),
       holdings: holdings
     )
+  }
+
+  private static func isBackendHoldingWeight(_ weight: Decimal) -> Bool {
+    NSDecimalNumber(decimal: weight) != .notANumber && weight >= 0 && weight <= 1
   }
 }
