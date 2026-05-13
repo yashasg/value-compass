@@ -50,3 +50,11 @@ Merged 3 inbox files documenting frontend folder structure, build artifact manag
 
 <!-- Append learnings below -->
 
+### 2026-05-12T20:47:11.031-07:00: Agent Model Defaults Configuration
+Updated `.squad/config.json` and merged user directive into active decisions:
+- Set `defaultModel` to `claude-sonnet-4.6` for all agents (corrected from user typo "claude-sonnect-4.6")
+- Configured Tess to use `claude-opus-4.7` (premium reasoning for design/UX)
+- Ralph and Scribe remain on `claude-haiku-4.5` (fast/cost-effective for session support)
+- Inbox entry archived; directive merged into User Directives section of decisions.md
+
+**Key Decision:** Squad now has explicit agent model tiers. Premium model for design agent, standard default for most agents, cost-optimized models for support agents.

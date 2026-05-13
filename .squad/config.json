@@ -1,6 +1,9 @@
 {
   "version": 1,
+  "defaultModel": "claude-sonnet-4.6",
   "agentModelOverrides": {
-    "tess": "claude-opus-4.7"
+    "tess": "claude-opus-4.7",
+    "ralph": "claude-haiku-4.5",
+    "scribe": "claude-haiku-4.5"
   }
 }
