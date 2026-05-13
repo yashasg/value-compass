@@ -6,12 +6,16 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| {domain 1} | {Name} | {example tasks} |
-| {domain 2} | {Name} | {example tasks} |
-| {domain 3} | {Name} | {example tasks} |
-| Code review | {Name} | Review PRs, check quality, suggest improvements |
-| Testing | {Name} | Write tests, find edge cases, verify fixes |
-| Scope & priorities | {Name} | What to build next, trade-offs, decisions |
+| Architecture, cross-cutting decisions | Danny | Tech specs, ADRs, domain boundaries, priorities, multi-domain trade-offs |
+| Backend APIs and service code | Rusty | FastAPI endpoints, `backend/api`, `backend/common`, service errors, request/response models |
+| Database and poller behavior | Rusty | SQLAlchemy models, Alembic migrations, `stock_cache`, scheduled refreshes, persistence invariants |
+| iOS implementation | Basher | Swift, SwiftUI, SwiftData, Xcode project changes, view models, calculator wiring |
+| iOS/iPadOS experience design | Tess | Onboarding, disclaimer/settings UX, adaptive iPad layouts, accessibility, Dynamic Type, empty states |
+| OpenAPI and sync contracts | Linus | `openapi.json`, generated Swift clients, backend/frontend contract tests, sync mapping |
+| Infrastructure and delivery | Livingston | GitHub Actions, TestFlight, Azure deploys, secrets wiring, build/release automation |
+| Code review | Danny | Review PRs, check quality, suggest reviewers |
+| Testing | Domain owner | Write tests, find edge cases, verify fixes in the touched area |
+| Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 
 ## Issue Routing
@@ -37,6 +41,7 @@ How to decide who handles what.
 5. **"Team, ..." → fan-out.** Spawn all relevant agents in parallel as `mode: "background"`.
 6. **Anticipate downstream work.** If a feature is being built, spawn the tester to write test cases from requirements simultaneously.
 7. **Issue-labeled work** — when a `squad:{member}` label is applied to an issue, route to that member. The Lead handles all `squad` (base label) triage.
+8. **Keep PR scope owner-aligned** — prefer one primary owner per branch. If work must span owners, name the handoff in the PR and keep generated artifacts with the contract owner.
 
 ## Work Type → Agent
 
