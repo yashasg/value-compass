@@ -1,7 +1,7 @@
 # Frontend
 
 SwiftUI client for value-compass. The Xcode project lives in
-`../ios/VCA.xcodeproj` and builds a universal app for iPhone and iPad.
+`frontend/VCA.xcodeproj` and builds a universal app for iPhone and iPad.
 
 ## Target
 
@@ -13,15 +13,17 @@ SwiftUI client for value-compass. The Xcode project lives in
 
 ```
 frontend/
-  build.sh
-  run.sh
-ios/
   VCA.xcodeproj
   Sources/
     App/           # Entry point, app lifecycle
     Features/      # UI screens
     Networking/    # SwiftOpenAPIGenerator output — never edited manually
     Models/        # Swift data models
+    Services/      # Local app services
+  Tests/
+    VCATests/
+  build.sh
+  run.sh
 ```
 
 ## Key Libraries
