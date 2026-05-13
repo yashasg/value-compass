@@ -22,6 +22,7 @@ from common import db as common_db  # noqa: E402
 from db.models import Base, Holding, Portfolio, StockCache  # noqa: E402
 from poller import job as job_module  # noqa: E402
 from poller.__main__ import build_scheduler  # noqa: E402
+from poller.polygon import BandMetrics, DailyBar, compute_band_metrics  # noqa: E402
 
 
 @pytest.fixture()
@@ -77,11 +78,17 @@ def test_success_path_writes_cache_and_pushes(
     monkeypatch.setattr(job_module, "is_trading_day", lambda _today: True)
 
     async def _fake_fetch_all(tickers):
-        return (
-            {t: Decimal("100") for t in tickers},
-            {t: Decimal("99") for t in tickers},
-            {t: Decimal("98") for t in tickers},
-        )
+        return {
+            t: BandMetrics(
+                current_price=Decimal("100"),
+                midline=Decimal("99"),
+                atr=Decimal("2"),
+                upper_band=Decimal("103.46"),
+                lower_band=Decimal("94.54"),
+                band_position=Decimal("0.6121076233183856502242152466"),
+            )
+            for t in tickers
+        }
 
     monkeypatch.setattr(job_module, "_fetch_all", _fake_fetch_all)
 
@@ -99,7 +106,12 @@ def test_success_path_writes_cache_and_pushes(
         assert row is not None
         assert row.current_price == Decimal("100")
         assert row.sma_50 == Decimal("99")
-        assert row.sma_200 == Decimal("98")
+        assert row.sma_200 == Decimal("99")
+        assert row.midline == Decimal("99")
+        assert row.atr == Decimal("2")
+        assert row.upper_band == Decimal("103.46")
+        assert row.lower_band == Decimal("94.54")
+        assert row.band_position == Decimal("0.6121076233")
         assert row.job_status == "success"
         assert row.last_modified is not None
         assert row.next_modified is not None
@@ -157,3 +169,27 @@ def test_scheduler_has_5pm_et_trigger() -> None:
     assert fields["minute"] == "0"
     assert fields["day_of_week"] == "mon-fri"
     assert str(trigger.timezone) == "America/New_York"
+
+
+def test_compute_band_metrics_uses_latest_22_bars() -> None:
+    bars = [
+        DailyBar(
+            timestamp=index,
+            open=Decimal(index),
+            high=Decimal(index) + Decimal("2"),
+            low=Decimal(index) - Decimal("1"),
+            close=Decimal(index),
+        )
+        for index in range(1, 25)
+    ]
+
+    metrics = compute_band_metrics(bars, "AAPL")
+
+    assert metrics.current_price == Decimal("24")
+    assert metrics.midline == Decimal("14")
+    assert metrics.atr == Decimal("3")
+    assert metrics.upper_band == Decimal("20.69")
+    assert metrics.lower_band == Decimal("7.31")
+    assert metrics.band_position == (
+        (Decimal("24") - Decimal("7.31")) / (Decimal("20.69") - Decimal("7.31"))
+    )

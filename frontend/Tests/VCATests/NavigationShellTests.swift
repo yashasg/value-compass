@@ -53,10 +53,10 @@ final class NavigationShellTests: XCTestCase {
     func testHoldingsDraftValidatesWeightsAndDuplicateSymbols() {
         let draft = HoldingsDraft(categories: [
             CategoryDraft(name: "US", weightPercentText: "60", tickers: [
-                TickerDraft(symbol: " vti ", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 0),
+                TickerDraft(symbol: " vti ", currentPrice: Decimal(250), movingAverage: Decimal(245), bandPosition: Decimal(string: "0.5"), sortOrder: 0),
             ]),
             CategoryDraft(name: "Growth", weightPercentText: "30", tickers: [
-                TickerDraft(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 0),
+                TickerDraft(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), bandPosition: Decimal(string: "0.5"), sortOrder: 0),
             ]),
         ])
 
@@ -107,20 +107,23 @@ final class NavigationShellTests: XCTestCase {
             symbol: "vti",
             currentPrice: Decimal(string: "250.5"),
             movingAverage: Decimal(string: "245"),
+            bandPosition: Decimal(string: "0.4"),
             sortOrder: 0
         )
 
         XCTAssertEqual(ticker.currentPriceText, "250.50")
         XCTAssertEqual(ticker.movingAverageText, "245.00")
+        XCTAssertEqual(ticker.bandPositionText, "0.40")
         XCTAssertEqual(ticker.currentPrice, Decimal(string: "250.50"))
         XCTAssertEqual(ticker.movingAverage, Decimal(245))
+        XCTAssertEqual(ticker.bandPosition, Decimal(string: "0.40"))
         XCTAssertTrue(ticker.hasCompleteMarketData)
         XCTAssertFalse(ticker.hasInvalidMarketData)
 
         ticker.currentPriceText = "0"
         XCTAssertTrue(ticker.hasInvalidMarketData)
         XCTAssertFalse(ticker.hasCompleteMarketData)
-        XCTAssertEqual(ticker.marketDataStatusMessage, "Price and moving average must be greater than 0.")
+        XCTAssertEqual(ticker.marketDataStatusMessage, "Price must be greater than 0 and band position must be numeric.")
     }
 
     func testHoldingsDraftBlocksCalculationForMissingOrInvalidMarketData() {
@@ -136,7 +139,7 @@ final class NavigationShellTests: XCTestCase {
 
         var invalidTicker = TickerDraft(symbol: "BND", sortOrder: 0)
         invalidTicker.currentPriceText = "-1"
-        invalidTicker.movingAverageText = "74"
+        invalidTicker.bandPositionText = "0.4"
         let invalidMarketDataDraft = HoldingsDraft(categories: [
             CategoryDraft(name: "Bonds", weightPercentText: "100", tickers: [invalidTicker]),
         ])

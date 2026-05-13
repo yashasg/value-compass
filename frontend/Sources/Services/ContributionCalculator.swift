@@ -8,15 +8,21 @@ struct ContributionInput {
     let portfolio: Portfolio?
     let monthlyBudget: Decimal
     let marketDataSnapshot: MarketDataSnapshot
+    let minMultiplier: Decimal
+    let maxMultiplier: Decimal
 
     init(
         portfolio: Portfolio?,
         monthlyBudget: Decimal? = nil,
-        marketDataSnapshot: MarketDataSnapshot? = nil
+        marketDataSnapshot: MarketDataSnapshot? = nil,
+        minMultiplier: Decimal = Decimal(string: "0.5")!,
+        maxMultiplier: Decimal = Decimal(string: "1.5")!
     ) {
         self.portfolio = portfolio
         self.monthlyBudget = monthlyBudget ?? portfolio?.monthlyBudget ?? 0
         self.marketDataSnapshot = marketDataSnapshot ?? MarketDataSnapshot(portfolio: portfolio)
+        self.minMultiplier = minMultiplier
+        self.maxMultiplier = maxMultiplier
     }
 }
 
@@ -40,7 +46,8 @@ struct MarketDataSnapshot: Equatable {
             }
             quotesBySymbol[symbol] = MarketDataQuote(
                 currentPrice: ticker.currentPrice,
-                movingAverage: ticker.movingAverage
+                movingAverage: ticker.movingAverage,
+                bandPosition: ticker.bandPosition
             )
         }
         self.init(quotesBySymbol: quotesBySymbol)
@@ -58,6 +65,17 @@ struct MarketDataSnapshot: Equatable {
 struct MarketDataQuote: Equatable {
     let currentPrice: Decimal?
     let movingAverage: Decimal?
+    let bandPosition: Decimal?
+
+    init(
+        currentPrice: Decimal?,
+        movingAverage: Decimal?,
+        bandPosition: Decimal? = nil
+    ) {
+        self.currentPrice = currentPrice
+        self.movingAverage = movingAverage
+        self.bandPosition = bandPosition
+    }
 }
 
 struct ContributionOutput {
@@ -103,6 +121,7 @@ enum ContributionCalculationError: LocalizedError, Equatable {
     case categoryWeightsDoNotSumTo100
     case categoryHasNoTickers(String)
     case missingMarketData(String)
+    case missingBandPosition(String)
     case invalidMarketData(String)
     case negativeAllocation(String)
     case outputTotalMismatch(expected: Decimal, actual: Decimal)
@@ -121,7 +140,9 @@ enum ContributionCalculationError: LocalizedError, Equatable {
         case .categoryHasNoTickers(let categoryName):
             return "\(categoryName) has no tickers."
         case .missingMarketData(let symbol):
-            return "\(symbol) is missing current price or moving average."
+            return "\(symbol) is missing current price."
+        case .missingBandPosition(let symbol):
+            return "\(symbol) is missing band position."
         case .invalidMarketData(let symbol):
             return "\(symbol) market data must be greater than 0."
         case .negativeAllocation(let symbol):
@@ -137,7 +158,7 @@ enum ContributionCalculationError: LocalizedError, Equatable {
 enum ContributionCalculationService {
     static func calculate(
         portfolio: Portfolio?,
-        calculator: any ContributionCalculating = ProportionalSplitContributionCalculator()
+        calculator: any ContributionCalculating = BandAdjustedContributionCalculator()
     ) -> ContributionOutput {
         let input = ContributionInput(portfolio: portfolio)
         if let validationError = ContributionInputValidator.validate(input) {
@@ -186,13 +207,12 @@ enum ContributionInputValidator {
                 let symbol = ticker.normalizedSymbol
                 guard
                     let quote = input.marketDataSnapshot.quote(for: symbol),
-                    let currentPrice = quote.currentPrice,
-                    let movingAverage = quote.movingAverage
+                    let currentPrice = quote.currentPrice
                 else {
                     return .missingMarketData(symbol)
                 }
 
-                guard currentPrice > 0, movingAverage > 0 else {
+                guard currentPrice > 0 else {
                     return .invalidMarketData(symbol)
                 }
             }
@@ -208,17 +228,109 @@ enum ContributionOutputValidator {
             return .negativeAllocation(allocation.tickerSymbol)
         }
 
-        let tolerance = Decimal(string: "0.01")!
-        guard abs(output.totalAmount - expectedTotal) <= tolerance else {
-            return .outputTotalMismatch(expected: expectedTotal, actual: output.totalAmount)
-        }
-
         let actualTotal = output.allocations.reduce(Decimal(0)) { $0 + $1.amount }
-        guard abs(actualTotal - expectedTotal) <= tolerance else {
-            return .allocationTotalMismatch(expected: expectedTotal, actual: actualTotal)
+        let tolerance = Decimal(string: "0.01")!
+        guard abs(actualTotal - output.totalAmount) <= tolerance else {
+            return .allocationTotalMismatch(expected: output.totalAmount, actual: actualTotal)
         }
 
         return nil
+    }
+
+}
+
+struct BandAdjustedContributionCalculator: ContributionCalculating {
+    func calculate(input: ContributionInput) -> ContributionOutput {
+        if let validationError = ContributionInputValidator.validate(input) {
+            return .failure(validationError)
+        }
+
+        guard let portfolio = input.portfolio else {
+            return .failure(ContributionCalculationError.missingPortfolio)
+        }
+
+        let categories = portfolio.categories.sorted { $0.sortOrder < $1.sortOrder }
+        let categoryTargets = split(input.monthlyBudget, across: categories.map(\.weight))
+        var categoryResults: [CategoryContributionResult] = []
+        var allocations: [TickerContributionAllocation] = []
+
+        for (category, categoryTarget) in zip(categories, categoryTargets) {
+            let tickers = category.tickers.sorted { $0.sortOrder < $1.sortOrder }
+            let tickerTargets = splitEvenly(categoryTarget, count: tickers.count)
+            var categoryAmount = Decimal(0)
+            var categoryAllocations: [TickerContributionAllocation] = []
+
+            for (ticker, targetAmount) in zip(tickers, tickerTargets) {
+                let symbol = ticker.normalizedSymbol
+                guard let position = input.marketDataSnapshot.quote(for: symbol)?.bandPosition else {
+                    return .failure(ContributionCalculationError.missingBandPosition(symbol))
+                }
+
+                let multiplier = clamp(
+                    1 + (Decimal(string: "0.5")! - position),
+                    min: input.minMultiplier,
+                    max: input.maxMultiplier
+                )
+                let amount = rounded(targetAmount * multiplier)
+                categoryAmount += amount
+                categoryAllocations.append(TickerContributionAllocation(
+                    tickerSymbol: symbol,
+                    categoryName: category.displayName,
+                    amount: amount,
+                    allocatedWeight: multiplier
+                ))
+            }
+
+            categoryResults.append(CategoryContributionResult(
+                categoryName: category.displayName,
+                amount: rounded(categoryAmount),
+                allocatedWeight: category.weight
+            ))
+            allocations.append(contentsOf: categoryAllocations)
+        }
+
+        return ContributionOutput(
+            totalAmount: allocations.reduce(Decimal(0)) { $0 + $1.amount },
+            categoryBreakdown: categoryResults,
+            allocations: allocations
+        )
+    }
+
+    private func split(_ total: Decimal, across weights: [Decimal]) -> [Decimal] {
+        var amounts = weights.map { rounded(total * $0) }
+        applyRemainder(total: total, to: &amounts)
+        return amounts
+    }
+
+    private func splitEvenly(_ total: Decimal, count: Int) -> [Decimal] {
+        guard count > 0 else {
+            return []
+        }
+
+        var amounts = Array(repeating: rounded(total / Decimal(count)), count: count)
+        applyRemainder(total: total, to: &amounts)
+        return amounts
+    }
+
+    private func applyRemainder(total: Decimal, to amounts: inout [Decimal]) {
+        guard let lastIndex = amounts.indices.last else {
+            return
+        }
+
+        let roundedTotal = rounded(total)
+        let currentTotal = amounts.reduce(Decimal(0), +)
+        amounts[lastIndex] = rounded(amounts[lastIndex] + roundedTotal - currentTotal)
+    }
+
+    private func rounded(_ value: Decimal, scale: Int = 2) -> Decimal {
+        var input = value
+        var output = Decimal()
+        NSDecimalRound(&output, &input, scale, .plain)
+        return output
+    }
+
+    private func clamp(_ value: Decimal, min: Decimal, max: Decimal) -> Decimal {
+        Swift.max(min, Swift.min(max, value))
     }
 }
 

@@ -141,6 +141,7 @@ final class Ticker {
     var symbol: String
     var currentPrice: Decimal?
     var movingAverage: Decimal?
+    var bandPosition: Decimal?
     var sortOrder: Int
     var category: Category?
 
@@ -149,6 +150,7 @@ final class Ticker {
         symbol: String,
         currentPrice: Decimal? = nil,
         movingAverage: Decimal? = nil,
+        bandPosition: Decimal? = nil,
         sortOrder: Int,
         category: Category? = nil
     ) {
@@ -156,6 +158,7 @@ final class Ticker {
         self.symbol = symbol
         self.currentPrice = currentPrice
         self.movingAverage = movingAverage
+        self.bandPosition = bandPosition
         self.sortOrder = sortOrder
         self.category = category
     }

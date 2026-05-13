@@ -134,6 +134,11 @@ class HoldingOut(BaseModel):
     current_price: float | None
     sma_50: float | None
     sma_200: float | None
+    midline: float | None
+    atr: float | None
+    upper_band: float | None
+    lower_band: float | None
+    band_position: float | None
 
 
 class PortfolioDataResponse(BaseModel):
@@ -225,6 +230,27 @@ def portfolio_data(
                 current_price=float(cache.current_price) if cache else None,
                 sma_50=float(cache.sma_50) if cache else None,
                 sma_200=float(cache.sma_200) if cache else None,
+                midline=(
+                    float(cache.midline)
+                    if cache and cache.midline is not None
+                    else None
+                ),
+                atr=float(cache.atr) if cache and cache.atr is not None else None,
+                upper_band=(
+                    float(cache.upper_band)
+                    if cache and cache.upper_band is not None
+                    else None
+                ),
+                lower_band=(
+                    float(cache.lower_band)
+                    if cache and cache.lower_band is not None
+                    else None
+                ),
+                band_position=(
+                    float(cache.band_position)
+                    if cache and cache.band_position is not None
+                    else None
+                ),
             )
         )
     return PortfolioDataResponse(

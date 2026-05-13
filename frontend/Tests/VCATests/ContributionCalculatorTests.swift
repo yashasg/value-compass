@@ -19,6 +19,35 @@ final class ContributionCalculatorTests: XCTestCase {
         ])
     }
 
+    func testBandAdjustedCalculatorAppliesClampedBandMultiplier() {
+        let portfolio = Portfolio(
+            name: "Bands",
+            monthlyBudget: Decimal(300),
+            categories: [
+                Category(name: "Equity", weight: 1, sortOrder: 0, tickers: [
+                    Ticker(symbol: "LOW", currentPrice: 100, movingAverage: 99, bandPosition: 0, sortOrder: 0),
+                    Ticker(symbol: "MID", currentPrice: 100, movingAverage: 99, bandPosition: Decimal(string: "0.5")!, sortOrder: 1),
+                    Ticker(symbol: "HIGH", currentPrice: 100, movingAverage: 99, bandPosition: 1, sortOrder: 2),
+                ]),
+            ]
+        )
+
+        let output = BandAdjustedContributionCalculator().calculate(input: ContributionInput(portfolio: portfolio))
+
+        XCTAssertNil(output.error)
+        XCTAssertEqual(output.totalAmount, Decimal(300))
+        XCTAssertEqual(output.allocations.map(\.amount), [
+            Decimal(150),
+            Decimal(100),
+            Decimal(50),
+        ])
+        XCTAssertEqual(output.allocations.map(\.allocatedWeight), [
+            Decimal(string: "1.5")!,
+            Decimal(1),
+            Decimal(string: "0.5")!,
+        ])
+    }
+
     func testProportionalSplitCalculatorRoundsToCentsAndPreservesBudgetTotal() {
         let portfolio = Portfolio(
             name: "Rounding",
@@ -127,7 +156,7 @@ final class ContributionCalculatorTests: XCTestCase {
             monthlyBudget: Decimal(100),
             categories: [
                 Category(name: "Equity", weight: 1, sortOrder: 0, tickers: [
-                    Ticker(symbol: "VTI", currentPrice: 1, movingAverage: nil, sortOrder: 0),
+                    Ticker(symbol: "VTI", currentPrice: nil, movingAverage: 1, sortOrder: 0),
                 ]),
             ]
         )
@@ -152,24 +181,8 @@ final class ContributionCalculatorTests: XCTestCase {
 
         XCTAssertEqual(negativeResult.error as? ContributionCalculationError, .negativeAllocation("VTI"))
 
-        let totalMismatchOutput = ContributionOutput(
-            totalAmount: Decimal(75),
-            allocations: [
-                TickerContributionAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(100), allocatedWeight: 1),
-            ]
-        )
-        let totalMismatchResult = ContributionCalculationService.calculate(
-            portfolio: portfolio,
-            calculator: SpyCalculator(output: totalMismatchOutput)
-        )
-
-        XCTAssertEqual(
-            totalMismatchResult.error as? ContributionCalculationError,
-            .outputTotalMismatch(expected: Decimal(100), actual: Decimal(75))
-        )
-
         let mismatchOutput = ContributionOutput(
-            totalAmount: Decimal(100),
+            totalAmount: Decimal(75),
             allocations: [
                 TickerContributionAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(50), allocatedWeight: 1),
             ]
@@ -181,7 +194,7 @@ final class ContributionCalculatorTests: XCTestCase {
 
         XCTAssertEqual(
             mismatchResult.error as? ContributionCalculationError,
-            .allocationTotalMismatch(expected: Decimal(100), actual: Decimal(50))
+            .allocationTotalMismatch(expected: Decimal(75), actual: Decimal(50))
         )
     }
 
@@ -191,11 +204,11 @@ final class ContributionCalculatorTests: XCTestCase {
             monthlyBudget: monthlyBudget,
             categories: [
                 Category(name: "Equity", weight: Decimal(string: "0.60")!, sortOrder: 0, tickers: [
-                    Ticker(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 0),
-                    Ticker(symbol: "VXUS", currentPrice: Decimal(60), movingAverage: Decimal(58), sortOrder: 1),
+                    Ticker(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), bandPosition: Decimal(string: "0.5")!, sortOrder: 0),
+                    Ticker(symbol: "VXUS", currentPrice: Decimal(60), movingAverage: Decimal(58), bandPosition: Decimal(string: "0.5")!, sortOrder: 1),
                 ]),
                 Category(name: "Bonds", weight: Decimal(string: "0.40")!, sortOrder: 1, tickers: [
-                    Ticker(symbol: "BND", currentPrice: Decimal(75), movingAverage: Decimal(74), sortOrder: 0),
+                    Ticker(symbol: "BND", currentPrice: Decimal(75), movingAverage: Decimal(74), bandPosition: Decimal(string: "0.5")!, sortOrder: 0),
                 ]),
             ]
         )

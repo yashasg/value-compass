@@ -1,11 +1,8 @@
 """Polygon.io client for the poller and the API's new-ticker background task.
 
-This is a *thin* client — only the two endpoints listed in the spec:
-
-* The aggregate snapshot endpoint, used to fetch the current price for
-  every tracked ticker in **one** request.
-* The SMA endpoint, called once per ticker (rate-limited to 5 req/min
-  on the free tier — the limiter lives here).
+This is a *thin* client for Polygon's daily aggregate endpoint. The poller
+derives the VCA midline, ATR, bands, and current band position locally from
+the most recent 22 daily OHLC bars.
 
 Network calls go through ``httpx.AsyncClient`` so the same code can be
 awaited from FastAPI's ``BackgroundTasks`` or from the synchronous
@@ -16,8 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Iterable
-from datetime import UTC, datetime, timedelta
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import httpx
@@ -30,90 +27,127 @@ log = logging.getLogger("vca.polygon")
 
 _BASE_URL = "https://api.polygon.io"
 
-# 5 requests / minute → 12 s between SMA calls.
+# 5 requests / minute → 12 s between aggregate calls.
 _SMA_DELAY_SEC = 60.0 / config.POLYGON_SMA_REQUESTS_PER_MIN
+_BAND_WINDOW = 21
+_AGG_LOOKBACK_DAYS = 30
+_BAND_SHIFT = Decimal("2.23")
 
 
 class PolygonError(RuntimeError):
     """Raised when Polygon returns a non-2xx response or malformed body."""
 
 
-async def fetch_snapshot_prices(
-    tickers: Iterable[str], client: httpx.AsyncClient
-) -> dict[str, Decimal]:
-    """Fetch the current price for every ticker in one request.
+@dataclass(frozen=True)
+class BandMetrics:
+    """OHLC-derived metrics cached for one ticker."""
 
-    Maps to Polygon's ``/v2/snapshot/locale/us/markets/stocks/tickers``
-    endpoint. Returns ``{ticker: price}``; tickers Polygon does not
-    return are simply absent from the dict (the caller decides how to
-    treat that).
-    """
-    params = {
-        "tickers": ",".join(tickers),
-        "apiKey": config.POLYGON_API_KEY,
-    }
+    current_price: Decimal
+    midline: Decimal
+    atr: Decimal
+    upper_band: Decimal
+    lower_band: Decimal
+    band_position: Decimal
+
+
+@dataclass(frozen=True)
+class DailyBar:
+    """One daily OHLC aggregate bar from Polygon."""
+
+    timestamp: int
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+
+
+async def fetch_band_metrics(
+    ticker: str, client: httpx.AsyncClient, today: date | None = None
+) -> BandMetrics:
+    """Fetch daily OHLC bars and compute VCA band metrics for ``ticker``."""
+    today = today or datetime.now(UTC).date()
+    from_date = today - timedelta(days=_AGG_LOOKBACK_DAYS)
     resp = await client.get(
-        f"{_BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers",
-        params=params,
+        f"{_BASE_URL}/v2/aggs/ticker/{ticker}/range/1/day/{from_date}/{today}",
+        params={"adjusted": "true", "sort": "asc", "apiKey": config.POLYGON_API_KEY},
         timeout=30.0,
     )
     if resp.status_code != 200:
-        raise PolygonError(f"snapshot HTTP {resp.status_code}: {resp.text}")
-    body = resp.json()
-    out: dict[str, Decimal] = {}
-    for entry in body.get("tickers", []):
-        ticker = entry.get("ticker")
-        # Prefer the previous day close for after-hours runs — matches the
-        # spec's 5 PM ET schedule, where regular-session prices are final.
-        price = (
-            entry.get("day", {}).get("c")
-            or entry.get("prevDay", {}).get("c")
-            or entry.get("lastTrade", {}).get("p")
-        )
-        if ticker and price is not None:
-            out[ticker] = Decimal(str(price))
-    return out
+        raise PolygonError(f"aggs {ticker} HTTP {resp.status_code}: {resp.text}")
+
+    return compute_band_metrics(_parse_daily_bars(resp.json(), ticker), ticker)
 
 
-async def fetch_sma(
-    ticker: str, window: int, client: httpx.AsyncClient
-) -> Decimal:
-    """Fetch the latest simple moving average for ``ticker``.
-
-    Maps to ``/v1/indicators/sma/{ticker}``.
-    """
-    params = {
-        "timespan": "day",
-        "window": window,
-        "series_type": "close",
-        "order": "desc",
-        "limit": 1,
-        "apiKey": config.POLYGON_API_KEY,
-    }
-    resp = await client.get(
-        f"{_BASE_URL}/v1/indicators/sma/{ticker}",
-        params=params,
-        timeout=30.0,
-    )
-    if resp.status_code != 200:
-        raise PolygonError(f"SMA {ticker}/{window} HTTP {resp.status_code}")
-    body = resp.json()
-    values = body.get("results", {}).get("values") or []
-    if not values:
-        raise PolygonError(f"SMA {ticker}/{window} returned no values")
-    return Decimal(str(values[0]["value"]))
-
-
-async def fetch_smas_rate_limited(
-    tickers: list[str], window: int, client: httpx.AsyncClient
-) -> dict[str, Decimal]:
-    """Fetch SMAs for many tickers, sleeping to respect 5 req/min."""
-    out: dict[str, Decimal] = {}
+async def fetch_band_metrics_rate_limited(
+    tickers: list[str], client: httpx.AsyncClient, today: date | None = None
+) -> dict[str, BandMetrics]:
+    """Fetch band metrics for many tickers, sleeping to respect rate limits."""
+    out: dict[str, BandMetrics] = {}
     for i, ticker in enumerate(tickers):
         if i > 0:
             await asyncio.sleep(_SMA_DELAY_SEC)
-        out[ticker] = await fetch_sma(ticker, window, client)
+        out[ticker] = await fetch_band_metrics(ticker, client, today=today)
     return out
+
+
+def compute_band_metrics(bars: list[DailyBar], ticker: str) -> BandMetrics:
+    """Compute midline, ATR, and band position from ascending OHLC bars."""
+    recent_bars = sorted(bars, key=lambda bar: bar.timestamp)[-_BAND_WINDOW - 1 :]
+    if len(recent_bars) < _BAND_WINDOW + 1:
+        raise PolygonError(
+            f"aggs {ticker} returned {len(recent_bars)} bars; need 22"
+        )
+
+    closes = [bar.close for bar in recent_bars]
+    midline = sum(closes[1:], Decimal(0)) / Decimal(_BAND_WINDOW)
+    true_ranges = []
+    for index in range(1, len(recent_bars)):
+        bar = recent_bars[index]
+        previous_close = recent_bars[index - 1].close
+        true_ranges.append(
+            max(
+                bar.high - bar.low,
+                abs(bar.high - previous_close),
+                abs(bar.low - previous_close),
+            )
+        )
+
+    atr = sum(true_ranges, Decimal(0)) / Decimal(_BAND_WINDOW)
+    upper_band = midline + (_BAND_SHIFT * atr)
+    lower_band = midline - (_BAND_SHIFT * atr)
+    width = upper_band - lower_band
+    if width <= 0:
+        raise PolygonError(f"aggs {ticker} produced invalid band width")
+
+    current_price = closes[-1]
+    band_position = (current_price - lower_band) / width
+    return BandMetrics(
+        current_price=current_price,
+        midline=midline,
+        atr=atr,
+        upper_band=upper_band,
+        lower_band=lower_band,
+        band_position=band_position,
+    )
+
+
+def _parse_daily_bars(body: dict, ticker: str) -> list[DailyBar]:
+    results = body.get("results") or []
+    bars: list[DailyBar] = []
+    for raw in results:
+        try:
+            bars.append(
+                DailyBar(
+                    timestamp=int(raw["t"]),
+                    open=Decimal(str(raw["o"])),
+                    high=Decimal(str(raw["h"])),
+                    low=Decimal(str(raw["l"])),
+                    close=Decimal(str(raw["c"])),
+                )
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PolygonError(f"aggs {ticker} returned malformed bar") from exc
+    return bars
 
 
 async def fetch_and_cache_ticker(ticker: str) -> None:
@@ -122,12 +156,7 @@ async def fetch_and_cache_ticker(ticker: str) -> None:
     upsert it into ``stock_cache`` with ``job_status = 'success'``.
     """
     async with httpx.AsyncClient() as client:
-        prices = await fetch_snapshot_prices([ticker], client)
-        if ticker not in prices:
-            raise PolygonError(f"snapshot did not return {ticker}")
-        sma_50 = await fetch_sma(ticker, 50, client)
-        await asyncio.sleep(_SMA_DELAY_SEC)
-        sma_200 = await fetch_sma(ticker, 200, client)
+        metrics = await fetch_band_metrics(ticker, client)
 
     now = datetime.now(UTC)
     with common_db.get_session() as session:
@@ -136,18 +165,28 @@ async def fetch_and_cache_ticker(ticker: str) -> None:
             session.add(
                 StockCache(
                     ticker=ticker,
-                    current_price=prices[ticker],
-                    sma_50=sma_50,
-                    sma_200=sma_200,
+                    current_price=metrics.current_price,
+                    sma_50=metrics.midline,
+                    sma_200=metrics.midline,
+                    midline=metrics.midline,
+                    atr=metrics.atr,
+                    upper_band=metrics.upper_band,
+                    lower_band=metrics.lower_band,
+                    band_position=metrics.band_position,
                     last_modified=now,
                     next_modified=now + timedelta(hours=24),
                     job_status="success",
                 )
             )
         else:
-            existing.current_price = prices[ticker]
-            existing.sma_50 = sma_50
-            existing.sma_200 = sma_200
+            existing.current_price = metrics.current_price
+            existing.sma_50 = metrics.midline
+            existing.sma_200 = metrics.midline
+            existing.midline = metrics.midline
+            existing.atr = metrics.atr
+            existing.upper_band = metrics.upper_band
+            existing.lower_band = metrics.lower_band
+            existing.band_position = metrics.band_position
             existing.last_modified = now
             existing.next_modified = now + timedelta(hours=24)
             existing.job_status = "success"
