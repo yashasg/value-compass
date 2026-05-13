@@ -394,11 +394,7 @@ struct PortfolioDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 summarySection
-                placeholderSection(
-                    title: "Holdings Editor",
-                    systemImage: "list.bullet.rectangle",
-                    message: "Category and ticker editing lands in the next MVP slice."
-                )
+                holdingsSection
                 placeholderSection(
                     title: "Calculate",
                     systemImage: "function",
@@ -420,6 +416,62 @@ struct PortfolioDetailView: View {
             LabeledContent("Monthly Budget", value: "$\(PortfolioFormDraft.displayText(for: portfolio.monthlyBudget))")
             LabeledContent("Moving Average", value: "\(portfolio.maWindow) days")
             LabeledContent("Categories", value: "\(portfolio.categories.count)")
+        }
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var holdingsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Holdings")
+                    .font(.title2.bold())
+
+                Spacer()
+
+                NavigationLink {
+                    HoldingsEditorView(portfolio: portfolio)
+                } label: {
+                    Label("Edit Holdings", systemImage: "list.bullet.rectangle")
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("portfolio.detail.editHoldings")
+            }
+
+            let draft = HoldingsDraft(portfolio: portfolio)
+            if draft.categories.isEmpty {
+                Text("No categories yet. Add categories and tickers before calculating.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(draft.categories) { category in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(category.displayName)
+                                .font(.headline)
+                            Spacer()
+                            Text("\(category.weightPercentText)%")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if category.tickers.isEmpty {
+                            Label("Warning: no tickers", systemImage: "exclamationmark.circle")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                                .accessibilityIdentifier("portfolio.detail.holdings.warning")
+                        } else {
+                            Text(category.tickers.map(\.normalizedSymbol).joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if !draft.canCalculate() {
+                    Label("Warnings must be resolved before calculating.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("portfolio.detail.calculateBlocked")
+                }
+            }
         }
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))

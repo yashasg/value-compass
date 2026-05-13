@@ -91,6 +91,66 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.categories.flatMap(\.tickers).first { $0.symbol == "VTI" }?.parentCategory?.name, "Equity")
     }
 
+    func testHoldingsDraftAppliesCategoriesTickersAndSortOrderToSwiftData() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolio = Portfolio(name: "Editable", monthlyBudget: Decimal(1_000))
+        context.insert(portfolio)
+
+        let equityID = UUID()
+        let bondsID = UUID()
+        let vtiID = UUID()
+        let bndID = UUID()
+        let draft = HoldingsDraft(categories: [
+            CategoryDraft(id: equityID, name: "Equity", weightPercentText: "70", sortOrder: 0, tickers: [
+                TickerDraft(id: vtiID, symbol: " vti ", sortOrder: 0),
+            ]),
+            CategoryDraft(id: bondsID, name: "Bonds", weightPercentText: "30", sortOrder: 1, tickers: [
+                TickerDraft(id: bndID, symbol: "bnd", sortOrder: 0),
+            ]),
+        ])
+
+        try draft.apply(to: portfolio, in: context)
+
+        let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Portfolio>()).first)
+        let categories = fetched.categories.sorted { $0.sortOrder < $1.sortOrder }
+        XCTAssertEqual(categories.map(\.id), [equityID, bondsID])
+        XCTAssertEqual(categories.map(\.weight), [Decimal(string: "0.7"), Decimal(string: "0.3")])
+        XCTAssertEqual(categories[0].tickers.map(\.symbol), ["VTI"])
+        XCTAssertEqual(categories[1].tickers.map(\.symbol), ["BND"])
+    }
+
+    func testHoldingsDraftDeletesRemovedCategoriesAndTickers() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let equity = Category(name: "Equity", weight: Decimal(string: "0.70")!, sortOrder: 0, tickers: [
+            Ticker(symbol: "VTI", sortOrder: 0),
+            Ticker(symbol: "VXUS", sortOrder: 1),
+        ])
+        let bonds = Category(name: "Bonds", weight: Decimal(string: "0.30")!, sortOrder: 1, tickers: [
+            Ticker(symbol: "BND", sortOrder: 0),
+        ])
+        let portfolio = Portfolio(name: "Editable", monthlyBudget: Decimal(1_000), categories: [equity, bonds])
+        context.insert(portfolio)
+        try context.save()
+
+        let draft = HoldingsDraft(categories: [
+            CategoryDraft(id: equity.id, name: "Stocks", weightPercentText: "100", sortOrder: 0, tickers: [
+                TickerDraft(id: equity.tickers[0].id, symbol: "VOO", sortOrder: 0),
+            ]),
+        ])
+
+        try draft.apply(to: portfolio, in: context)
+
+        let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Portfolio>()).first)
+        XCTAssertEqual(fetched.categories.count, 1)
+        XCTAssertEqual(fetched.categories[0].name, "Stocks")
+        XCTAssertEqual(fetched.categories[0].tickers.count, 1)
+        XCTAssertEqual(fetched.categories[0].tickers[0].symbol, "VOO")
+        XCTAssertEqual(try context.fetch(FetchDescriptor<VCA.Category>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<VCA.Ticker>()).count, 1)
+    }
+
     func testPortfolioDeleteRemovesSavedPortfolio() throws {
         let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
         let context = ModelContext(container)
