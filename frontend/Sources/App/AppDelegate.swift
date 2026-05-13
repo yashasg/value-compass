@@ -8,8 +8,8 @@ import Foundation
   /// `PushNotificationManager`.
   final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
-      _ application: UIApplication,
-      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+      _: UIApplication,
+      didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
     )
       -> Bool
     {
@@ -20,7 +20,7 @@ import Foundation
     }
 
     func application(
-      _ application: UIApplication,
+      _: UIApplication,
       didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
       Task { @MainActor in
@@ -29,8 +29,8 @@ import Foundation
     }
 
     func application(
-      _ application: UIApplication,
-      didFailToRegisterForRemoteNotificationsWithError error: Error
+      _: UIApplication,
+      didFailToRegisterForRemoteNotificationsWithError _: Error
     ) {
       // Notifications are optional; failure here is non-fatal.
     }

@@ -153,6 +153,8 @@ run_swift_format_lint() {
     paths+=("$FRONTEND_DIR/Tests")
   fi
 
+  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required for Swift style lint. Install a recent Xcode toolchain or set RUN_SWIFT_FORMAT_LINT=false."
+
   printf '\n==> lint Swift format\n'
   xcrun swift-format lint \
     --recursive \

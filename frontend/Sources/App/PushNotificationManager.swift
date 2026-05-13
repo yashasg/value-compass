@@ -48,8 +48,8 @@ final class PushNotificationManager: NSObject, ObservableObject {
 extension PushNotificationManager: UNUserNotificationCenterDelegate {
   /// Show notifications even when the app is in the foreground.
   func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    willPresent notification: UNNotification
+    _: UNUserNotificationCenter,
+    willPresent _: UNNotification
   ) async
     -> UNNotificationPresentationOptions
   {
