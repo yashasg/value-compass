@@ -32,6 +32,24 @@ enum BackendSyncProjectionError: Error, Equatable {
 /// Maps the richer SwiftData model to the flat v1 backend schema described in
 /// docs/db-tech-spec.md and docs/services-tech-spec.md.
 enum BackendSyncProjection {
+  static func applyBackendMetadata(
+    _ backendPortfolio: BackendPortfolioPayload,
+    to portfolio: Portfolio
+  ) throws {
+    guard backendPortfolio.monthlyBudget > 0 else {
+      throw BackendSyncProjectionError.nonPositiveBudget
+    }
+
+    guard Portfolio.allowedMAWindows.contains(backendPortfolio.maWindow) else {
+      throw BackendSyncProjectionError.invalidMAWindow(backendPortfolio.maWindow)
+    }
+
+    portfolio.name = backendPortfolio.name
+    portfolio.monthlyBudget = backendPortfolio.monthlyBudget
+    portfolio.maWindow = backendPortfolio.maWindow
+    portfolio.createdAt = backendPortfolio.createdAt
+  }
+
   static func makePayload(
     for portfolio: Portfolio,
     deviceUUID: UUID
@@ -40,7 +58,7 @@ enum BackendSyncProjection {
       throw BackendSyncProjectionError.nonPositiveBudget
     }
 
-    guard [50, 200].contains(portfolio.maWindow) else {
+    guard Portfolio.allowedMAWindows.contains(portfolio.maWindow) else {
       throw BackendSyncProjectionError.invalidMAWindow(portfolio.maWindow)
     }
 

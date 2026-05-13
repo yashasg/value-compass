@@ -103,6 +103,127 @@ final class BackendSyncProjectionTests: XCTestCase {
       ])
   }
 
+  func testBackendPayloadShapeOnlyContainsV1FlatSchemaFields() throws {
+    let portfolio = Portfolio(
+      name: "Flat contract",
+      monthlyBudget: Decimal(500),
+      categories: [
+        Category(
+          name: "Local Category Name",
+          weight: Decimal(string: "0.25")!,
+          sortOrder: 99,
+          tickers: [
+            Ticker(
+              symbol: "AAPL",
+              currentPrice: Decimal(string: "1234.5678"),
+              movingAverage: Decimal(string: "9876.5432"),
+              sortOrder: 42
+            )
+          ]
+        ),
+        Category(
+          name: "Second Local Category",
+          weight: Decimal(string: "0.75")!,
+          sortOrder: 100,
+          tickers: [
+            Ticker(symbol: "MSFT", sortOrder: 7)
+          ]
+        ),
+      ],
+      contributionRecords: [
+        ContributionRecord(
+          portfolioId: UUID(),
+          totalAmount: Decimal(string: "321.09")!,
+          breakdown: [
+            TickerAllocation(
+              tickerSymbol: "HISTORY_ONLY",
+              categoryName: "Historical Snapshot",
+              amount: Decimal(string: "321.09")!,
+              allocatedWeight: Decimal(string: "0.4321")!
+            )
+          ]
+        )
+      ]
+    )
+
+    let payload = try BackendSyncProjection.makePayload(for: portfolio, deviceUUID: UUID())
+
+    XCTAssertEqual(
+      fieldNames(in: payload.portfolio),
+      ["createdAt", "deviceUUID", "id", "maWindow", "monthlyBudget", "name"]
+    )
+    XCTAssertEqual(
+      fieldNames(in: try XCTUnwrap(payload.holdings.first)),
+      ["portfolioID", "ticker", "weight"]
+    )
+
+    let tokens = payloadTokens(payload)
+    for localOnlyToken in [
+      "categoryBreakdown",
+      "categoryName",
+      "contributionRecords",
+      "currentPrice",
+      "Historical Snapshot",
+      "HISTORY_ONLY",
+      "movingAverage",
+      "sortOrder",
+      "tickerAllocations",
+      "1234.5678",
+      "9876.5432",
+      "321.09",
+      "0.4321",
+    ] {
+      XCTAssertFalse(
+        tokens.contains(localOnlyToken),
+        "Backend payload leaked local-only token: \(localOnlyToken)"
+      )
+    }
+  }
+
+  func testApplyingBackendMetadataCannotOverwriteLocalCategoryGrouping() throws {
+    let originalCreatedAt = Date(timeIntervalSince1970: 100)
+    let portfolio = Portfolio(
+      name: "Local source of truth",
+      monthlyBudget: Decimal(800),
+      createdAt: originalCreatedAt,
+      categories: [
+        Category(
+          name: "Equity",
+          weight: Decimal(string: "0.60")!,
+          sortOrder: 1,
+          tickers: [
+            Ticker(symbol: "VTI", currentPrice: 250, movingAverage: 245, sortOrder: 1),
+            Ticker(symbol: "VXUS", currentPrice: 55, movingAverage: 53, sortOrder: 2),
+          ]
+        ),
+        Category(
+          name: "Bonds",
+          weight: Decimal(string: "0.40")!,
+          sortOrder: 2,
+          tickers: [
+            Ticker(symbol: "BND", currentPrice: 70, movingAverage: 71, sortOrder: 1)
+          ]
+        ),
+      ]
+    )
+    let originalGrouping = categoryGroupingSnapshot(portfolio)
+    let backendPortfolio = BackendPortfolioPayload(
+      id: portfolio.id,
+      deviceUUID: UUID(),
+      name: "Backend metadata",
+      monthlyBudget: Decimal(900),
+      maWindow: 200,
+      createdAt: Date(timeIntervalSince1970: 200)
+    )
+
+    try BackendSyncProjection.applyBackendMetadata(backendPortfolio, to: portfolio)
+
+    XCTAssertEqual(portfolio.name, "Backend metadata")
+    XCTAssertEqual(portfolio.monthlyBudget, Decimal(900))
+    XCTAssertEqual(portfolio.maWindow, 200)
+    XCTAssertEqual(categoryGroupingSnapshot(portfolio), originalGrouping)
+  }
+
   func testProjectionRejectsPositiveWeightEmptyCategoryInsteadOfCreatingInvalidHolding() {
     let portfolio = Portfolio(
       name: "Invalid for sync",
@@ -235,6 +356,58 @@ final class BackendSyncProjectionTests: XCTestCase {
         error as? BackendSyncProjectionError,
         .invalidHoldingWeight(ticker: "VTI", weight: Decimal(2))
       )
+    }
+  }
+
+  private func fieldNames(in value: Any) -> [String] {
+    Mirror(reflecting: value).children.compactMap(\.label).sorted()
+  }
+
+  private func payloadTokens(_ value: Any) -> Set<String> {
+    var tokens = Set<String>()
+
+    func visit(_ value: Any) {
+      if let decimal = value as? Decimal {
+        tokens.insert(NSDecimalNumber(decimal: decimal).stringValue)
+        return
+      }
+
+      if let string = value as? String {
+        tokens.insert(string)
+        return
+      }
+
+      let mirror = Mirror(reflecting: value)
+      guard let displayStyle = mirror.displayStyle else {
+        tokens.insert(String(describing: value))
+        return
+      }
+
+      switch displayStyle {
+      case .class, .collection, .dictionary, .optional, .set, .struct, .tuple:
+        for child in mirror.children {
+          if let label = child.label {
+            tokens.insert(label)
+          }
+          visit(child.value)
+        }
+      default:
+        tokens.insert(String(describing: value))
+      }
+    }
+
+    visit(value)
+    return tokens
+  }
+
+  private func categoryGroupingSnapshot(_ portfolio: Portfolio) -> [String] {
+    portfolio.categories.sorted { $0.sortOrder < $1.sortOrder }.map { category in
+      let tickers = category.tickers.sorted { $0.sortOrder < $1.sortOrder }
+        .map { ticker in
+          "\(ticker.normalizedSymbol):\(ticker.sortOrder)"
+        }
+        .joined(separator: ",")
+      return "\(category.name):\(category.id):\(category.weight):\(category.sortOrder):\(tickers)"
     }
   }
 }
