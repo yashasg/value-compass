@@ -18,11 +18,12 @@ DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
+RUN_SWIFT_FORMAT="${RUN_SWIFT_FORMAT:-true}" # true, false
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_SWIFT_FORMAT=true|false] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
@@ -138,6 +139,27 @@ should_run_analyze() {
   esac
 }
 
+should_run_swift_format() {
+  case "$RUN_SWIFT_FORMAT" in
+    true|1|yes) return 0 ;;
+    false|0|no) return 1 ;;
+    *) fail "Unknown RUN_SWIFT_FORMAT '$RUN_SWIFT_FORMAT'. Use true or false." ;;
+  esac
+}
+
+lint_swift_format() {
+  command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
+
+  printf '\n==> Linting Swift style\n'
+  xcrun swift-format lint \
+    --configuration "$REPO_ROOT/.swift-format" \
+    --recursive \
+    --parallel \
+    --strict \
+    "$FRONTEND_DIR/Sources" \
+    "$FRONTEND_DIR/Tests"
+}
+
 run_xcodebuild() {
   local action="$1"
   local device="$2"
@@ -201,6 +223,9 @@ fi
 
 require_xcode
 validate_project
+if should_run_swift_format; then
+  lint_swift_format
+fi
 
 case "$PLATFORM_MODE" in
   iphone|ipad) run_for_platform "$PLATFORM_MODE" ;;

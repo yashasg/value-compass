@@ -4,48 +4,49 @@ import SwiftUI
 /// app is below the minimum supported version. Blocks all further use until
 /// the user updates via the App Store.
 struct ForcedUpdateView: View {
-    let minimumVersion: String?
+  let minimumVersion: String?
 
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "arrow.up.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .foregroundStyle(.tint)
-                .accessibilityHidden(true)
+  var body: some View {
+    VStack(spacing: 24) {
+      Image(systemName: "arrow.up.circle.fill")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 96, height: 96)
+        .foregroundStyle(.tint)
+        .accessibilityHidden(true)
 
-            Text("Update Required")
-                .font(.largeTitle.bold())
+      Text("Update Required")
+        .font(.largeTitle.bold())
 
-            if let minimumVersion {
-                Text("\(AppBrand.displayName) \(minimumVersion) or later is required to continue.")
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("A newer version of \(AppBrand.displayName) is required to continue.")
-                    .multilineTextAlignment(.center)
-            }
+      if let minimumVersion {
+        Text("\(AppBrand.displayName) \(minimumVersion) or later is required to continue.")
+          .multilineTextAlignment(.center)
+      } else {
+        Text("A newer version of \(AppBrand.displayName) is required to continue.")
+          .multilineTextAlignment(.center)
+      }
 
-            // Open the App Store. Prefer an explicit App Store ID when one
-            // has been configured via Info.plist (`VCAAppStoreID`); otherwise
-            // fall back to a branded search so the link resolves to a valid page.
-            Link("Open App Store", destination: Self.appStoreURL)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-        }
-        .padding(32)
-        .frame(maxWidth: 640)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      // Open the App Store. Prefer an explicit App Store ID when one
+      // has been configured via Info.plist (`VCAAppStoreID`); otherwise
+      // fall back to a branded search so the link resolves to a valid page.
+      Link("Open App Store", destination: Self.appStoreURL)
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
     }
+    .padding(32)
+    .frame(maxWidth: 640)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
 
-    private static var appStoreURL: URL {
-        if let id = Bundle.main.object(forInfoDictionaryKey: "VCAAppStoreID") as? String,
-           !id.isEmpty,
-           let url = URL(string: "itms-apps://itunes.apple.com/app/id\(id)") {
-            return url
-        }
-        // Static, known-good URL literal. `URL(string:)` only returns nil
-        // for malformed strings; this one is well-formed.
-        return URL(string: "https://apps.apple.com/search?term=Investrum")!
+  private static var appStoreURL: URL {
+    if let id = Bundle.main.object(forInfoDictionaryKey: "VCAAppStoreID") as? String,
+      !id.isEmpty,
+      let url = URL(string: "itms-apps://itunes.apple.com/app/id\(id)")
+    {
+      return url
     }
+    // Static, known-good URL literal. `URL(string:)` only returns nil
+    // for malformed strings; this one is well-formed.
+    return URL(string: "https://apps.apple.com/search?term=Investrum")!
+  }
 }
