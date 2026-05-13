@@ -241,6 +241,111 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertTrue(try context.fetch(FetchDescriptor<TickerAllocation>()).isEmpty)
   }
 
+  func testOfflineWorkflowPersistsMultiplePortfoliosMarketDataAndIsolatedHistory() throws {
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = ModelContext(container)
+    let corePortfolio = Portfolio(name: "Core Offline", monthlyBudget: Decimal(1_000))
+    let incomePortfolio = Portfolio(name: "Income Offline", monthlyBudget: Decimal(500))
+    context.insert(corePortfolio)
+    context.insert(incomePortfolio)
+
+    try HoldingsDraft(categories: [
+      CategoryDraft(
+        name: "Equity", weightPercentText: "70", sortOrder: 0,
+        tickers: [
+          TickerDraft(
+            symbol: "vti", currentPrice: Decimal(250), movingAverage: Decimal(245),
+            bandPosition: Decimal(string: "0.3"), sortOrder: 0),
+          TickerDraft(
+            symbol: "vxus", currentPrice: Decimal(60), movingAverage: Decimal(58),
+            bandPosition: Decimal(string: "0.7"), sortOrder: 1),
+        ]),
+      CategoryDraft(
+        name: "Bonds", weightPercentText: "30", sortOrder: 1,
+        tickers: [
+          TickerDraft(
+            symbol: "bnd", currentPrice: Decimal(75), movingAverage: Decimal(74),
+            bandPosition: Decimal(string: "0.5"), sortOrder: 0)
+        ]),
+    ]).apply(to: corePortfolio, in: context)
+    try HoldingsDraft(categories: [
+      CategoryDraft(
+        name: "Dividend", weightPercentText: "100", sortOrder: 0,
+        tickers: [
+          TickerDraft(
+            symbol: "schd", currentPrice: Decimal(80), movingAverage: Decimal(79),
+            bandPosition: Decimal(string: "0.4"), sortOrder: 0)
+        ])
+    ]).apply(to: incomePortfolio, in: context)
+    try context.save()
+
+    let coreOutput = ContributionCalculationService.calculate(portfolio: corePortfolio)
+    let incomeOutput = ContributionCalculationService.calculate(portfolio: incomePortfolio)
+    XCTAssertNil(coreOutput.error)
+    XCTAssertNil(incomeOutput.error)
+    context.insert(
+      try ContributionRecord(
+        snapshotFor: corePortfolio, output: coreOutput, date: Date(timeIntervalSince1970: 10)))
+    context.insert(
+      try ContributionRecord(
+        snapshotFor: incomePortfolio, output: incomeOutput, date: Date(timeIntervalSince1970: 20)))
+    try context.save()
+
+    let coreDraft = HoldingsDraft(portfolio: corePortfolio)
+    var editedCoreDraft = coreDraft
+    editedCoreDraft.categories[0].name = "Global Equity"
+    try editedCoreDraft.apply(to: corePortfolio, in: context)
+    try context.save()
+
+    let invalidDraft = HoldingsDraft(categories: [
+      CategoryDraft(
+        name: "Cash", weightPercentText: "100", sortOrder: 0,
+        tickers: [
+          TickerDraft(symbol: "cash", currentPrice: nil, movingAverage: nil, sortOrder: 0)
+        ])
+    ])
+    try invalidDraft.apply(to: incomePortfolio, in: context)
+    try context.save()
+    XCTAssertEqual(
+      ContributionCalculationService.calculate(portfolio: incomePortfolio).error
+        as? ContributionCalculationError,
+      .missingMarketData("CASH"))
+
+    var retryDraft = HoldingsDraft(portfolio: incomePortfolio)
+    retryDraft.categories[0].tickers[0].currentPriceText = "1.00"
+    retryDraft.categories[0].tickers[0].movingAverageText = "1.00"
+    retryDraft.categories[0].tickers[0].bandPositionText = "0.50"
+    try retryDraft.apply(to: incomePortfolio, in: context)
+    let retryOutput = ContributionCalculationService.calculate(portfolio: incomePortfolio)
+    XCTAssertNil(retryOutput.error)
+    context.insert(
+      try ContributionRecord(
+        snapshotFor: incomePortfolio, output: retryOutput, date: Date(timeIntervalSince1970: 30)))
+    try context.save()
+
+    let portfolios = try context.fetch(FetchDescriptor<Portfolio>())
+    XCTAssertEqual(portfolios.count, 2)
+    XCTAssertEqual(
+      corePortfolio.categories
+        .first { $0.name == "Global Equity" }?
+        .tickers
+        .first { $0.normalizedSymbol == "VTI" }?
+        .currentPrice,
+      Decimal(250))
+
+    let records = try context.fetch(FetchDescriptor<ContributionRecord>())
+    let coreRecords = records.filter { $0.portfolioId == corePortfolio.id }
+    let incomeRecords = records.filter { $0.portfolioId == incomePortfolio.id }
+    XCTAssertEqual(coreRecords.count, 1)
+    XCTAssertEqual(incomeRecords.count, 2)
+    XCTAssertEqual(coreRecords.first?.totalAmount, Decimal(1_000))
+    XCTAssertEqual(incomeRecords.map(\.totalAmount).sorted(), [Decimal(500), Decimal(500)])
+    XCTAssertEqual(
+      coreRecords.first?.tickerAllocations.map(\.tickerSymbol).sorted(), ["BND", "VTI", "VXUS"])
+    XCTAssertEqual(
+      incomeRecords.flatMap(\.tickerAllocations).map(\.tickerSymbol).sorted(), ["CASH", "SCHD"])
+  }
+
   func testContributionRecordStoresImmutableSnapshotOffline() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
