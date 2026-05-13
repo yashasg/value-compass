@@ -46,3 +46,5 @@ frontend/Carthage/Build/
 frontend/*.profdata
 # Generated Swift module interfaces
 frontend/*.swiftinterface
+
+ecalidraw.log
