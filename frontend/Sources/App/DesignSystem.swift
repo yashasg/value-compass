@@ -20,6 +20,18 @@ enum AppColorToken: String, CaseIterable {
   var assetName: String { rawValue }
 }
 
+enum AppLayoutMetrics {
+  static let minimumTouchTarget: CGFloat = 44
+  static let sidebarMinWidth: CGFloat = 320
+  static let sidebarIdealWidth: CGFloat = 360
+  static let sidebarMaxWidth: CGFloat = 420
+  static let readableContentMaxWidth: CGFloat = 600
+  static let wideContentMaxWidth: CGFloat = 760
+  static let mainMargin: CGFloat = 24
+  static let gridGutter: CGFloat = 16
+  static let stackGap: CGFloat = 12
+}
+
 extension Color {
   static let appBackground = Color(AppColorToken.background.assetName)
   static let appSurface = Color(AppColorToken.surface.assetName)
@@ -36,4 +48,13 @@ extension Color {
   static let appContentPrimary = Color(AppColorToken.contentPrimary.assetName)
   static let appContentSecondary = Color(AppColorToken.contentSecondary.assetName)
   static let appContentTertiary = Color(AppColorToken.contentTertiary.assetName)
+}
+
+extension View {
+  func appMinimumTouchTarget() -> some View {
+    frame(
+      minWidth: AppLayoutMetrics.minimumTouchTarget,
+      minHeight: AppLayoutMetrics.minimumTouchTarget
+    )
+  }
 }

@@ -3,6 +3,14 @@ import XCTest
 @testable import VCA
 
 final class DesignSystemTests: XCTestCase {
+  func testAdaptiveLayoutMetricsMatchIPadContract() {
+    XCTAssertEqual(AppLayoutMetrics.minimumTouchTarget, 44)
+    XCTAssertGreaterThanOrEqual(AppLayoutMetrics.sidebarMinWidth, 320)
+    XCTAssertLessThanOrEqual(AppLayoutMetrics.readableContentMaxWidth, 600)
+    XCTAssertGreaterThan(AppLayoutMetrics.gridGutter, 0)
+    XCTAssertGreaterThan(AppLayoutMetrics.stackGap, 0)
+  }
+
   func testSemanticColorTokenCatalogMatchesDesignContract() {
     XCTAssertEqual(
       Set(AppColorToken.allCases.map(\.assetName)),
