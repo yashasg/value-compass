@@ -15,10 +15,11 @@ description: "My squad work loop"
 1. Validate the `frontend/build.sh` and `frontend/run.sh works`, if not make it a P0 and fix it
 1. If open GitHub issues exist, pick the highest-priority unblocked issue and make code changes in this cycle.
 2. For squad work, create branches as `users/squad/<issue_name_fix>`, commit and push changes, then open/update a PR linked with a closing keyword (for example `Closes #123`).
-3. Monitor CI/CD for squad PRs, fix failing checks, address comments, and squash merge to `main` when green so linked issues close with the merge.
-4. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
-5. Use the MVP milestone tag on new issues
-5. After completing work, output:
+3. **Before creating a PR, run `.github/scripts/validate-secrets.sh` to ensure no GitHub secrets are logged in CI/CD workflows.** Fail the PR if validation fails.
+4. Monitor CI/CD for squad PRs, fix failing checks, address comments, and squash merge to `main` when green so linked issues close with the merge.
+5. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
+6. Use the MVP milestone tag on new issues
+7. After completing work, output:
 	- blockers
 	- risky changes
 	- top 3 next actions
