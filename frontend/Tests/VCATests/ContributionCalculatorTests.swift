@@ -3,6 +3,62 @@ import XCTest
 @testable import VCA
 
 final class ContributionCalculatorTests: XCTestCase {
+  func testMovingAverageCalculatorTiltsTowardTickersBelowMovingAverage() {
+    let portfolio = Portfolio(
+      name: "Signals",
+      monthlyBudget: Decimal(300),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "UNDER", currentPrice: 80, movingAverage: 100, sortOrder: 0),
+            Ticker(symbol: "OVER", currentPrice: 125, movingAverage: 100, sortOrder: 1),
+          ])
+      ]
+    )
+
+    let output = MovingAverageContributionCalculator().calculate(
+      input: ContributionInput(portfolio: portfolio))
+
+    XCTAssertNil(output.error)
+    XCTAssertEqual(output.totalAmount, Decimal(300))
+    XCTAssertEqual(
+      output.allocations,
+      [
+        TickerContributionAllocation(
+          tickerSymbol: "UNDER", categoryName: "Equity",
+          amount: Decimal(string: "182.93")!, allocatedWeight: Decimal(string: "0.6098")!),
+        TickerContributionAllocation(
+          tickerSymbol: "OVER", categoryName: "Equity",
+          amount: Decimal(string: "117.07")!, allocatedWeight: Decimal(string: "0.3902")!),
+      ])
+  }
+
+  func testDefaultCalculationServiceUsesMovingAverageCalculator() {
+    let portfolio = Portfolio(
+      name: "Default",
+      monthlyBudget: Decimal(300),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "UNDER", currentPrice: 80, movingAverage: 100, sortOrder: 0),
+            Ticker(symbol: "OVER", currentPrice: 125, movingAverage: 100, sortOrder: 1),
+          ])
+      ]
+    )
+
+    let output = ContributionCalculationService.calculate(portfolio: portfolio)
+
+    XCTAssertNil(output.error)
+    XCTAssertEqual(
+      output.allocations.map(\.amount),
+      [
+        Decimal(string: "182.93")!,
+        Decimal(string: "117.07")!,
+      ])
+  }
+
   func testProportionalSplitCalculatorAllocatesByCategoryWeightThenEquallyByTicker() {
     let portfolio = makeValidPortfolio(monthlyBudget: Decimal(1_000))
     let output = ProportionalSplitContributionCalculator().calculate(
@@ -221,6 +277,24 @@ final class ContributionCalculatorTests: XCTestCase {
     XCTAssertEqual(
       ProportionalSplitContributionCalculator().calculate(
         input: ContributionInput(portfolio: missingMarketData)
+      ).error as? ContributionCalculationError,
+      .missingMarketData("VTI")
+    )
+
+    let missingMovingAverage = Portfolio(
+      name: "Missing MA",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "VTI", currentPrice: 1, movingAverage: nil, sortOrder: 0)
+          ])
+      ]
+    )
+    XCTAssertEqual(
+      ProportionalSplitContributionCalculator().calculate(
+        input: ContributionInput(portfolio: missingMovingAverage)
       ).error as? ContributionCalculationError,
       .missingMarketData("VTI")
     )

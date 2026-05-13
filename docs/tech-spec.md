@@ -25,7 +25,7 @@ plugs into.
 
 | # | Non-Goal | Rationale |
 |---|----------|-----------|
-| 1 | Implement the VCA/moving-average algorithm | User-owned; we define the seam only |
+| 1 | Live brokerage-grade allocation strategy tuning | MVP ships a deterministic moving-average signal; strategy iteration remains user-owned |
 | 2 | Live market data | Stub/manual values; backend poller comes later |
 | 3 | Backend sync / Supabase | Local-first; backend scaffolding exists but is not wired |
 | 4 | Per-ticker weight customization | Equal split within category for v1 |
@@ -180,8 +180,10 @@ Contribution History
 
 ### 7.1 Contribution Calculator Protocol
 
-The algorithm is **not implemented by the team**. We define a Swift protocol and
-ship a placeholder implementation. The user provides the real implementation.
+The app owns the protocol seam and ships a deterministic moving-average VCA
+implementation. Category budgets are still governed by category weights; ticker
+allocations within each category tilt toward tickers whose current price is below
+their moving average.
 
 ```swift
 /// The single seam for the VCA algorithm.
@@ -205,10 +207,11 @@ enum CalculationError: Error {
 }
 ```
 
-**Placeholder behavior:** The stub implementation ignores moving averages and
-splits the budget proportionally by category weight, then equally among tickers
-within each category. This lets the full UI/UX flow work end-to-end before the
-real algorithm is plugged in.
+**Default behavior:** `MovingAverageContributionCalculator` computes each
+ticker's signal as `movingAverage / currentPrice`, normalizes those signals
+within the category, rounds allocations to cents, and assigns any remainder so
+the final allocations sum to the monthly budget. The proportional split
+calculator remains available as a test/stub implementation.
 
 ### 7.2 Market Data Provider Protocol
 
@@ -282,7 +285,7 @@ data and returns allocations. Rounding is handled by the app, not the algorithm.
 | Missing price/MA for any ticker | Alert listing missing tickers; [Calculate] disabled |
 | Empty portfolio (no categories) | Empty state with prompt to add a category |
 | Category with no tickers | Warning badge; excluded from calculation |
-| Algorithm throws `CalculationError` | Alert with error description |
+| Algorithm returns `ContributionCalculationError` | Alert with error description |
 | Algorithm returns amounts not summing to budget | App-side rounding correction; log warning |
 
 ---
@@ -323,7 +326,7 @@ sums to budget, no negative amounts, etc.).
 
 | # | Question | Status | Tracking |
 |---|----------|--------|----------|
-| 1 | User to provide `ContributionCalculating` implementation (real VCA algorithm) | **Blocked on user** | [Issue #15](https://github.com/yashasg/value-compass/issues/15) |
+| 1 | Strategy tuning beyond the deterministic moving-average signal | Deferred until post-MVP usage feedback | [Issue #15](https://github.com/yashasg/value-compass/issues/15) |
 | 2 | Should contribution history include a "notes" field for user annotations? | Open — not blocking v1, can add later | — |
 | 3 | When backend sync is built, will the `Category` concept be added to the backend schema or remain client-only? | Deferred to v2 planning | — |
 
