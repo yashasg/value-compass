@@ -17,6 +17,7 @@ PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
+VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
@@ -143,6 +144,7 @@ run_xcodebuild() {
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \
+    VCA_API_BASE_URL="$VCA_API_BASE_URL" \
     "$action"
 }
 

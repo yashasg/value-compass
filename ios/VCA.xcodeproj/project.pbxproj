@@ -31,6 +31,7 @@
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
 		C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F004 /* RootViewSmokeTests.swift */; };
 		C0000000000000000000B005 /* BackendSyncProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F005 /* BackendSyncProjectionTests.swift */; };
+		C0000000000000000000B006 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F006 /* APIClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,7 @@
 		A0000000000000000000A00A /* VCA.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VCA.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0000000000000000000A00A /* VCATests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VCATests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0000000000000000000F001 /* VCAApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCAApp.swift; sourceTree = "<group>"; };
+		A0000000000000000000F000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A0000000000000000000F002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A0000000000000000000F003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A0000000000000000000F004 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
@@ -71,6 +73,7 @@
 		C0000000000000000000F003 /* NavigationShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationShellTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F004 /* RootViewSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewSmokeTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F005 /* BackendSyncProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjectionTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F006 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,6 +117,7 @@
 		A0000000000000000000A004 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A0000000000000000000F000 /* Info.plist */,
 				A0000000000000000000F001 /* VCAApp.swift */,
 				A0000000000000000000F002 /* AppDelegate.swift */,
 				A0000000000000000000F003 /* AppState.swift */,
@@ -184,6 +188,7 @@
 				C0000000000000000000F003 /* NavigationShellTests.swift */,
 				C0000000000000000000F004 /* RootViewSmokeTests.swift */,
 				C0000000000000000000F005 /* BackendSyncProjectionTests.swift */,
+				C0000000000000000000F006 /* APIClientTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -317,6 +322,7 @@
 				C0000000000000000000B003 /* NavigationShellTests.swift in Sources */,
 				C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */,
 				C0000000000000000000B005 /* BackendSyncProjectionTests.swift in Sources */,
+				C0000000000000000000B006 /* APIClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,13 +402,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -425,13 +426,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
