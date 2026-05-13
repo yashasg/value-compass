@@ -67,10 +67,12 @@ can be tested end-to-end. The placeholder may allocate by category weight and
 equal ticker split, but it must not claim to implement the real VCA/moving-average
 algorithm.
 
-The current local band-adjusted implementation computes each ticker's raw
-multiplier as `1 + (0.5 - bandPosition)`. Because normalized band position is
-expected to sit in the `0...1` range, the default clamp bounds are `0.5` minimum
-and `1.5` maximum; out-of-range manual inputs are still clamped to those bounds.
+Current placeholder/local policy: the band-adjusted implementation computes
+each ticker's raw multiplier as `1 + (0.5 - bandPosition)`. Because normalized
+band position is expected to sit in the `0...1` range, the default clamp bounds
+are `0.5` minimum and `1.5` maximum; out-of-range manual inputs are still
+clamped to those bounds. These local policy values can change when the
+user-owned VCA algorithm is finalized.
 
 ### 3.2 `MarketDataProviding`
 
