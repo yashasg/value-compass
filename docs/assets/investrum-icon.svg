@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Investrum">
+  <title>Investrum</title>
+  <defs>
+    <!-- Subtle background sheen (top-left lighter, bottom darker) -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F1A38"/>
+      <stop offset="100%" stop-color="#070C1E"/>
+    </linearGradient>
+    <!-- Cyan-to-blue gradient for the mark -->
+    <linearGradient id="mark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5BE9FF"/>
+      <stop offset="55%"  stop-color="#1FB4FF"/>
+      <stop offset="100%" stop-color="#0A66FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded-square app icon background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="225" ry="225" fill="url(#bg)"/>
+
+  <!-- Logo mark: stylized "A" formed by an upward arrow and a smaller triangle -->
+  <g fill="url(#mark)">
+    <!-- Large upward arrow (head + shaft) -->
+    <path d="M 512 245
+             L 706 480
+             L 566 480
+             L 566 700
+             L 458 700
+             L 458 480
+             L 318 480 Z"/>
+    <!-- Smaller triangle to the right, forming the right leg of the 'A' -->
+    <polygon points="612,455 760,700 464,700"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="512" y="880"
+        text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-size="150"
+        font-weight="700"
+        letter-spacing="-2"
+        fill="#FFFFFF">Investrum</text>
+</svg>
