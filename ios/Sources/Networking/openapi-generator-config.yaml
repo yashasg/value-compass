@@ -1,0 +1,20 @@
+# SwiftOpenAPIGenerator configuration.
+#
+# Consumed by the `swift-openapi-generator` build plugin in the Xcode project
+# (the plugin is added as a Swift Package dependency:
+#   https://github.com/apple/swift-openapi-generator).
+#
+# The plugin reads `openapi.json` (a copy of the repo-root file, kept in sync
+# by CI) and emits Swift sources into the build directory. The generated
+# `Client` is wired to use `APIClient.shared.session` as its URLSession
+# transport — see `APIClient.swift`.
+#
+# Old app versions never break: every server-added field is optional in the
+# generated `Codable` types because SwiftOpenAPIGenerator emits non-required
+# schema properties as `Optional`.
+
+generate:
+  - types
+  - client
+accessModifier: internal
+namingStrategy: idiomatic

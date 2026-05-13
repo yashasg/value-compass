@@ -1,1 +1,461 @@
-{}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "vca-api",
+    "description": "value-compass FastAPI service. Reads from Postgres only; never calls Polygon directly except via the /portfolio/holdings background task for brand-new tickers.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Return 200 if the API process is up and Postgres is reachable.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schema/version": {
+      "get": {
+        "summary": "Schema Version",
+        "operationId": "schema_version_schema_version_get",
+        "parameters": [
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-App-Attest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/status": {
+      "get": {
+        "summary": "Portfolio Status",
+        "description": "Return the freshest ``last_modified`` / ``next_modified`` across\nthe cache. Lightweight and Cloudflare-cacheable.",
+        "operationId": "portfolio_status_portfolio_status_get",
+        "parameters": [
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-App-Attest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/data": {
+      "get": {
+        "summary": "Portfolio Data",
+        "description": "Return the full portfolio allocation for the calling device.\n\nOnly called by the iOS client on a cache miss.",
+        "operationId": "portfolio_data_portfolio_data_get",
+        "parameters": [
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-App-Attest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioDataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/holdings": {
+      "post": {
+        "summary": "Add Holding",
+        "description": "Add a holding to the calling device's portfolio.\n\nIf the ticker is not yet in ``stock_cache`` the request schedules an\nasyncio background task that fetches the ticker from Polygon and\npushes via APNs once the cache is populated. The response is\n``202 Accepted`` either way \u2014 the client shows a spinner until the\nAPNs push arrives.",
+        "operationId": "add_holding_portfolio_holdings_post",
+        "parameters": [
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-App-Attest"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddHoldingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddHoldingRequest": {
+        "properties": {
+          "device_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Device Uuid"
+          },
+          "ticker": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 1,
+            "title": "Ticker"
+          },
+          "weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_uuid",
+          "ticker",
+          "weight"
+        ],
+        "title": "AddHoldingRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          }
+        },
+        "type": "object",
+        "title": "HealthResponse"
+      },
+      "HoldingOut": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "current_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Price"
+          },
+          "sma_50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 50"
+          },
+          "sma_200": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 200"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "weight",
+          "current_price",
+          "sma_50",
+          "sma_200"
+        ],
+        "title": "HoldingOut"
+      },
+      "PortfolioDataResponse": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Portfolio Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monthly_budget": {
+            "type": "number",
+            "title": "Monthly Budget"
+          },
+          "ma_window": {
+            "type": "integer",
+            "title": "Ma Window"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingOut"
+            },
+            "type": "array",
+            "title": "Holdings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "name",
+          "monthly_budget",
+          "ma_window",
+          "holdings"
+        ],
+        "title": "PortfolioDataResponse"
+      },
+      "PortfolioStatusResponse": {
+        "properties": {
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified"
+          },
+          "next_modified": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "last_modified",
+          "next_modified"
+        ],
+        "title": "PortfolioStatusResponse"
+      },
+      "SchemaVersionResponse": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "SchemaVersionResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

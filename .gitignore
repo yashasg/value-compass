@@ -14,3 +14,35 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+# Squad: ignore runtime state (logs, inbox, sessions)
+.squad/orchestration-log/
+.squad/log/
+.squad/decisions/inbox/
+.squad/sessions/
+.squad/.scratch/
+# Squad: SubSquad activation file (local to this machine)
+.squad-workstream
+
+# Generated build artifacts
+build/
+
+# iOS / Xcode user-local files
+# Xcode .pbxuser, .perspectivev3 user-specific files
+frontend/*.pbxuser
+frontend/*.perspectivev3
+# Xcode xcuserdata (build settings, breakpoints, watchpoints)
+frontend/*.xcworkspace/xcuserdata/
+frontend/*.xcodeproj/xcuserdata/
+# Xcode .xcworkspace private data
+frontend/.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+# Xcode .xcworkspace index files
+frontend/.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+# CocoaPods (if used)
+frontend/Pods/
+frontend/Podfile.lock
+# Carthage (if used)
+frontend/Carthage/Build/
+# Xcode code coverage / profiling data
+frontend/*.profdata
+# Generated Swift module interfaces
+frontend/*.swiftinterface

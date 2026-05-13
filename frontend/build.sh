@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$FRONTEND_DIR/.." && pwd)"
+cd "$FRONTEND_DIR"
+
+PROJECT_PATH="${PROJECT_PATH:-VCA.xcodeproj}"
+WORKSPACE_PATH="${WORKSPACE_PATH:-}"
+SCHEME="${SCHEME:-VCA}"
+CONFIGURATION="${CONFIGURATION:-Debug}"
+IOS_VERSION="${IOS_VERSION:-26.4}"
+IPADOS_VERSION="${IPADOS_VERSION:-$IOS_VERSION}"
+IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 17}"
+IPAD_DEVICE="${IPAD_DEVICE:-iPad (A16)}"
+PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
+SDK="${SDK:-iphonesimulator}"
+
+usage() {
+  cat <<USAGE
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] ./build.sh
+
+Defaults:
+  CONFIGURATION=$CONFIGURATION
+  IOS_VERSION=$IOS_VERSION
+  IPADOS_VERSION=$IPADOS_VERSION
+  IPHONE_DEVICE=$IPHONE_DEVICE
+  IPAD_DEVICE=$IPAD_DEVICE
+
+This script builds and tests the iOS app on explicit simulator destinations.
+USAGE
+}
+
+fail() {
+  printf 'build.sh: %s\n' "$*" >&2
+  exit 1
+}
+
+require_xcode() {
+  command -v xcodebuild >/dev/null 2>&1 || fail "xcodebuild is required. Install Xcode and select it with xcode-select."
+  command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
+}
+
+validate_project() {
+  if [ -n "$WORKSPACE_PATH" ]; then
+    [ -d "$WORKSPACE_PATH" ] || fail "WORKSPACE_PATH '$WORKSPACE_PATH' does not exist. Set WORKSPACE_PATH to the .xcworkspace."
+    return
+  fi
+
+  [ -d "$PROJECT_PATH" ] || fail "PROJECT_PATH '$PROJECT_PATH' does not exist. Set PROJECT_PATH to the frontend app .xcodeproj."
+  [ -f "$PROJECT_PATH/project.pbxproj" ] || fail "PROJECT_PATH '$PROJECT_PATH' is missing project.pbxproj. Create/open the Xcode project, or set PROJECT_PATH/WORKSPACE_PATH to a valid frontend app project."
+}
+
+validate_runtime() {
+  local version="$1"
+  xcrun simctl list runtimes available | grep -F "iOS $version" >/dev/null 2>&1 || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
+}
+
+xcode_container_args() {
+  if [ -n "$WORKSPACE_PATH" ]; then
+    printf '%s\n' -workspace "$WORKSPACE_PATH"
+  else
+    printf '%s\n' -project "$PROJECT_PATH"
+  fi
+}
+
+run_xcodebuild() {
+  local action="$1"
+  local device="$2"
+  local os_version="$3"
+  local destination="platform=iOS Simulator,name=$device,OS=$os_version"
+
+  printf '\n==> %s %s for %s on %s %s\n' "$action" "$SCHEME" "$CONFIGURATION" "$device" "$os_version"
+  xcodebuild \
+    $(xcode_container_args) \
+    -scheme "$SCHEME" \
+    -configuration "$CONFIGURATION" \
+    -sdk "$SDK" \
+    -destination "$destination" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
+    CODE_SIGNING_ALLOWED=NO \
+    "$action"
+}
+
+run_for_platform() {
+  local kind="$1"
+  case "$kind" in
+    iphone)
+      validate_runtime "$IOS_VERSION"
+      run_xcodebuild build "$IPHONE_DEVICE" "$IOS_VERSION"
+      run_xcodebuild test "$IPHONE_DEVICE" "$IOS_VERSION"
+      ;;
+    ipad)
+      validate_runtime "$IPADOS_VERSION"
+      run_xcodebuild build "$IPAD_DEVICE" "$IPADOS_VERSION"
+      run_xcodebuild test "$IPAD_DEVICE" "$IPADOS_VERSION"
+      ;;
+    *) fail "Unknown platform '$kind'. Use PLATFORM_MODE=iphone, ipad, or both." ;;
+  esac
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+require_xcode
+validate_project
+
+case "$PLATFORM_MODE" in
+  iphone|ipad) run_for_platform "$PLATFORM_MODE" ;;
+  both) run_for_platform iphone; run_for_platform ipad ;;
+  *) fail "Unknown PLATFORM_MODE '$PLATFORM_MODE'. Use iphone, ipad, or both." ;;
+esac
