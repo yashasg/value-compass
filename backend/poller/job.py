@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
-from typing import Iterable
+from collections.abc import Iterable
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
 import httpx
 from sqlalchemy import select
@@ -45,9 +46,12 @@ def _tracked_tickers(session: Session) -> list[str]:
 
 
 def _next_run_after(now: datetime) -> datetime:
-    """A simple ``next_modified`` projection — 24 h ahead. The exact
+    """Return a simple ``next_modified`` projection 24 h ahead.
+
+    The exact
     next trigger is recomputed by APScheduler; ``next_modified`` is only
-    a hint surfaced to the iOS client for cache-window display."""
+    a hint surfaced to the iOS client for cache-window display.
+    """
     return now + timedelta(hours=24)
 
 
@@ -66,9 +70,9 @@ def _devices_holding(session: Session, tickers: Iterable[str]) -> list:
 
 
 async def _fetch_all(tickers: list[str]) -> tuple[
-    dict[str, "polygon.Decimal"],
-    dict[str, "polygon.Decimal"],
-    dict[str, "polygon.Decimal"],
+    dict[str, Decimal],
+    dict[str, Decimal],
+    dict[str, Decimal],
 ]:
     async with httpx.AsyncClient() as client:
         prices = await polygon.fetch_snapshot_prices(tickers, client)
@@ -83,7 +87,7 @@ def run_nightly_job(today: date | None = None) -> str:
     Returns one of ``"skipped"``, ``"success"``, or ``"failed"`` —
     handy for tests and for an external watchdog log scrape.
     """
-    today = today or datetime.now(timezone.utc).date()
+    today = today or datetime.now(UTC).date()
     if not is_trading_day(today):
         log.info("today (%s) is not a trading day — skipping job", today)
         return "skipped"
@@ -96,11 +100,16 @@ def run_nightly_job(today: date | None = None) -> str:
 
         try:
             prices, sma_50, sma_200 = asyncio.run(_fetch_all(tickers))
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             next_at = _next_run_after(now)
 
             for ticker in tickers:
-                if ticker not in prices or ticker not in sma_50 or ticker not in sma_200:
+                missing_market_data = (
+                    ticker not in prices
+                    or ticker not in sma_50
+                    or ticker not in sma_200
+                )
+                if missing_market_data:
                     raise polygon.PolygonError(
                         f"missing data for {ticker} after fetch"
                     )

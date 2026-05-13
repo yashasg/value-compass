@@ -8,13 +8,17 @@ on:
     paths:
       - "backend/**"
       - "alembic.ini"
+      - "docs/python/coding_standards.md"
       - ".github/workflows/backend-ci.yml"
+      - "pyproject.toml"
   push:
     branches: [main]
     paths:
       - "backend/**"
       - "alembic.ini"
+      - "docs/python/coding_standards.md"
       - ".github/workflows/backend-ci.yml"
+      - "pyproject.toml"
 
 permissions:
   contents: read
@@ -40,11 +44,16 @@ jobs:
       - name: Compile-check all Python sources
         run: python -m compileall -q backend
 
+      - name: Lint Python sources
+        run: |
+          pip install ruff==0.15.12
+          ruff check backend
+
       - name: Run tests (if any)
         run: |
           if [ -d backend/tests ] || find backend -name 'test_*.py' -print -quit | grep -q .; then
             pip install pytest
-            pytest backend
+            pytest -W error backend
           else
             echo "No tests yet — skipping pytest."
           fi

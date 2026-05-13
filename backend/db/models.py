@@ -28,6 +28,8 @@ class Base(DeclarativeBase):
 
 
 class Portfolio(Base):
+    """User-owned investment portfolio keyed by a device UUID."""
+
     __tablename__ = "portfolios"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -43,7 +45,7 @@ class Portfolio(Base):
         DateTime(timezone=True), nullable=False
     )
 
-    holdings: Mapped[list["Holding"]] = relationship(
+    holdings: Mapped[list[Holding]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
 
@@ -53,6 +55,8 @@ class Portfolio(Base):
 
 
 class Holding(Base):
+    """Ticker allocation within a portfolio."""
+
     __tablename__ = "holdings"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -71,6 +75,8 @@ class Holding(Base):
 
 
 class StockCache(Base):
+    """Cached market data for a ticker."""
+
     __tablename__ = "stock_cache"
 
     ticker: Mapped[str] = mapped_column(Text, primary_key=True)

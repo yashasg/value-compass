@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from collections.abc import Iterable
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Iterable
 
 import httpx
 
-from common import config, db as common_db
+from common import config
+from common import db as common_db
 from db.models import StockCache
 
 log = logging.getLogger("vca.polygon")
@@ -116,7 +117,8 @@ async def fetch_smas_rate_limited(
 
 
 async def fetch_and_cache_ticker(ticker: str) -> None:
-    """Fetch a single ticker (used by the API's new-ticker flow) and
+    """Fetch and cache a single ticker for the API's new-ticker flow.
+
     upsert it into ``stock_cache`` with ``job_status = 'success'``.
     """
     async with httpx.AsyncClient() as client:
@@ -127,7 +129,7 @@ async def fetch_and_cache_ticker(ticker: str) -> None:
         await asyncio.sleep(_SMA_DELAY_SEC)
         sma_200 = await fetch_sma(ticker, 200, client)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     with common_db.get_session() as session:
         existing = session.get(StockCache, ticker)
         if existing is None:

@@ -42,6 +42,7 @@ def build_scheduler() -> BlockingScheduler:
 
 
 def main() -> int:
+    """Start the blocking scheduler process."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",

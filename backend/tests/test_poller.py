@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -28,12 +28,17 @@ from poller.__main__ import build_scheduler  # noqa: E402
 def in_memory_db(monkeypatch: pytest.MonkeyPatch):
     engine = create_engine("sqlite:///:memory:", future=True)
     Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+    SessionLocal = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, future=True
+    )
 
     # Patch common.db so both the job and any callee see the same session.
     monkeypatch.setattr(common_db, "_engine", engine)
     monkeypatch.setattr(common_db, "_SessionLocal", SessionLocal)
-    return SessionLocal
+    try:
+        yield SessionLocal
+    finally:
+        engine.dispose()
 
 
 def _seed(SessionLocal) -> uuid.UUID:
@@ -46,7 +51,7 @@ def _seed(SessionLocal) -> uuid.UUID:
             name="Main",
             monthly_budget=Decimal("1000"),
             ma_window=50,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         portfolio.holdings.append(
             Holding(id=uuid.uuid4(), ticker="AAPL", weight=Decimal("1"))
@@ -56,7 +61,9 @@ def _seed(SessionLocal) -> uuid.UUID:
     return device_uuid
 
 
-def test_skipped_on_non_trading_day(in_memory_db, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skipped_on_non_trading_day(
+    in_memory_db, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(job_module, "is_trading_day", lambda _today: False)
     assert job_module.run_nightly_job(today=date(2026, 1, 1)) == "skipped"
 
@@ -107,7 +114,7 @@ def test_failure_path_does_not_update_modified(
 
     # Pre-populate stock_cache with a known last_modified so we can
     # assert it is NOT updated on failure.
-    sentinel = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    sentinel = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
     with SessionLocal() as s:
         s.add(
             StockCache(
@@ -136,8 +143,8 @@ def test_failure_path_does_not_update_modified(
         assert row.job_status == "failed"
         # Critical spec invariant: last_modified / next_modified frozen.
         # SQLite strips tz; compare as naive UTC.
-        assert row.last_modified.replace(tzinfo=timezone.utc) == sentinel
-        assert row.next_modified.replace(tzinfo=timezone.utc) == sentinel
+        assert row.last_modified.replace(tzinfo=UTC) == sentinel
+        assert row.next_modified.replace(tzinfo=UTC) == sentinel
 
 
 def test_scheduler_has_5pm_et_trigger() -> None:
