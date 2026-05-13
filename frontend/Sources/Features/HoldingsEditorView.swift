@@ -27,7 +27,7 @@ enum HoldingsDraftIssue: Equatable {
     case .emptyTickerSymbol:
       return "Ticker symbols are required."
     case .missingTickerMarketData(let symbol):
-      return "\(symbol) is missing current price or moving average."
+      return "\(symbol) is missing current price or band position."
     case .invalidTickerMarketData(let symbol):
       return "\(symbol) market data must be greater than 0."
     case .duplicateTickerSymbols(let symbols):

@@ -234,6 +234,10 @@ enum ContributionOutputValidator {
 
     let actualTotal = output.allocations.reduce(Decimal(0)) { $0 + $1.amount }
     let tolerance = Decimal(string: "0.01")!
+    guard abs(output.totalAmount - expectedTotal) <= tolerance else {
+      return .outputTotalMismatch(expected: expectedTotal, actual: output.totalAmount)
+    }
+
     guard abs(actualTotal - output.totalAmount) <= tolerance else {
       return .allocationTotalMismatch(expected: output.totalAmount, actual: actualTotal)
     }

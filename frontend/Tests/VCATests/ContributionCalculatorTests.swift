@@ -233,8 +233,25 @@ final class ContributionCalculatorTests: XCTestCase {
     XCTAssertEqual(
       negativeResult.error as? ContributionCalculationError, .negativeAllocation("VTI"))
 
-    let mismatchOutput = ContributionOutput(
+    let outputTotalMismatch = ContributionOutput(
       totalAmount: Decimal(75),
+      allocations: [
+        TickerContributionAllocation(
+          tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(75), allocatedWeight: 1)
+      ]
+    )
+    let outputTotalMismatchResult = ContributionCalculationService.calculate(
+      portfolio: portfolio,
+      calculator: SpyCalculator(output: outputTotalMismatch)
+    )
+
+    XCTAssertEqual(
+      outputTotalMismatchResult.error as? ContributionCalculationError,
+      .outputTotalMismatch(expected: Decimal(100), actual: Decimal(75))
+    )
+
+    let mismatchOutput = ContributionOutput(
+      totalAmount: Decimal(100),
       allocations: [
         TickerContributionAllocation(
           tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(50), allocatedWeight: 1)
@@ -247,7 +264,7 @@ final class ContributionCalculatorTests: XCTestCase {
 
     XCTAssertEqual(
       mismatchResult.error as? ContributionCalculationError,
-      .allocationTotalMismatch(expected: Decimal(75), actual: Decimal(50))
+      .allocationTotalMismatch(expected: Decimal(100), actual: Decimal(50))
     )
   }
 

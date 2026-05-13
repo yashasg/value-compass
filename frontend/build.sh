@@ -153,6 +153,7 @@ should_run_swift_format_lint() {
 
 run_swift_format_lint() {
   printf '\n==> Linting Swift formatting\n'
+  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required for Swift formatting lint. Install a recent Xcode toolchain or set RUN_SWIFT_FORMAT_LINT=false."
   xcrun swift-format lint --configuration "$REPO_ROOT/.swift-format" --recursive --parallel Sources Tests
 }
 
