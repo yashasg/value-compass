@@ -12,14 +12,15 @@ description: "My squad work loop"
 
 ## What to do each cycle
 
-1. Validate the `frontend/build.sh` and `frontend/run.sh works`, if not make it a P0 and fix it
-1. If open GitHub issues exist, pick the highest-priority unblocked issue and make code changes in this cycle.
-2. For squad work, create branches as `users/squad/<issue_name_fix>`, commit and push changes, then open/update a PR linked with a closing keyword (for example `Closes #123`).
-3. **Before creating a PR, run `.github/scripts/validate-secrets.sh` to ensure no GitHub secrets are logged in CI/CD workflows.** Fail the PR if validation fails.
-4. Monitor CI/CD for squad PRs, fix failing checks, address comments, and squash merge to `main` when green so linked issues close with the merge.
-5. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
-6. Use the MVP milestone tag on new issues
-7. After completing work, output:
+1. Validate the `frontend/build.sh` and `frontend/run.sh works`, if not make it a P0 and fix it.
+2. If open GitHub issues exist, pick the highest-priority unblocked issue and make code changes in this cycle.
+3. For squad work, create branches as `users/squad/<issue_name_fix>`, commit and push changes, then open/update a PR linked with a closing keyword (for example `Closes #123`).
+4. **Before creating a PR, run `.github/scripts/validate-secrets.sh` to ensure no GitHub secrets are logged in CI/CD workflows.** Fail the PR if validation fails.
+5. Monitor CI/CD for squad PRs, fix failing checks, address comments, and squash merge to `main` when green so linked issues close with the merge.
+6. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
+7. Use the MVP milestone tag on new issues
+8. maintain clean code, use docs/python/coding_standards.md and docs/swift/coding_style.md. Always look to remove/delete stale code and files.
+9. After completing work, output:
 	- blockers
 	- risky changes
 	- top 3 next actions
