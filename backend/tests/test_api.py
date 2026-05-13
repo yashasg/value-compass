@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -19,8 +19,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.pool import StaticPool  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from api.main import app, get_db  # noqa: E402
 from db.models import Base, Holding, Portfolio, StockCache  # noqa: E402
@@ -35,7 +35,9 @@ def db_session():
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+    SessionLocal = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, future=True
+    )
     session = SessionLocal()
     try:
         yield session
@@ -82,8 +84,10 @@ def test_portfolio_status_empty(client: TestClient) -> None:
     assert resp.json() == {"last_modified": None, "next_modified": None}
 
 
-def test_portfolio_status_returns_latest(client: TestClient, db_session: Session) -> None:
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+def test_portfolio_status_returns_latest(
+    client: TestClient, db_session: Session
+) -> None:
+    now = datetime.now(UTC).replace(microsecond=0)
     db_session.add(
         StockCache(
             ticker="AAPL",
@@ -112,7 +116,9 @@ def test_portfolio_data_404_for_unknown_device(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_portfolio_data_returns_holdings(client: TestClient, db_session: Session) -> None:
+def test_portfolio_data_returns_holdings(
+    client: TestClient, db_session: Session
+) -> None:
     device_uuid = uuid.uuid4()
     portfolio = Portfolio(
         id=uuid.uuid4(),
@@ -120,7 +126,7 @@ def test_portfolio_data_returns_holdings(client: TestClient, db_session: Session
         name="Main",
         monthly_budget=Decimal("1000"),
         ma_window=50,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     portfolio.holdings.append(
         Holding(id=uuid.uuid4(), ticker="AAPL", weight=Decimal("0.5"))
@@ -132,7 +138,7 @@ def test_portfolio_data_returns_holdings(client: TestClient, db_session: Session
             current_price=Decimal("150"),
             sma_50=Decimal("149"),
             sma_200=Decimal("148"),
-            last_modified=datetime.now(timezone.utc),
+            last_modified=datetime.now(UTC),
             next_modified=None,
             job_status="success",
         )
@@ -165,7 +171,7 @@ def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(
             name="P",
             monthly_budget=Decimal("100"),
             ma_window=200,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
     )
     db_session.add(
@@ -174,7 +180,7 @@ def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(
             current_price=Decimal("400"),
             sma_50=Decimal("399"),
             sma_200=Decimal("398"),
-            last_modified=datetime.now(timezone.utc),
+            last_modified=datetime.now(UTC),
             next_modified=None,
             job_status="success",
         )
