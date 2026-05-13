@@ -1,16 +1,8 @@
-name: Trigger auto deployment for vc-services
+name: Deploy vc-services to Azure Container Apps
 
 # When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
-  push:
-    branches: 
-      [ main ]
-    paths:
-    - '**'
-    - '.github/workflows/vc-services-AutoDeployTrigger-72f03101-2033-4563-b2ca-4dd1b68bc046.yml'
-
-  # Allow manual trigger 
+  # Manual trigger only (MVP requirement: no automatic deployment)
   workflow_dispatch:
       
 jobs:
@@ -29,17 +21,10 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}backend/api
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
+          appSourcePath: ${{ github.workspace }}/backend/api
           registryUrl: cae127fb809bacr.azurecr.io
           registryUsername: ${{ secrets.VCSERVICES_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.VCSERVICES_REGISTRY_PASSWORD }}
           containerAppName: vc-services
           resourceGroup: puzzlequest-value-compass-rg
           imageToBuild: cae127fb809bacr.azurecr.io/vc-services:${{ github.sha }}
-          
-            
-
-     
-
