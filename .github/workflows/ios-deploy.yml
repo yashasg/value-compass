@@ -11,10 +11,13 @@ name: ios-deploy
 # Secrets used (from GitHub Secrets):
 #   * APPLE_DEV_CERTIFICATE          — base64-encoded .p12 distribution cert
 #   * APPLE_DEV_CERTIFICATE_PASSWORD — password for the .p12
+#   * APPLE_PROVISIONING_PROFILE     — base64-encoded App Store provisioning profile
+#   * APPLE_TEAM_ID                  — Apple Developer Team ID
 #   * APP_STORE_CONNECT_API_KEY      — base64-encoded App Store Connect API
 #                                       key (.p8) for `xcrun altool` / Transporter
 #   * APP_STORE_CONNECT_API_KEY_ID   — Key ID for the .p8 above
 #   * APP_STORE_CONNECT_ISSUER_ID    — Issuer ID for the App Store Connect API key
+#   * API_BASE_URL                   — backend services base URL injected into the app
 
 on:
   workflow_dispatch:
@@ -29,6 +32,9 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  IOS_BUNDLE_ID: com.valuecompass.VCA
 
 jobs:
   deploy:
@@ -67,19 +73,55 @@ jobs:
             -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+      - name: Install provisioning profile
+        env:
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+
+          echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_PATH"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          {
+            echo "IOS_PROFILE_NAME=$PROFILE_NAME"
+            echo "IOS_PROFILE_UUID=$PROFILE_UUID"
+          } >> "$GITHUB_ENV"
+
       - name: Archive
         working-directory: ios
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
         run: |
+          set -euo pipefail
+          if [ -z "${APPLE_TEAM_ID:-}" ]; then
+            echo "APPLE_TEAM_ID secret must be set." >&2
+            exit 1
+          fi
+
           xcodebuild \
             -project VCA.xcodeproj \
             -scheme VCA \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/VCA.xcarchive" \
+            VCA_API_BASE_URL="$API_BASE_URL" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROFILE_NAME" \
             archive
 
       - name: Export IPA
         working-directory: frontend
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -87,10 +129,20 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store</string>
-            <key>signingStyle</key><string>automatic</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>__APPLE_TEAM_ID__</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>__IOS_BUNDLE_ID__</key><string>__IOS_PROFILE_NAME__</string>
+            </dict>
           </dict>
           </plist>
           PLIST
+          sed -i '' \
+            -e "s/__APPLE_TEAM_ID__/$APPLE_TEAM_ID/g" \
+            -e "s/__IOS_BUNDLE_ID__/$IOS_BUNDLE_ID/g" \
+            -e "s/__IOS_PROFILE_NAME__/$IOS_PROFILE_NAME/g" \
+            "$RUNNER_TEMP/ExportOptions.plist"
 
           xcodebuild \
             -exportArchive \

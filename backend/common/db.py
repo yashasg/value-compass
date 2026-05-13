@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -18,8 +17,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from common import config
 
-_engine: Optional[Engine] = None
-_SessionLocal: Optional[sessionmaker[Session]] = None
+_engine: Engine | None = None
+_SessionLocal: sessionmaker[Session] | None = None
 
 
 def get_engine() -> Engine:

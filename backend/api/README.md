@@ -4,7 +4,7 @@ FastAPI application. Serves iOS clients. Reads from Postgres only and
 **never** calls Polygon directly — all stock data is written by
 `backend/poller` and read here.
 
-Runs as systemd service: **`vca-api.service`** (see `infra/systemd/`).
+Runs as systemd service: **`vca-api.service`** (see `backend/infra/systemd/`).
 
 ## Endpoints
 

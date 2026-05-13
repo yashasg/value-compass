@@ -18,8 +18,7 @@ ticker — see the New Ticker Flow in the README.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import (
@@ -37,7 +36,8 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from common import config, db as common_db
+from common import config
+from common import db as common_db
 from db.models import Holding, Portfolio, StockCache
 
 log = logging.getLogger("vca.api")
@@ -56,14 +56,14 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
-def get_db() -> Session:  # pragma: no cover - thin wrapper, exercised in tests via override
+def get_db() -> Session:  # pragma: no cover
     """FastAPI dependency yielding a SQLAlchemy session."""
     with common_db.get_session() as session:
         yield session
 
 
 async def require_app_attest(
-    x_app_attest: Optional[str] = Header(default=None, alias="X-App-Attest"),
+    x_app_attest: str | None = Header(default=None, alias="X-App-Attest"),
 ) -> str:
     """Validate the App Attest header on every request.
 
@@ -98,7 +98,7 @@ async def add_standard_headers(request: Request, call_next):
     )
     response.headers.setdefault(
         "Last-Modified",
-        datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"),
     )
     response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)
     return response
@@ -108,27 +108,37 @@ async def add_standard_headers(request: Request, call_next):
 # Schemas
 # ---------------------------------------------------------------------------
 class HealthResponse(BaseModel):
+    """Health-check response body."""
+
     status: str = Field(default="ok")
 
 
 class SchemaVersionResponse(BaseModel):
+    """API schema-version response body."""
+
     version: int
 
 
 class PortfolioStatusResponse(BaseModel):
-    last_modified: Optional[datetime]
-    next_modified: Optional[datetime]
+    """Portfolio freshness response body."""
+
+    last_modified: datetime | None
+    next_modified: datetime | None
 
 
 class HoldingOut(BaseModel):
+    """Holding data returned to the iOS client."""
+
     ticker: str
     weight: float
-    current_price: Optional[float]
-    sma_50: Optional[float]
-    sma_200: Optional[float]
+    current_price: float | None
+    sma_50: float | None
+    sma_200: float | None
 
 
 class PortfolioDataResponse(BaseModel):
+    """Full portfolio allocation response body."""
+
     portfolio_id: UUID
     name: str
     monthly_budget: float
@@ -137,6 +147,8 @@ class PortfolioDataResponse(BaseModel):
 
 
 class AddHoldingRequest(BaseModel):
+    """Request body for adding a holding to a device portfolio."""
+
     device_uuid: UUID
     ticker: str = Field(min_length=1, max_length=10)
     weight: float = Field(gt=0, le=1)
@@ -155,12 +167,13 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="database unreachable",
-        )
+        ) from exc
     return HealthResponse(status="ok")
 
 
 @app.get("/schema/version", response_model=SchemaVersionResponse)
 def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
+    """Return the API schema version required by the client."""
     return SchemaVersionResponse(version=config.SCHEMA_VERSION)
 
 
@@ -169,8 +182,10 @@ def portfolio_status(
     db: Session = Depends(get_db),
     _: str = Depends(require_app_attest),
 ) -> PortfolioStatusResponse:
-    """Return the freshest ``last_modified`` / ``next_modified`` across
-    the cache. Lightweight and Cloudflare-cacheable."""
+    """Return the freshest ``last_modified`` / ``next_modified``.
+
+    The cache response is lightweight and Cloudflare-cacheable.
+    """
     row = db.execute(
         select(StockCache.last_modified, StockCache.next_modified)
         .order_by(StockCache.last_modified.desc())
@@ -277,8 +292,8 @@ async def _fetch_new_ticker(ticker: str, device_uuid: UUID) -> None:
     """
     # Imported lazily to avoid pulling Polygon / APNs deps into the API
     # process at startup, and to break the api → poller import cycle.
-    from poller.polygon import fetch_and_cache_ticker  # noqa: WPS433
     from poller.apns import push_to_device  # noqa: WPS433
+    from poller.polygon import fetch_and_cache_ticker  # noqa: WPS433
 
     try:
         await fetch_and_cache_ticker(ticker)

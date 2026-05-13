@@ -88,8 +88,13 @@ jobs:
           # (spec: "Database migrations always run before application restart").
           /opt/value-compass/.venv/bin/alembic upgrade head
 
-          # Restart systemd services. The unit files live in infra/systemd/
-          # and are symlinked into /etc/systemd/system/ during initial setup.
+          # Restart systemd services. The unit files live in backend/infra/systemd/
+          # Keep symlinks current so VMs bootstrapped with older repo layouts
+          # continue to resolve the unit files after checkout.
+          sudo ln -sfn /opt/value-compass/backend/infra/systemd/vca-api.service \
+            /etc/systemd/system/vca-api.service
+          sudo ln -sfn /opt/value-compass/backend/infra/systemd/vca-poller.service \
+            /etc/systemd/system/vca-poller.service
           sudo systemctl daemon-reload
           sudo systemctl restart vca-api.service
           sudo systemctl restart vca-poller.service
