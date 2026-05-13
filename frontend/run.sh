@@ -9,10 +9,10 @@ PROJECT_PATH="${PROJECT_PATH:-../ios/VCA.xcodeproj}"
 WORKSPACE_PATH="${WORKSPACE_PATH:-}"
 SCHEME="${SCHEME:-VCA}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
-IOS_VERSION="${IOS_VERSION:-26.4}"
+IOS_VERSION="${IOS_VERSION:-latest}"
 IPADOS_VERSION="${IPADOS_VERSION:-$IOS_VERSION}"
-IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 17}"
-IPAD_DEVICE="${IPAD_DEVICE:-iPad (A16)}"
+IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 15}"
+IPAD_DEVICE="${IPAD_DEVICE:-iPad (10th generation)}"
 DEVICE_KIND="${DEVICE_KIND:-iphone}" # iphone or ipad
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
@@ -60,15 +60,28 @@ runtime_id() {
   printf '%s\n' "$id"
 }
 
+latest_ios_version() {
+  xcrun simctl list runtimes available | sed -n 's/^iOS \([0-9][0-9.]*\) .*/\1/p' | tail -n 1
+}
+
+resolve_ios_version() {
+  local version="$1"
+  if [ "$version" = "latest" ]; then
+    latest_ios_version
+  else
+    printf '%s\n' "$version"
+  fi
+}
+
 select_values() {
   case "$DEVICE_KIND" in
     iphone)
       DEVICE_NAME="$IPHONE_DEVICE"
-      OS_VERSION="$IOS_VERSION"
+      OS_VERSION="$(resolve_ios_version "$IOS_VERSION")"
       ;;
     ipad)
       DEVICE_NAME="$IPAD_DEVICE"
-      OS_VERSION="$IPADOS_VERSION"
+      OS_VERSION="$(resolve_ios_version "$IPADOS_VERSION")"
       ;;
     *) fail "Unknown DEVICE_KIND '$DEVICE_KIND'. Use iphone or ipad." ;;
   esac

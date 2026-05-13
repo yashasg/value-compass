@@ -9,10 +9,10 @@ PROJECT_PATH="${PROJECT_PATH:-../ios/VCA.xcodeproj}"
 WORKSPACE_PATH="${WORKSPACE_PATH:-}"
 SCHEME="${SCHEME:-VCA}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
-IOS_VERSION="${IOS_VERSION:-26.4}"
+IOS_VERSION="${IOS_VERSION:-latest}"
 IPADOS_VERSION="${IPADOS_VERSION:-$IOS_VERSION}"
-IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 17}"
-IPAD_DEVICE="${IPAD_DEVICE:-iPad (A16)}"
+IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 15}"
+IPAD_DEVICE="${IPAD_DEVICE:-iPad (10th generation)}"
 PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
@@ -56,6 +56,47 @@ validate_project() {
 validate_runtime() {
   local version="$1"
   xcrun simctl list runtimes available | grep -F "iOS $version" >/dev/null 2>&1 || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
+}
+
+latest_ios_version() {
+  xcrun simctl list runtimes available | sed -n 's/^iOS \([0-9][0-9.]*\) .*/\1/p' | tail -n 1
+}
+
+resolve_ios_version() {
+  local version="$1"
+  if [ "$version" = "latest" ]; then
+    latest_ios_version
+  else
+    printf '%s\n' "$version"
+  fi
+}
+
+runtime_id() {
+  local version="$1"
+  local id="com.apple.CoreSimulator.SimRuntime.iOS-${version//./-}"
+  xcrun simctl list runtimes available | grep -F "$id" >/dev/null 2>&1 || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
+  printf '%s\n' "$id"
+}
+
+simulator_udid() {
+  local device="$1"
+  local version="$2"
+  xcrun simctl list devices available "iOS $version" 2>/dev/null | grep -F "    $device (" | sed -n '1s/.*(\([0-9A-Fa-f-][0-9A-Fa-f-]*\)).*/\1/p' || true
+}
+
+ensure_simulator() {
+  local device="$1"
+  local version="$2"
+  local runtime
+  local udid
+
+  runtime="$(runtime_id "$version")"
+  udid="$(simulator_udid "$device" "$version")"
+
+  if [ -z "$udid" ]; then
+    printf '==> Creating simulator %s on iOS %s\n' "$device" "$version"
+    xcrun simctl create "$device" "$device" "$runtime" >/dev/null || fail "Could not create simulator '$device' for runtime '$runtime'. Override IPHONE_DEVICE/IPAD_DEVICE with an installed simulator device type."
+  fi
 }
 
 xcode_container_args() {
@@ -109,19 +150,25 @@ run_for_platform() {
   local kind="$1"
   case "$kind" in
     iphone)
-      validate_runtime "$IOS_VERSION"
-      run_xcodebuild build "$IPHONE_DEVICE" "$IOS_VERSION"
+      local os_version
+      os_version="$(resolve_ios_version "$IOS_VERSION")"
+      validate_runtime "$os_version"
+      ensure_simulator "$IPHONE_DEVICE" "$os_version"
+      run_xcodebuild build "$IPHONE_DEVICE" "$os_version"
       if should_run_tests; then
-        run_xcodebuild test "$IPHONE_DEVICE" "$IOS_VERSION"
+        run_xcodebuild test "$IPHONE_DEVICE" "$os_version"
       else
         printf '\n==> Skipping tests for %s: no test target configured (set RUN_TESTS=true to require tests)\n' "$SCHEME"
       fi
       ;;
     ipad)
-      validate_runtime "$IPADOS_VERSION"
-      run_xcodebuild build "$IPAD_DEVICE" "$IPADOS_VERSION"
+      local os_version
+      os_version="$(resolve_ios_version "$IPADOS_VERSION")"
+      validate_runtime "$os_version"
+      ensure_simulator "$IPAD_DEVICE" "$os_version"
+      run_xcodebuild build "$IPAD_DEVICE" "$os_version"
       if should_run_tests; then
-        run_xcodebuild test "$IPAD_DEVICE" "$IPADOS_VERSION"
+        run_xcodebuild test "$IPAD_DEVICE" "$os_version"
       else
         printf '\n==> Skipping tests for %s: no test target configured (set RUN_TESTS=true to require tests)\n' "$SCHEME"
       fi
