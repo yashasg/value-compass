@@ -389,17 +389,21 @@ struct PortfolioEditorView: View {
 
 struct PortfolioDetailView: View {
     let portfolio: Portfolio
+    let calculator: any ContributionCalculating
+
+    @State private var calculationOutput: ContributionOutput?
+
+    init(portfolio: Portfolio, calculator: any ContributionCalculating = ProportionalSplitContributionCalculator()) {
+        self.portfolio = portfolio
+        self.calculator = calculator
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 summarySection
                 holdingsSection
-                placeholderSection(
-                    title: "Calculate",
-                    systemImage: "function",
-                    message: "The calculator seam will use this portfolio once market data input is available."
-                )
+                calculateSection
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -501,13 +505,45 @@ struct PortfolioDetailView: View {
         return "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | MA \(TickerDraft.displayDecimalText(for: ticker.movingAverage))"
     }
 
-    private func placeholderSection(title: String, systemImage: String, message: String) -> some View {
-        ContentUnavailableView {
-            Label(title, systemImage: systemImage)
-        } description: {
-            Text(message)
+    private var calculateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Calculate", systemImage: "function")
+                    .font(.title2.bold())
+
+                Spacer()
+
+                Button {
+                    calculationOutput = ContributionCalculationService.calculate(
+                        portfolio: portfolio,
+                        calculator: calculator
+                    )
+                } label: {
+                    Label("Calculate", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("portfolio.detail.calculate")
+            }
+
+            if let calculationOutput {
+                if let error = calculationOutput.error {
+                    Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("portfolio.detail.calculateError")
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Monthly contribution: $\(PortfolioFormDraft.displayText(for: calculationOutput.totalAmount))")
+                            .font(.headline)
+                        Text("\(calculationOutput.allocations.count) ticker allocations ready.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("portfolio.detail.calculateSuccess")
+                }
+            } else {
+                Text("Uses the local proportional-split calculator seam after validating budget, weights, tickers, and market data.")
+                    .foregroundStyle(.secondary)
+            }
         }
-        .frame(maxWidth: .infinity)
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
