@@ -20,6 +20,41 @@ final class NavigationShellTests: XCTestCase {
     XCTAssertEqual(MainView.navigationShellKind(for: .regular), .splitView)
   }
 
+  func testUnspecifiedWidthUsesNavigationSplitViewFallback() {
+    XCTAssertEqual(MainView.navigationShellKind(for: nil), .splitView)
+  }
+
+  func testSplitViewShowsSettingsDetailWhenSettingsSelected() {
+    let portfolioID = UUID()
+
+    let detail = MainView.detailSelection(
+      sidebarSelection: .settings,
+      selectedPortfolioID: portfolioID,
+      firstPortfolioID: portfolioID)
+
+    XCTAssertEqual(detail, .settings)
+  }
+
+  func testSplitViewFallsBackToFirstPortfolioWhenNoneSelected() {
+    let portfolioID = UUID()
+
+    let detail = MainView.detailSelection(
+      sidebarSelection: .portfolios,
+      selectedPortfolioID: nil,
+      firstPortfolioID: portfolioID)
+
+    XCTAssertEqual(detail, .portfolio(portfolioID))
+  }
+
+  func testSplitViewShowsEmptyPortfolioStateWhenNoPortfoliosExist() {
+    let detail = MainView.detailSelection(
+      sidebarSelection: .portfolios,
+      selectedPortfolioID: nil,
+      firstPortfolioID: nil)
+
+    XCTAssertEqual(detail, .emptyPortfolioSelection)
+  }
+
   func testPortfolioDraftTrimsAndValidatesPortfolioValues() throws {
     let draft = PortfolioFormDraft(
       name: "  Long Term  ", monthlyBudgetText: "250.75", maWindow: 200)

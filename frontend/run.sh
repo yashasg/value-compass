@@ -94,6 +94,37 @@ simulator_udid() {
   xcrun simctl list devices available "iOS $version" 2>/dev/null | grep -F "    $device (" | sed -n '1s/.*(\([0-9A-Fa-f-][0-9A-Fa-f-]*\)).*/\1/p' || true
 }
 
+boot_simulator() {
+  local udid="$1"
+  local boot_error
+  boot_error="$(mktemp "${TMPDIR:-/tmp}/vca-sim-boot.XXXXXX")"
+
+  for attempt in 1 2 3; do
+    if xcrun simctl boot "$udid" 2>"$boot_error"; then
+      xcrun simctl bootstatus "$udid" -b
+      rm -f "$boot_error"
+      return
+    fi
+
+    if grep -F "current state: Booted" "$boot_error" >/dev/null 2>&1; then
+      xcrun simctl bootstatus "$udid" -b
+      rm -f "$boot_error"
+      return
+    fi
+
+    if grep -F "current state: Shutting Down" "$boot_error" >/dev/null 2>&1 && [ "$attempt" -lt 3 ]; then
+      sleep 5
+      continue
+    fi
+
+    cat "$boot_error" >&2
+    rm -f "$boot_error"
+    fail "Could not boot simulator '$udid'."
+  done
+
+  rm -f "$boot_error"
+}
+
 ensure_simulator() {
   local device="$1"
   local version="$2"
@@ -107,10 +138,8 @@ ensure_simulator() {
     printf '==> Creating simulator %s on iOS %s\n' "$device" "$version"
     udid="$(xcrun simctl create "$device" "$device" "$runtime")" || fail "Could not create simulator '$device' for runtime '$runtime'. Override IPHONE_DEVICE/IPAD_DEVICE with an installed simulator device type."
   fi
-
   printf '==> Booting simulator %s (%s)\n' "$device" "$udid"
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  xcrun simctl bootstatus "$udid" -b
+  boot_simulator "$udid"
   printf '%s\n' "$udid"
 }
 
