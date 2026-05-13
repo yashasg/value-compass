@@ -2,8 +2,8 @@ import XCTest
 
 @testable import VCA
 
-@MainActor
 final class BackendSyncProjectionTests: XCTestCase {
+  @MainActor
   func testProjectionMapsPortfolioMetadataAndSplitsCategoryWeightsAcrossTickers() throws {
     let portfolioID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
     let deviceUUID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
@@ -64,6 +64,7 @@ final class BackendSyncProjectionTests: XCTestCase {
     )
   }
 
+  @MainActor
   func testProjectionExcludesLocalOnlyFieldsByConstruction() throws {
     let portfolio = Portfolio(
       name: "Local rich model",
@@ -103,6 +104,7 @@ final class BackendSyncProjectionTests: XCTestCase {
       ])
   }
 
+  @MainActor
   func testProjectionRejectsPositiveWeightEmptyCategoryInsteadOfCreatingInvalidHolding() {
     let portfolio = Portfolio(
       name: "Invalid for sync",
@@ -118,6 +120,7 @@ final class BackendSyncProjectionTests: XCTestCase {
     }
   }
 
+  @MainActor
   func testProjectionSkipsZeroWeightEmptyCategory() throws {
     let portfolio = Portfolio(
       name: "Draft",
