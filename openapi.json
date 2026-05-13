@@ -28,6 +28,7 @@
     "/schema/version": {
       "get": {
         "summary": "Schema Version",
+        "description": "Return the API schema version required by the client.",
         "operationId": "schema_version_schema_version_get",
         "parameters": [
           {
@@ -74,7 +75,7 @@
     "/portfolio/status": {
       "get": {
         "summary": "Portfolio Status",
-        "description": "Return the freshest ``last_modified`` / ``next_modified`` across\nthe cache. Lightweight and Cloudflare-cacheable.",
+        "description": "Return the freshest ``last_modified`` / ``next_modified``.\n\nThe cache response is lightweight and Cloudflare-cacheable.",
         "operationId": "portfolio_status_portfolio_status_get",
         "parameters": [
           {
@@ -259,7 +260,8 @@
           "ticker",
           "weight"
         ],
-        "title": "AddHoldingRequest"
+        "title": "AddHoldingRequest",
+        "description": "Request body for adding a holding to a device portfolio."
       },
       "HTTPValidationError": {
         "properties": {
@@ -283,7 +285,8 @@
           }
         },
         "type": "object",
-        "title": "HealthResponse"
+        "title": "HealthResponse",
+        "description": "Health-check response body."
       },
       "HoldingOut": {
         "properties": {
@@ -327,6 +330,61 @@
               }
             ],
             "title": "Sma 200"
+          },
+          "midline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midline"
+          },
+          "atr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr"
+          },
+          "upper_band": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Band"
+          },
+          "lower_band": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Band"
+          },
+          "band_position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Position"
           }
         },
         "type": "object",
@@ -335,9 +393,15 @@
           "weight",
           "current_price",
           "sma_50",
-          "sma_200"
+          "sma_200",
+          "midline",
+          "atr",
+          "upper_band",
+          "lower_band",
+          "band_position"
         ],
-        "title": "HoldingOut"
+        "title": "HoldingOut",
+        "description": "Holding data returned to the iOS client."
       },
       "PortfolioDataResponse": {
         "properties": {
@@ -374,7 +438,8 @@
           "ma_window",
           "holdings"
         ],
-        "title": "PortfolioDataResponse"
+        "title": "PortfolioDataResponse",
+        "description": "Full portfolio allocation response body."
       },
       "PortfolioStatusResponse": {
         "properties": {
@@ -408,7 +473,8 @@
           "last_modified",
           "next_modified"
         ],
-        "title": "PortfolioStatusResponse"
+        "title": "PortfolioStatusResponse",
+        "description": "Portfolio freshness response body."
       },
       "SchemaVersionResponse": {
         "properties": {
@@ -421,7 +487,8 @@
         "required": [
           "version"
         ],
-        "title": "SchemaVersionResponse"
+        "title": "SchemaVersionResponse",
+        "description": "API schema-version response body."
       },
       "ValidationError": {
         "properties": {

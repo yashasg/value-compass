@@ -14,15 +14,16 @@ Runs as systemd service: **`vca-poller.service`** (see `backend/infra/systemd/`)
 
 ## Job Steps
 
-1. Fetch current prices for all tracked tickers (Polygon snapshot, 1
-   request).
-2. Fetch SMA per ticker (Polygon SMA endpoint, N requests, 5 req/min).
+1. Fetch the latest daily OHLC bars for each tracked ticker (Polygon
+   aggregates endpoint, N requests, 5 req/min).
+2. Sort bars ascending, keep the latest 22 bars, and compute the 21-bar
+   midline, ATR, upper/lower bands, current close, and band position.
 3. Write results to `stock_cache`.
 4. Set `job_status = success`.
 5. Update `last_modified` and `next_modified`.
 6. Send APNs push to affected devices.
 
-The 5 req/min rate limit on the SMA endpoint is the binding constraint
+The 5 req/min rate limit on the aggregates endpoint is the binding constraint
 on the job's wall-clock duration.
 
 ## Failure Behaviour
@@ -49,6 +50,6 @@ on its next scheduled run.
 
 | Service     | Purpose                          | Tier |
 |-------------|----------------------------------|------|
-| Polygon.io  | Stock prices + SMA               | Free |
+| Polygon.io  | Daily OHLC bars                  | Free |
 | Supabase    | Postgres database (writer)       | Free |
 | Apple APNs  | Push notifications on completion | Free |

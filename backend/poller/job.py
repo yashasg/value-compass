@@ -3,8 +3,8 @@
 Sequence (per the spec):
 
 1. Skip if today is not a US trading day.
-2. Fetch current prices for all tracked tickers (1 request).
-3. Fetch SMA per ticker, throttled to 5 req/min.
+2. Fetch OHLC bars per ticker, throttled to 5 req/min.
+3. Compute VCA midline, ATR, bands, and band position.
 4. Write results to ``stock_cache``.
 5. On success: ``job_status = 'success'``; update ``last_modified`` and
    ``next_modified``.
@@ -25,7 +25,6 @@ import asyncio
 import logging
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
 
 import httpx
 from sqlalchemy import select
@@ -69,16 +68,9 @@ def _devices_holding(session: Session, tickers: Iterable[str]) -> list:
     return [r[0] for r in rows]
 
 
-async def _fetch_all(tickers: list[str]) -> tuple[
-    dict[str, Decimal],
-    dict[str, Decimal],
-    dict[str, Decimal],
-]:
+async def _fetch_all(tickers: list[str]) -> dict[str, polygon.BandMetrics]:
     async with httpx.AsyncClient() as client:
-        prices = await polygon.fetch_snapshot_prices(tickers, client)
-        sma_50 = await polygon.fetch_smas_rate_limited(tickers, 50, client)
-        sma_200 = await polygon.fetch_smas_rate_limited(tickers, 200, client)
-    return prices, sma_50, sma_200
+        return await polygon.fetch_band_metrics_rate_limited(tickers, client)
 
 
 def run_nightly_job(today: date | None = None) -> str:
@@ -99,17 +91,13 @@ def run_nightly_job(today: date | None = None) -> str:
             return "success"
 
         try:
-            prices, sma_50, sma_200 = asyncio.run(_fetch_all(tickers))
+            metrics_by_ticker = asyncio.run(_fetch_all(tickers))
             now = datetime.now(UTC)
             next_at = _next_run_after(now)
 
             for ticker in tickers:
-                missing_market_data = (
-                    ticker not in prices
-                    or ticker not in sma_50
-                    or ticker not in sma_200
-                )
-                if missing_market_data:
+                metrics = metrics_by_ticker.get(ticker)
+                if metrics is None:
                     raise polygon.PolygonError(
                         f"missing data for {ticker} after fetch"
                     )
@@ -118,18 +106,28 @@ def run_nightly_job(today: date | None = None) -> str:
                     session.add(
                         StockCache(
                             ticker=ticker,
-                            current_price=prices[ticker],
-                            sma_50=sma_50[ticker],
-                            sma_200=sma_200[ticker],
+                            current_price=metrics.current_price,
+                            sma_50=metrics.midline,
+                            sma_200=metrics.midline,
+                            midline=metrics.midline,
+                            atr=metrics.atr,
+                            upper_band=metrics.upper_band,
+                            lower_band=metrics.lower_band,
+                            band_position=metrics.band_position,
                             last_modified=now,
                             next_modified=next_at,
                             job_status="success",
                         )
                     )
                 else:
-                    row.current_price = prices[ticker]
-                    row.sma_50 = sma_50[ticker]
-                    row.sma_200 = sma_200[ticker]
+                    row.current_price = metrics.current_price
+                    row.sma_50 = metrics.midline
+                    row.sma_200 = metrics.midline
+                    row.midline = metrics.midline
+                    row.atr = metrics.atr
+                    row.upper_band = metrics.upper_band
+                    row.lower_band = metrics.lower_band
+                    row.band_position = metrics.band_position
                     row.last_modified = now
                     row.next_modified = next_at
                     row.job_status = "success"

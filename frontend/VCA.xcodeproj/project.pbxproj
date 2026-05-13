@@ -12,6 +12,7 @@
 		A0000000000000000000B003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F003 /* AppState.swift */; };
 		A0000000000000000000B004 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F004 /* PushNotificationManager.swift */; };
 		A0000000000000000000B005 /* LocalPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F005 /* LocalPersistence.swift */; };
+		A0000000000000000000B006 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F006 /* AppBrand.swift */; };
 		A0000000000000000000B010 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F010 /* RootView.swift */; };
 		A0000000000000000000B011 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F011 /* OnboardingView.swift */; };
 		A0000000000000000000B012 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F012 /* SettingsView.swift */; };
@@ -28,6 +29,8 @@
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
+		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
+		A0000000000000000000B051 /* icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F051 /* icon.svg */; };
 		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
@@ -56,6 +59,7 @@
 		A0000000000000000000F003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A0000000000000000000F004 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
+		A0000000000000000000F006 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
 		A0000000000000000000F010 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F011 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -73,6 +77,8 @@
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
+		A0000000000000000000F050 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A0000000000000000000F051 /* icon.svg */ = {isa = PBXFileReference; lastKnownFileType = image.svg; path = icon.svg; sourceTree = "<group>"; };
 		C0000000000000000000F001 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F002 /* LocalPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistenceTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F003 /* NavigationShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationShellTests.swift; sourceTree = "<group>"; };
@@ -117,6 +123,7 @@
 				A0000000000000000000A006 /* Models */,
 				A0000000000000000000A007 /* Networking */,
 				A0000000000000000000A040 /* Services */,
+				A0000000000000000000A050 /* Assets */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -130,6 +137,7 @@
 				A0000000000000000000F003 /* AppState.swift */,
 				A0000000000000000000F004 /* PushNotificationManager.swift */,
 				A0000000000000000000F005 /* LocalPersistence.swift */,
+				A0000000000000000000F006 /* AppBrand.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -177,6 +185,15 @@
 				A0000000000000000000F040 /* ContributionCalculator.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000A050 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000F050 /* Assets.xcassets */,
+				A0000000000000000000F051 /* icon.svg */,
+			);
+			path = Assets;
 			sourceTree = "<group>";
 		};
 		A0000000000000000000A008 /* Products */ = {
@@ -292,6 +309,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A0000000000000000000B036 /* openapi.json in Resources */,
+				A0000000000000000000B050 /* Assets.xcassets in Resources */,
+				A0000000000000000000B051 /* icon.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -314,6 +333,7 @@
 				A0000000000000000000B003 /* AppState.swift in Sources */,
 				A0000000000000000000B004 /* PushNotificationManager.swift in Sources */,
 				A0000000000000000000B005 /* LocalPersistence.swift in Sources */,
+				A0000000000000000000B006 /* AppBrand.swift in Sources */,
 				A0000000000000000000B010 /* RootView.swift in Sources */,
 				A0000000000000000000B011 /* OnboardingView.swift in Sources */,
 				A0000000000000000000B012 /* SettingsView.swift in Sources */,

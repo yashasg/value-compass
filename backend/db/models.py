@@ -83,6 +83,11 @@ class StockCache(Base):
     current_price: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     sma_50: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     sma_200: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    midline: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    atr: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    upper_band: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    lower_band: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    band_position: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     # UTC timestamps of the last successful refresh and the next scheduled
     # refresh. ``next_modified`` is only written when ``job_status = 'success'``.
     last_modified: Mapped[datetime] = mapped_column(
