@@ -106,6 +106,24 @@ After user clarification, the Stitch `stitch_value_compass_vca_calculator` desig
 
 **Unblocks:** Engineering can start scaffolding screens and models in parallel without waiting for visual design finalization.
 
+### 2026-05-12T17:02:11.019-07:00: Tess — Platform, layout, and appearance scope for v1
+**By:** Tess (iOS/iPadOS Designer) | **Status:** Adopted
+
+Value Compass v1 design scope is now concrete and approved.
+
+**Scope:**
+- **Platform:** Both iPhone and iPad with adaptive layouts: `NavigationStack` on iPhone (compact width), `NavigationSplitView` on iPad (regular width). No bottom tab bar in v1.
+- **Appearance:** Both light and dark mode via semantic system colors and asset catalog color sets — no hard-coded hex in views. Stitch's coral-on-navy is provisional only.
+- **Visual System:** Stitch screens are functional scaffolding (screen inventory, fields, navigation). Final palette, typography, iconography, spacing will be proposed by Tess after functional MVP is walkable.
+- **Approved screens:** Onboarding/first-run, Portfolio list (iPad sidebar), Portfolio detail/dashboard, Create/Edit Portfolio, Category list/edit, Ticker add/edit (manual market value + per-ticker moving-average inputs), Contribution input/result/history, Settings (local-only, no account UI), Disclaimer.
+- **Accessibility:** Dynamic Type, VoiceOver labels, WCAG AA contrast in both appearances, no color-only signaling (pair with arrows or +/− text).
+
+**Why:** User directive (iPhone+iPad, light+dark) + v1 is local/offline-first, no auth, categories local-only. Aligns design scope with engineering scope.
+
+**Impact:**
+- **Basher:** unblocked to scaffold SwiftUI screens for both size classes and appearances using semantic colors. Report feasibility on adaptive navigation and contribution flows.
+- **Rusty / Linus:** no change — SwiftData and services already account for this scope.
+
 ## Governance
 
 - All meaningful changes require team consensus
