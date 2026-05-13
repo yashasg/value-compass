@@ -13,7 +13,7 @@ struct SettingsView: View {
 
       Section("Disclaimer") {
         Text(Disclaimer.text)
-          .font(.footnote)
+          .valueCompassTextStyle(.bodySmall)
           .foregroundStyle(.secondary)
           .fixedSize(horizontal: false, vertical: true)
       }

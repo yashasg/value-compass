@@ -14,10 +14,10 @@ struct OnboardingView: View {
           .accessibilityAddTraits(.isHeader)
 
         Text("Important Disclaimer")
-          .font(.headline)
+          .valueCompassTextStyle(.headlineMedium)
 
         Text(Disclaimer.text)
-          .font(.body)
+          .valueCompassTextStyle(.bodyLarge)
           .fixedSize(horizontal: false, vertical: true)
 
         Button {
@@ -27,6 +27,7 @@ struct OnboardingView: View {
           }
         } label: {
           Text("I Understand — Continue")
+            .valueCompassTextStyle(.bodyLarge)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)

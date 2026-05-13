@@ -598,7 +598,7 @@ struct HoldingsEditorView: View {
               systemImage: ticker.hasInvalidMarketData
                 ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
             )
-            .font(.caption)
+            .valueCompassTextStyle(.labelCaps)
             .foregroundStyle(ticker.hasInvalidMarketData ? .red : .orange)
             .accessibilityIdentifier("holdings.ticker.marketDataWarning")
           }

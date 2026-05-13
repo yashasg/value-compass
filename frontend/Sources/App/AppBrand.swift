@@ -76,10 +76,10 @@ struct AppBrandHeader: View {
 
       VStack(alignment: .leading, spacing: 4) {
         Text(AppBrand.displayName)
-          .font(.title2.bold())
+          .valueCompassTextStyle(.headlineMedium)
         if let subtitle {
           Text(subtitle)
-            .font(.subheadline)
+            .valueCompassTextStyle(.bodySmall)
             .foregroundStyle(.secondary)
         }
       }
