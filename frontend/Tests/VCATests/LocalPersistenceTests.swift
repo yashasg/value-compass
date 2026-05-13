@@ -170,6 +170,38 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertTrue(try context.fetch(FetchDescriptor<Portfolio>()).isEmpty)
     }
 
+    func testPortfolioDeleteCascadesContributionHistory() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolio = Portfolio(name: "Delete History", monthlyBudget: Decimal(250), maWindow: 50)
+        let record = ContributionRecord(
+            portfolioId: portfolio.id,
+            totalAmount: Decimal(250),
+            portfolio: portfolio,
+            categoryBreakdown: [
+                CategoryContribution(categoryName: "Equity", amount: Decimal(250), allocatedWeight: 1),
+            ],
+            tickerAllocations: [
+                TickerAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(250), allocatedWeight: 1),
+            ]
+        )
+        portfolio.contributionRecords = [record]
+
+        context.insert(portfolio)
+        try context.save()
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ContributionRecord>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<CategoryContribution>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<TickerAllocation>()).count, 1)
+
+        context.delete(portfolio)
+        try context.save()
+
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Portfolio>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<ContributionRecord>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<CategoryContribution>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<TickerAllocation>()).isEmpty)
+    }
+
     func testContributionRecordStoresImmutableSnapshotOffline() throws {
         let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
         let context = ModelContext(container)
