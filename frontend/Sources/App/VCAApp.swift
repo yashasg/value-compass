@@ -27,6 +27,7 @@ struct VCAApp: App {
         .environmentObject(appState)
         .environmentObject(minVersionMonitor)
         .environmentObject(pushManager)
+        .preferredColorScheme(appState.appTheme.preferredColorScheme)
     }
   }
 }

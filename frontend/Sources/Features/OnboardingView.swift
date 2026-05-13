@@ -25,10 +25,10 @@ struct OnboardingView: View {
         Button {
           Task {
             await pushManager.requestAuthorizationAndRegister()
-            appState.hasCompletedOnboarding = true
+            appState.hasSeenDisclaimer = true
           }
         } label: {
-          Text("I Understand — Continue")
+          Text("Acknowledge & Continue")
             .valueCompassTextStyle(.bodyLarge)
             .frame(maxWidth: .infinity)
         }

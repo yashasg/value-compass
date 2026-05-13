@@ -13,7 +13,7 @@ struct RootView: View {
     Group {
       if minVersionMonitor.requiresUpdate {
         ForcedUpdateView(minimumVersion: minVersionMonitor.minimumVersion)
-      } else if !appState.hasCompletedOnboarding {
+      } else if !appState.hasSeenDisclaimer {
         OnboardingView()
       } else {
         MainView()
