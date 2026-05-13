@@ -24,11 +24,13 @@
 		A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F032 /* DeviceIDProvider.swift */; };
 		A0000000000000000000B033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F033 /* KeychainStore.swift */; };
 		A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MinAppVersionMonitor.swift */; };
+		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
 		C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F004 /* RootViewSmokeTests.swift */; };
+		C0000000000000000000B005 /* BackendSyncProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F005 /* BackendSyncProjectionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,12 +63,14 @@
 		A0000000000000000000F032 /* DeviceIDProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIDProvider.swift; sourceTree = "<group>"; };
 		A0000000000000000000F033 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000F034 /* MinAppVersionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionMonitor.swift; sourceTree = "<group>"; };
-		A0000000000000000000F035 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
+		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
+		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		C0000000000000000000F001 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F002 /* LocalPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistenceTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F003 /* NavigationShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationShellTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F004 /* RootViewSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewSmokeTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F005 /* BackendSyncProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjectionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,7 +152,8 @@
 				A0000000000000000000F032 /* DeviceIDProvider.swift */,
 				A0000000000000000000F033 /* KeychainStore.swift */,
 				A0000000000000000000F034 /* MinAppVersionMonitor.swift */,
-				A0000000000000000000F035 /* openapi-generator-config.yaml */,
+				A0000000000000000000F035 /* BackendSyncProjection.swift */,
+				A0000000000000000000F037 /* openapi-generator-config.yaml */,
 				A0000000000000000000F036 /* openapi.json */,
 			);
 			path = Networking;
@@ -178,6 +183,7 @@
 				C0000000000000000000F002 /* LocalPersistenceTests.swift */,
 				C0000000000000000000F003 /* NavigationShellTests.swift */,
 				C0000000000000000000F004 /* RootViewSmokeTests.swift */,
+				C0000000000000000000F005 /* BackendSyncProjectionTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -298,6 +304,7 @@
 				A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */,
 				A0000000000000000000B033 /* KeychainStore.swift in Sources */,
 				A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */,
+				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,6 +316,7 @@
 				C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */,
 				C0000000000000000000B003 /* NavigationShellTests.swift in Sources */,
 				C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */,
+				C0000000000000000000B005 /* BackendSyncProjectionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
