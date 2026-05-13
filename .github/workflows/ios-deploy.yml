@@ -68,7 +68,7 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
       - name: Archive
-        working-directory: frontend
+        working-directory: ios
         run: |
           xcodebuild \
             -project VCA.xcodeproj \
