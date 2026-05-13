@@ -262,7 +262,7 @@ struct MovingAverageContributionCalculator: ContributionCalculating {
     }
 
     guard let portfolio = input.portfolio else {
-      return .failure(ContributionCalculationError.missingPortfolio)
+      preconditionFailure("ContributionInputValidator must reject missing portfolios.")
     }
 
     let categories = portfolio.categories.sorted { $0.sortOrder < $1.sortOrder }
@@ -278,7 +278,7 @@ struct MovingAverageContributionCalculator: ContributionCalculating {
           let currentPrice = quote?.currentPrice,
           let movingAverage = quote?.movingAverage
         else {
-          return 1
+          preconditionFailure("ContributionInputValidator must reject missing market data.")
         }
         return movingAverage / currentPrice
       }

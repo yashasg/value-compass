@@ -186,24 +186,24 @@ allocations within each category tilt toward tickers whose current price is belo
 their moving average.
 
 ```swift
-/// The single seam for the VCA algorithm.
-/// The app calls `calculate()`; the user owns the implementation.
+/// The single seam for contribution algorithms.
 protocol ContributionCalculating {
-    /// Given a portfolio and its current market data, return per-ticker
-    /// target contribution amounts.
-    ///
-    /// - Parameter portfolio: Fully populated portfolio with categories,
-    ///   tickers, and their current price / moving average values.
-    /// - Returns: An array of ticker allocations summing to
-    ///   `portfolio.monthlyBudget`.
-    /// - Throws: `CalculationError` if input data is incomplete.
-    func calculate(for portfolio: Portfolio) throws -> [TickerAllocation]
+  /// Given a validated input snapshot, return contribution output whose
+  /// allocations sum to `input.monthlyBudget`.
+  func calculate(input: ContributionInput) -> ContributionOutput
 }
 
-enum CalculationError: Error {
-    case missingMarketData(ticker: String)
-    case invalidWeights            // category weights don't sum to 1.0
-    case zeroBudget
+enum ContributionCalculationError: LocalizedError {
+  case missingPortfolio
+  case invalidBudget
+  case noCategories
+  case categoryWeightsDoNotSumTo100
+  case categoryHasNoTickers(String)
+  case missingMarketData(String)
+  case invalidMarketData(String)
+  case negativeAllocation(String)
+  case outputTotalMismatch(expected: Decimal, actual: Decimal)
+  case allocationTotalMismatch(expected: Decimal, actual: Decimal)
 }
 ```
 
