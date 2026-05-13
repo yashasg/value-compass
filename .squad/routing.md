@@ -2,6 +2,8 @@
 
 How to decide who handles what.
 
+The table below summarizes the policy for humans. `.squad/routing.json` is the machine-readable source of truth used by automation for owner and keyword routing.
+
 ## Routing Table
 
 | Work Type | Route To | Examples |

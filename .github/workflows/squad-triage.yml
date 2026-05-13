@@ -88,14 +88,15 @@ jobs:
               }
             }
 
-            // Read routing rules — check .squad/ first, fall back to .ai-team/
-            let routingFile = '.squad/routing.md';
-            if (!fs.existsSync(routingFile)) {
-              routingFile = '.ai-team/routing.md';
+            // Read machine-readable routing rules — check .squad/ first, fall back to .ai-team/
+            let routingConfigFile = '.squad/routing.json';
+            if (!fs.existsSync(routingConfigFile)) {
+              routingConfigFile = '.ai-team/routing.json';
             }
-            let routingContent = '';
-            if (fs.existsSync(routingFile)) {
-              routingContent = fs.readFileSync(routingFile, 'utf8');
+            let domainRules = [];
+            if (fs.existsSync(routingConfigFile)) {
+              const routingConfig = JSON.parse(fs.readFileSync(routingConfigFile, 'utf8'));
+              domainRules = Array.isArray(routingConfig.domains) ? routingConfig.domains : [];
             }
 
             // Find the Lead
@@ -112,6 +113,11 @@ jobs:
 
             function slugify(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
+            function keywordMatches(text, keyword) {
+              const escaped = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(text);
+            }
+
             // Build triage context
             const memberList = members.map(m =>
               `- **${m.name}** (${m.role}) → label: \`squad:${slugify(m.name)}\``
@@ -119,64 +125,6 @@ jobs:
 
             // Determine best assignee based on issue content and routing
             const issueText = `${issue.title}\n${issue.body || ''}`.toLowerCase();
-            const domainRules = [
-              {
-                member: 'Danny',
-                reason: 'Issue relates to architecture, priorities, or cross-domain coordination',
-                keywords: [
-                  'architecture', 'architectural', 'adr', 'tech spec',
-                  'cross-cutting', 'priorities', 'roadmap', 'parallel',
-                  'scope', 'trade-off', 'domain boundary'
-                ]
-              },
-              {
-                member: 'Livingston',
-                reason: 'Issue relates to infrastructure, CI/CD, deployment, or release automation',
-                keywords: [
-                  'ci', 'cd', 'ci/cd', 'github actions', 'workflow', 'deploy',
-                  'deployment', 'testflight', 'app store', 'azure', 'secret',
-                  'certificate', 'provisioning', 'release', 'build script'
-                ]
-              },
-              {
-                member: 'Linus',
-                reason: 'Issue relates to OpenAPI, generated clients, sync contracts, or service integration',
-                keywords: [
-                  'openapi', 'generated client', 'client sync', 'sync mapping',
-                  'contract test', 'contract tests', 'integration', 'api client',
-                  'portfolio syncing', 'portfoliosyncing'
-                ]
-              },
-              {
-                member: 'Rusty',
-                reason: 'Issue relates to backend APIs, database models, migrations, or poller behavior',
-                keywords: [
-                  'backend', 'fastapi', 'api endpoint', 'endpoint', 'database',
-                  'db', 'sqlalchemy', 'alembic', 'migration', 'poller',
-                  'stock_cache', 'market-data api', 'service error', 'data model'
-                ]
-              },
-              {
-                member: 'Tess',
-                reason: 'Issue relates to iOS/iPadOS experience design, onboarding, layout, or accessibility',
-                keywords: [
-                  'onboarding', 'disclaimer', 'settings', 'appearance',
-                  'accessibility', 'dynamic type', 'voiceover', 'ipad',
-                  'adaptive', 'layout', 'empty state', 'light mode', 'dark mode',
-                  'color token', 'design'
-                ]
-              },
-              {
-                member: 'Basher',
-                reason: 'Issue relates to Swift, SwiftUI, SwiftData, or iOS app implementation',
-                keywords: [
-                  'ios', 'swift', 'swiftui', 'swiftdata', 'xcode', 'frontend',
-                  'view model', 'viewmodel', 'calculator', 'calculation',
-                  'portfolio list', 'holdings editor', 'result screen',
-                  'contribution history', 'xctest'
-                ]
-              }
-            ];
 
             let assignedMember = null;
             let triageReason = '';
@@ -209,7 +157,7 @@ jobs:
                 if (!member) {
                   continue;
                 }
-                if (rule.keywords.some(kw => issueText.includes(kw))) {
+                if ((rule.keywords || []).some(kw => keywordMatches(issueText, kw))) {
                   assignedMember = member;
                   triageReason = rule.reason;
                   break;
