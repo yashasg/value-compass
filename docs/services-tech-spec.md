@@ -300,11 +300,11 @@ V1 backend targets **Azure Container Apps** as the managed infrastructure founda
 
 The `.github/workflows/vc-services-AutoDeployTrigger-*.yml` workflow:
 1. Checks out the target ref.
-2. Logs in to Azure using `VCSERVICES_AZURE_CREDENTIALS`.
-3. Builds the FastAPI app and pushes a container image to `cae127fb809bacr.azurecr.io` with a tag matching the commit SHA.
-4. Deploys the container to the Azure Container Apps resource group `puzzlequest-value-compass-rg` and container app `vc-services`.
+2. Logs in to Azure using `AZURE_CREDENTIALS`.
+3. Builds the FastAPI app from `backend/api` and pushes a container image to `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER` with a tag matching the commit SHA.
+4. Deploys the container to the Azure Container Apps resource group named by `AZURE_RESOURCE_GROUP` and container app named by `AZURE_CONTAINER_APP_NAME`.
 
-All credentials are stored in GitHub Secrets. No secrets are committed to code.
+All credentials and Azure resource identifiers are stored in GitHub Secrets. Required secrets for the Container Apps workflow are `AZURE_CREDENTIALS`, `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER`, `AZURE_CONTAINER_REGISTRY_USERNAME`, `AZURE_CONTAINER_REGISTRY_PASSWORD`, `AZURE_CONTAINER_APP_NAME`, and `AZURE_RESOURCE_GROUP`. No secrets are committed to code.
 
 ### Future: Backend Responsibilities and API Contracts
 
