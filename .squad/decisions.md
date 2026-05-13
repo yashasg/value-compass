@@ -124,6 +124,26 @@ Value Compass v1 design scope is now concrete and approved.
 - **Basher:** unblocked to scaffold SwiftUI screens for both size classes and appearances using semantic colors. Report feasibility on adaptive navigation and contribution flows.
 - **Rusty / Linus:** no change — SwiftData and services already account for this scope.
 
+### 2026-05-12T17:02:11.019-07:00: SwiftUI Stitch Scaffold Feasibility — ADOPTED
+**By:** Basher (iOS Dev) | **Status:** Adopted
+
+SwiftUI scaffolding is feasible for universal iPhone/iPad support and light/dark mode without duplicating core screen logic.
+
+**Key Findings:**
+1. **Navigation:** `NavigationSplitView` on iPad and `NavigationStack` on iPhone share the same Portfolio→Category→Ticker view models using a shared route/selection model and screen components. Only the shell is adaptive: compact width drives stack pushes/sheets; regular width drives sidebar/content/detail selection. Core business logic is not forked by device class.
+
+2. **Semantic colors:** Asset Catalog color sets support light/dark mode without per-view conditionals. Use `Color("TokenName")`/design-token wrappers with asset variants switching by appearance. Token categories include: app/background surfaces, elevated surfaces/cards, primary/secondary action, content primary/secondary/tertiary, borders/dividers, validation/status, financial positive/negative/neutral, input background/focus/disabled, selection/highlight, and chart/category accents.
+
+3. **SwiftData observation:** Keep `@Query` at list/history boundaries and pass selected model IDs or references into focused screens. For create/edit forms, use draft form state and commit in one save to avoid live partial mutations. Contribution history queries immutable `ContributionRecord` snapshots by `portfolioId`, sorted newest-first. Calculation uses an explicit validated input snapshot so edits during navigation do not alter already-produced results.
+
+4. **Scaffolding order:** (1) App shell with adaptive navigation, semantic tokens, disclaimer route, local settings. (2) Onboarding/disclaimer first-launch gate. (3) Portfolio list. (4) Create/edit portfolio. (5) Portfolio detail/dashboard. (6) Category edit. (7) Ticker edit with manual market inputs. (8) Contribution input/validation. (9) Contribution result. (10) Contribution history. (11) Settings/disclaimer.
+
+5. **Blockers:** None. User clarification is not needed before implementation for navigation, dark/light mode, local settings, no account UI, no tabs, or manual market inputs. Open non-blocking items: final Tess palette/typography, final user-supplied VCA algorithm, future backend sync/category round-trip behavior.
+
+**Why:** Preserves v1 decisions (universal iOS/iPadOS, SwiftData local-first, Portfolio→Category→Ticker, manual market inputs, local-only settings/history, no account UI, no tabs, semantic colors, provisional SF fonts) while treating Stitch as functional scaffolding only.
+
+**Next:** Basher proceeds with SwiftUI scaffolding implementation.
+
 ## Governance
 
 - All meaningful changes require team consensus
