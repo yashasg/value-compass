@@ -23,6 +23,7 @@ struct BackendHoldingPayload: Equatable {
 enum BackendSyncProjectionError: Error, Equatable {
     case duplicateTickerSymbols([String])
     case emptyCategory(categoryName: String)
+    case emptyTickerSymbol
     case invalidHoldingWeight(ticker: String, weight: Decimal)
     case invalidMAWindow(Int)
     case nonPositiveBudget
@@ -53,7 +54,7 @@ enum BackendSyncProjection {
             return $0.id.uuidString < $1.id.uuidString
         }
 
-        let duplicateSymbols = duplicateTickerSymbols(in: categories)
+        let duplicateSymbols = portfolio.duplicateTickerSymbols()
         if !duplicateSymbols.isEmpty {
             throw BackendSyncProjectionError.duplicateTickerSymbols(duplicateSymbols)
         }
@@ -76,13 +77,19 @@ enum BackendSyncProjection {
                 throw BackendSyncProjectionError.emptyCategory(categoryName: category.name)
             }
 
-            let holdingWeight = category.weight / Decimal(tickers.count)
-            return try tickers.map { ticker in
-                let normalizedSymbol = ticker.normalizedSymbol
-                guard isBackendHoldingWeight(holdingWeight) else {
-                    throw BackendSyncProjectionError.invalidHoldingWeight(ticker: normalizedSymbol, weight: holdingWeight)
+            let normalizedSymbols = tickers.map(\.normalizedSymbol)
+            for normalizedSymbol in normalizedSymbols {
+                guard !normalizedSymbol.isEmpty else {
+                    throw BackendSyncProjectionError.emptyTickerSymbol
                 }
+            }
 
+            let holdingWeight = category.weight / Decimal(tickers.count)
+            guard isBackendHoldingWeight(holdingWeight) else {
+                throw BackendSyncProjectionError.invalidHoldingWeight(ticker: normalizedSymbols[0], weight: holdingWeight)
+            }
+
+            return normalizedSymbols.map { normalizedSymbol in
                 return BackendHoldingPayload(
                     portfolioID: portfolio.id,
                     ticker: normalizedSymbol,
@@ -102,19 +109,6 @@ enum BackendSyncProjection {
             ),
             holdings: holdings
         )
-    }
-
-    private static func duplicateTickerSymbols(in categories: [Category]) -> [String] {
-        var seen = Set<String>()
-        var duplicates = Set<String>()
-
-        for symbol in categories.flatMap(\.tickers).map(\.normalizedSymbol) where !symbol.isEmpty {
-            if !seen.insert(symbol).inserted {
-                duplicates.insert(symbol)
-            }
-        }
-
-        return duplicates.sorted()
     }
 
     private static func isBackendHoldingWeight(_ weight: Decimal) -> Bool {

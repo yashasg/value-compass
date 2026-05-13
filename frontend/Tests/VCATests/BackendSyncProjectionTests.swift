@@ -113,6 +113,22 @@ final class BackendSyncProjectionTests: XCTestCase {
         }
     }
 
+    func testProjectionRejectsEmptyTickerSymbolBeforeBackendPayload() {
+        let portfolio = Portfolio(
+            name: "Empty sync symbol",
+            monthlyBudget: Decimal(100),
+            categories: [
+                Category(name: "Invalid", weight: 1, sortOrder: 1, tickers: [
+                    Ticker(symbol: "  ", sortOrder: 1),
+                ]),
+            ]
+        )
+
+        XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: portfolio, deviceUUID: UUID())) { error in
+            XCTAssertEqual(error as? BackendSyncProjectionError, .emptyTickerSymbol)
+        }
+    }
+
     func testProjectionRejectsInvalidBackendHoldingWeights() {
         let negativeWeightPortfolio = Portfolio(
             name: "Negative weight",
