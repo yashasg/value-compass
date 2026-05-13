@@ -9,32 +9,28 @@ struct MainView: View {
     case splitView
   }
 
-  enum Section: String, Hashable, CaseIterable, Identifiable {
-    case dashboard = "Dashboard"
+  enum SidebarSelection: String, Hashable, CaseIterable, Identifiable {
+    case portfolios = "Portfolios"
     case settings = "Settings"
     var id: String { rawValue }
   }
 
+  enum DetailSelection: Equatable {
+    case portfolio(UUID)
+    case settings
+    case emptyPortfolioSelection
+  }
+
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-  @State private var selection: Section? = .dashboard
+  @Query(sort: \Portfolio.createdAt, order: .reverse) private var portfolios: [Portfolio]
+  @State private var sidebarSelection: SidebarSelection? = .portfolios
+  @State private var selectedPortfolioID: UUID?
 
   var body: some View {
     switch Self.navigationShellKind(for: horizontalSizeClass) {
     case .stack:
       NavigationStack {
-        List {
-          AppBrandSidebarHeader()
-
-          ForEach(Section.allCases) { section in
-            NavigationLink(value: section) {
-              Label(section.rawValue, systemImage: icon(for: section))
-            }
-          }
-        }
-        .navigationTitle(AppBrand.displayName)
-        .navigationDestination(for: Section.self) { section in
-          destination(for: section)
-        }
+        PortfolioListView(showsSettingsLink: true)
       }
     case .splitView:
       splitView
@@ -49,34 +45,80 @@ struct MainView: View {
 
   private var splitView: some View {
     NavigationSplitView {
-      List(selection: $selection) {
+      List(selection: $sidebarSelection) {
         AppBrandSidebarHeader()
 
-        ForEach(Section.allCases) { section in
+        ForEach(SidebarSelection.allCases) { section in
           NavigationLink(value: section) {
             Label(section.rawValue, systemImage: icon(for: section))
           }
         }
       }
       .navigationTitle(AppBrand.displayName)
+    } content: {
+      switch sidebarSelection ?? .portfolios {
+      case .portfolios:
+        PortfolioListView(selectedPortfolioID: $selectedPortfolioID, showsSettingsLink: false)
+      case .settings:
+        SettingsView()
+      }
     } detail: {
-      destination(for: selection ?? .dashboard)
+      detailView(
+        for: Self.detailSelection(
+          sidebarSelection: sidebarSelection,
+          selectedPortfolioID: selectedPortfolioID,
+          firstPortfolioID: portfolios.first?.id))
     }
   }
 
   @ViewBuilder
-  private func destination(for section: Section) -> some View {
-    switch section {
-    case .dashboard:
-      DashboardView()
+  private func detailView(for detailSelection: DetailSelection) -> some View {
+    switch detailSelection {
+    case .portfolio(let id):
+      if let portfolio = portfolios.first(where: { $0.id == id }) {
+        PortfolioDetailView(portfolio: portfolio)
+      } else {
+        emptyPortfolioSelectionView
+      }
     case .settings:
       SettingsView()
+    case .emptyPortfolioSelection:
+      emptyPortfolioSelectionView
     }
   }
 
-  private func icon(for section: Section) -> String {
+  private var emptyPortfolioSelectionView: some View {
+    ContentUnavailableView {
+      Label("Select a Portfolio", systemImage: "sidebar.leading")
+    } description: {
+      Text("Choose or create a portfolio from the list.")
+    }
+    .navigationTitle("Portfolio")
+  }
+
+  static func detailSelection(
+    sidebarSelection: SidebarSelection?,
+    selectedPortfolioID: UUID?,
+    firstPortfolioID: UUID?
+  ) -> DetailSelection {
+    if sidebarSelection == .settings {
+      return .settings
+    }
+
+    if let selectedPortfolioID {
+      return .portfolio(selectedPortfolioID)
+    }
+
+    if let firstPortfolioID {
+      return .portfolio(firstPortfolioID)
+    }
+
+    return .emptyPortfolioSelection
+  }
+
+  private func icon(for section: SidebarSelection) -> String {
     switch section {
-    case .dashboard: return "chart.line.uptrend.xyaxis"
+    case .portfolios: return "chart.line.uptrend.xyaxis"
     case .settings: return "gear"
     }
   }
@@ -181,10 +223,18 @@ struct PortfolioFormDraft: Equatable {
 }
 
 struct PortfolioListView: View {
+  private let selectedPortfolioID: Binding<UUID?>?
+  private let showsSettingsLink: Bool
+
   @Environment(\.modelContext) private var modelContext
   @Query(sort: \Portfolio.createdAt, order: .reverse) private var portfolios: [Portfolio]
   @State private var editorMode: PortfolioEditorMode?
   @State private var saveError: SaveError?
+
+  init(selectedPortfolioID: Binding<UUID?>? = nil, showsSettingsLink: Bool = true) {
+    self.selectedPortfolioID = selectedPortfolioID
+    self.showsSettingsLink = showsSettingsLink
+  }
 
   var body: some View {
     Group {
@@ -203,21 +253,17 @@ struct PortfolioListView: View {
       } else {
         List {
           ForEach(portfolios) { portfolio in
-            NavigationLink {
-              PortfolioDetailView(portfolio: portfolio)
-            } label: {
-              PortfolioRowView(portfolio: portfolio)
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-              Button("Delete", role: .destructive) {
-                delete(portfolio)
-              }
+            portfolioRow(for: portfolio)
+              .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button("Delete", role: .destructive) {
+                  delete(portfolio)
+                }
 
-              Button("Edit") {
-                editorMode = .edit(portfolio)
+                Button("Edit") {
+                  editorMode = .edit(portfolio)
+                }
+                .tint(.blue)
               }
-              .tint(.blue)
-            }
           }
           .onDelete(perform: delete)
         }
@@ -234,6 +280,17 @@ struct PortfolioListView: View {
         }
         .accessibilityIdentifier("portfolio.create")
       }
+
+      if showsSettingsLink {
+        ToolbarItem(placement: .secondaryAction) {
+          NavigationLink {
+            SettingsView()
+          } label: {
+            Label("Settings", systemImage: "gear")
+          }
+          .accessibilityIdentifier("portfolio.settings")
+        }
+      }
     }
     .sheet(item: $editorMode) { mode in
       PortfolioEditorView(mode: mode) { draft in
@@ -246,6 +303,34 @@ struct PortfolioListView: View {
         message: Text(error.message),
         dismissButton: .default(Text("OK"))
       )
+    }
+  }
+
+  @ViewBuilder
+  private func portfolioRow(for portfolio: Portfolio) -> some View {
+    if let selectedPortfolioID {
+      Button {
+        selectedPortfolioID.wrappedValue = portfolio.id
+      } label: {
+        HStack {
+          PortfolioRowView(portfolio: portfolio)
+          Spacer()
+          if selectedPortfolioID.wrappedValue == portfolio.id {
+            Image(systemName: "checkmark.circle.fill")
+              .foregroundStyle(.tint)
+              .accessibilityHidden(true)
+          }
+        }
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("portfolio.list.selection")
+      .accessibilityAddTraits(selectedPortfolioID.wrappedValue == portfolio.id ? .isSelected : [])
+    } else {
+      NavigationLink {
+        PortfolioDetailView(portfolio: portfolio)
+      } label: {
+        PortfolioRowView(portfolio: portfolio)
+      }
     }
   }
 
