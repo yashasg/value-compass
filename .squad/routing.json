@@ -1,0 +1,124 @@
+{
+  "domains": [
+    {
+      "name": "architecture",
+      "member": "Danny",
+      "reason": "Issue relates to architecture, priorities, or cross-domain coordination",
+      "keywords": [
+        "architecture",
+        "architectural",
+        "adr",
+        "tech spec",
+        "cross-cutting",
+        "priorities",
+        "roadmap",
+        "parallel",
+        "scope",
+        "trade-off",
+        "domain boundary"
+      ]
+    },
+    {
+      "name": "infrastructure",
+      "member": "Livingston",
+      "reason": "Issue relates to infrastructure, CI/CD, deployment, or release automation",
+      "keywords": [
+        "ci/cd",
+        "github actions",
+        "workflow",
+        "deploy",
+        "deployment",
+        "testflight",
+        "app store",
+        "azure",
+        "secret",
+        "certificate",
+        "provisioning",
+        "release",
+        "build script"
+      ]
+    },
+    {
+      "name": "integration",
+      "member": "Linus",
+      "reason": "Issue relates to OpenAPI, generated clients, sync contracts, or service integration",
+      "keywords": [
+        "openapi",
+        "generated client",
+        "client sync",
+        "sync mapping",
+        "contract test",
+        "contract tests",
+        "integration",
+        "api client",
+        "portfolio syncing",
+        "portfoliosyncing"
+      ]
+    },
+    {
+      "name": "backend",
+      "member": "Rusty",
+      "reason": "Issue relates to backend APIs, database models, migrations, or poller behavior",
+      "keywords": [
+        "backend",
+        "fastapi",
+        "api endpoint",
+        "endpoint",
+        "database",
+        "db",
+        "sqlalchemy",
+        "alembic",
+        "migration",
+        "poller",
+        "stock_cache",
+        "market-data api",
+        "service error",
+        "data model"
+      ]
+    },
+    {
+      "name": "design",
+      "member": "Tess",
+      "reason": "Issue relates to iOS/iPadOS experience design, onboarding, layout, or accessibility",
+      "keywords": [
+        "onboarding",
+        "disclaimer",
+        "settings",
+        "appearance",
+        "accessibility",
+        "dynamic type",
+        "voiceover",
+        "ipad",
+        "adaptive",
+        "layout",
+        "empty state",
+        "light mode",
+        "dark mode",
+        "color token",
+        "design"
+      ]
+    },
+    {
+      "name": "ios",
+      "member": "Basher",
+      "reason": "Issue relates to Swift, SwiftUI, SwiftData, or iOS app implementation",
+      "keywords": [
+        "ios",
+        "swift",
+        "swiftui",
+        "swiftdata",
+        "xcode",
+        "frontend",
+        "view model",
+        "viewmodel",
+        "calculator",
+        "calculation",
+        "portfolio list",
+        "holdings editor",
+        "result screen",
+        "contribution history",
+        "xctest"
+      ]
+    }
+  ]
+}

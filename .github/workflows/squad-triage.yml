@@ -88,14 +88,15 @@ jobs:
               }
             }
 
-            // Read routing rules — check .squad/ first, fall back to .ai-team/
-            let routingFile = '.squad/routing.md';
-            if (!fs.existsSync(routingFile)) {
-              routingFile = '.ai-team/routing.md';
+            // Read machine-readable routing rules — check .squad/ first, fall back to .ai-team/
+            let routingConfigFile = '.squad/routing.json';
+            if (!fs.existsSync(routingConfigFile)) {
+              routingConfigFile = '.ai-team/routing.json';
             }
-            let routingContent = '';
-            if (fs.existsSync(routingFile)) {
-              routingContent = fs.readFileSync(routingFile, 'utf8');
+            let domainRules = [];
+            if (fs.existsSync(routingConfigFile)) {
+              const routingConfig = JSON.parse(fs.readFileSync(routingConfigFile, 'utf8'));
+              domainRules = Array.isArray(routingConfig.domains) ? routingConfig.domains : [];
             }
 
             // Find the Lead
@@ -111,6 +112,11 @@ jobs:
             }
 
             function slugify(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+
+            function keywordMatches(text, keyword) {
+              const escaped = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(text);
+            }
 
             // Build triage context
             const memberList = members.map(m =>
@@ -146,39 +152,14 @@ jobs:
 
             // If not routed to @copilot, use keyword-based routing
             if (!assignedMember) {
-              for (const member of members) {
-                const role = member.role.toLowerCase();
-                if ((role.includes('frontend') || role.includes('ui')) &&
-                    (issueText.includes('ui') || issueText.includes('frontend') ||
-                     issueText.includes('css') || issueText.includes('component') ||
-                     issueText.includes('button') || issueText.includes('page') ||
-                     issueText.includes('layout') || issueText.includes('design'))) {
-                  assignedMember = member;
-                  triageReason = 'Issue relates to frontend/UI work';
-                  break;
+              for (const rule of domainRules) {
+                const member = members.find(m => m.name.toLowerCase() === rule.member.toLowerCase());
+                if (!member) {
+                  continue;
                 }
-                if ((role.includes('backend') || role.includes('api') || role.includes('server')) &&
-                    (issueText.includes('api') || issueText.includes('backend') ||
-                     issueText.includes('database') || issueText.includes('endpoint') ||
-                     issueText.includes('server') || issueText.includes('auth'))) {
+                if ((rule.keywords || []).some(kw => keywordMatches(issueText, kw))) {
                   assignedMember = member;
-                  triageReason = 'Issue relates to backend/API work';
-                  break;
-                }
-                if ((role.includes('test') || role.includes('qa') || role.includes('quality')) &&
-                    (issueText.includes('test') || issueText.includes('bug') ||
-                     issueText.includes('fix') || issueText.includes('regression') ||
-                     issueText.includes('coverage'))) {
-                  assignedMember = member;
-                  triageReason = 'Issue relates to testing/quality work';
-                  break;
-                }
-                if ((role.includes('devops') || role.includes('infra') || role.includes('ops')) &&
-                    (issueText.includes('deploy') || issueText.includes('ci') ||
-                     issueText.includes('pipeline') || issueText.includes('docker') ||
-                     issueText.includes('infrastructure'))) {
-                  assignedMember = member;
-                  triageReason = 'Issue relates to DevOps/infrastructure work';
+                  triageReason = rule.reason;
                   break;
                 }
               }
