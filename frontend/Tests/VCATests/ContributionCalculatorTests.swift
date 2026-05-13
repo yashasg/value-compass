@@ -33,21 +33,27 @@ final class ContributionCalculatorTests: XCTestCase {
       ])
   }
 
-  func testBandAdjustedCalculatorAppliesClampedBandMultiplier() {
+  func testBandAdjustedCalculatorUsesNaturalBandMultiplierBounds() {
     let portfolio = Portfolio(
       name: "Bands",
-      monthlyBudget: Decimal(300),
+      monthlyBudget: Decimal(500),
       categories: [
         Category(
           name: "Equity", weight: 1, sortOrder: 0,
           tickers: [
             Ticker(
-              symbol: "LOW", currentPrice: 100, movingAverage: 99, bandPosition: 0, sortOrder: 0),
+              symbol: "UNDER", currentPrice: 100, movingAverage: 99,
+              bandPosition: Decimal(string: "-0.25")!, sortOrder: 0),
+            Ticker(
+              symbol: "LOW", currentPrice: 100, movingAverage: 99, bandPosition: 0, sortOrder: 1),
             Ticker(
               symbol: "MID", currentPrice: 100, movingAverage: 99,
-              bandPosition: Decimal(string: "0.5")!, sortOrder: 1),
+              bandPosition: Decimal(string: "0.5")!, sortOrder: 2),
             Ticker(
-              symbol: "HIGH", currentPrice: 100, movingAverage: 99, bandPosition: 1, sortOrder: 2),
+              symbol: "HIGH", currentPrice: 100, movingAverage: 99, bandPosition: 1, sortOrder: 3),
+            Ticker(
+              symbol: "OVER", currentPrice: 100, movingAverage: 99,
+              bandPosition: Decimal(string: "1.25")!, sortOrder: 4),
           ])
       ]
     )
@@ -56,20 +62,24 @@ final class ContributionCalculatorTests: XCTestCase {
       input: ContributionInput(portfolio: portfolio))
 
     XCTAssertNil(output.error)
-    XCTAssertEqual(output.totalAmount, Decimal(300))
+    XCTAssertEqual(output.totalAmount, Decimal(500))
     XCTAssertEqual(
       output.allocations.map(\.amount),
       [
         Decimal(150),
+        Decimal(150),
         Decimal(100),
+        Decimal(50),
         Decimal(50),
       ])
     XCTAssertEqual(
       output.allocations.map(\.allocatedWeight),
       [
-        Decimal(string: "1.5")!,
+        BandMultiplierPolicy.defaultMaximum,
+        BandMultiplierPolicy.defaultMaximum,
         Decimal(1),
-        Decimal(string: "0.5")!,
+        BandMultiplierPolicy.defaultMinimum,
+        BandMultiplierPolicy.defaultMinimum,
       ])
   }
 
