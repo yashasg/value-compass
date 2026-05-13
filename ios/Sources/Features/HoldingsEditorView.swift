@@ -8,6 +8,8 @@ enum HoldingsDraftIssue: Equatable {
     case categoryWeightsDoNotSumTo100
     case categoryHasNoTickers(String)
     case emptyTickerSymbol
+    case missingTickerMarketData(String)
+    case invalidTickerMarketData(String)
     case duplicateTickerSymbols([String])
 
     var message: String {
@@ -24,6 +26,10 @@ enum HoldingsDraftIssue: Equatable {
             return "\(categoryName) has no tickers."
         case .emptyTickerSymbol:
             return "Ticker symbols are required."
+        case .missingTickerMarketData(let symbol):
+            return "\(symbol) is missing current price or moving average."
+        case .invalidTickerMarketData(let symbol):
+            return "\(symbol) market data must be greater than 0."
         case .duplicateTickerSymbols(let symbols):
             return "Ticker symbols must be unique: \(symbols.joined(separator: ", "))."
         }
@@ -31,9 +37,9 @@ enum HoldingsDraftIssue: Equatable {
 
     var blocksSaving: Bool {
         switch self {
-        case .emptyCategoryName, .invalidCategoryWeight, .emptyTickerSymbol, .duplicateTickerSymbols:
+        case .emptyCategoryName, .invalidCategoryWeight, .emptyTickerSymbol, .invalidTickerMarketData, .duplicateTickerSymbols:
             return true
-        case .noCategories, .categoryWeightsDoNotSumTo100, .categoryHasNoTickers:
+        case .noCategories, .categoryWeightsDoNotSumTo100, .categoryHasNoTickers, .missingTickerMarketData:
             return false
         }
     }
@@ -107,8 +113,17 @@ struct HoldingsDraft: Equatable {
             issues.append(.categoryHasNoTickers(category.displayName))
         }
 
-        if categories.flatMap(\.tickers).contains(where: { $0.normalizedSymbol.isEmpty }) {
+        let tickers = categories.flatMap(\.tickers)
+        if tickers.contains(where: { $0.normalizedSymbol.isEmpty }) {
             issues.append(.emptyTickerSymbol)
+        }
+
+        for ticker in tickers where !ticker.normalizedSymbol.isEmpty {
+            if ticker.hasInvalidMarketData {
+                issues.append(.invalidTickerMarketData(ticker.normalizedSymbol))
+            } else if !ticker.hasCompleteMarketData {
+                issues.append(.missingTickerMarketData(ticker.normalizedSymbol))
+            }
         }
 
         let duplicates = duplicateTickerSymbols()
@@ -310,8 +325,8 @@ struct CategoryDraft: Identifiable, Equatable {
 struct TickerDraft: Identifiable, Equatable {
     let id: UUID
     var symbol: String
-    var currentPrice: Decimal?
-    var movingAverage: Decimal?
+    var currentPriceText: String
+    var movingAverageText: String
     var sortOrder: Int
 
     init(
@@ -323,21 +338,77 @@ struct TickerDraft: Identifiable, Equatable {
     ) {
         self.id = id
         self.symbol = symbol
-        self.currentPrice = currentPrice
-        self.movingAverage = movingAverage
+        self.currentPriceText = Self.displayDecimalText(for: currentPrice)
+        self.movingAverageText = Self.displayDecimalText(for: movingAverage)
         self.sortOrder = sortOrder
     }
 
     init(ticker: Ticker) {
         id = ticker.id
         symbol = ticker.symbol
-        currentPrice = ticker.currentPrice
-        movingAverage = ticker.movingAverage
+        currentPriceText = Self.displayDecimalText(for: ticker.currentPrice)
+        movingAverageText = Self.displayDecimalText(for: ticker.movingAverage)
         sortOrder = ticker.sortOrder
     }
 
     var normalizedSymbol: String {
         symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
+    var currentPrice: Decimal? {
+        Self.validPositiveDecimal(from: currentPriceText)
+    }
+
+    var movingAverage: Decimal? {
+        Self.validPositiveDecimal(from: movingAverageText)
+    }
+
+    var hasCompleteMarketData: Bool {
+        currentPrice != nil && movingAverage != nil
+    }
+
+    var hasInvalidMarketData: Bool {
+        Self.hasInvalidPositiveDecimal(currentPriceText) || Self.hasInvalidPositiveDecimal(movingAverageText)
+    }
+
+    var marketDataStatusMessage: String? {
+        if hasInvalidMarketData {
+            return "Price and moving average must be greater than 0."
+        }
+        if !hasCompleteMarketData {
+            return "Current price and moving average are required before calculating."
+        }
+        return nil
+    }
+
+    static func displayDecimalText(for decimal: Decimal?) -> String {
+        guard let decimal else {
+            return ""
+        }
+
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        return formatter.string(from: NSDecimalNumber(decimal: decimal)) ?? NSDecimalNumber(decimal: decimal).stringValue
+    }
+
+    private static func validPositiveDecimal(from text: String) -> Decimal? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let value = Decimal(string: trimmed), value > 0 else {
+            return nil
+        }
+        return value
+    }
+
+    private static func hasInvalidPositiveDecimal(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        return validPositiveDecimal(from: trimmed) == nil
     }
 }
 
@@ -440,30 +511,49 @@ struct HoldingsEditorView: View {
             }
 
             ForEach(category.tickers) { $ticker in
-                HStack {
-                    TextField("Ticker symbol", text: $ticker.symbol)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("holdings.ticker.symbol")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        TextField("Ticker symbol", text: $ticker.symbol)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("holdings.ticker.symbol")
 
-                    Button {
-                        category.wrappedValue.moveTicker(id: ticker.id, direction: .up)
-                    } label: {
-                        Image(systemName: "chevron.up")
+                        Button {
+                            category.wrappedValue.moveTicker(id: ticker.id, direction: .up)
+                        } label: {
+                            Image(systemName: "chevron.up")
+                        }
+                        .disabled(category.wrappedValue.tickers.first?.id == ticker.id)
+
+                        Button {
+                            category.wrappedValue.moveTicker(id: ticker.id, direction: .down)
+                        } label: {
+                            Image(systemName: "chevron.down")
+                        }
+                        .disabled(category.wrappedValue.tickers.last?.id == ticker.id)
+
+                        Button(role: .destructive) {
+                            category.wrappedValue.deleteTicker(id: ticker.id)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
                     }
-                    .disabled(category.wrappedValue.tickers.first?.id == ticker.id)
 
-                    Button {
-                        category.wrappedValue.moveTicker(id: ticker.id, direction: .down)
-                    } label: {
-                        Image(systemName: "chevron.down")
+                    HStack {
+                        TextField("Current Price", text: $ticker.currentPriceText)
+                            .keyboardType(.decimalPad)
+                            .accessibilityIdentifier("holdings.ticker.currentPrice")
+
+                        TextField("Moving Average", text: $ticker.movingAverageText)
+                            .keyboardType(.decimalPad)
+                            .accessibilityIdentifier("holdings.ticker.movingAverage")
                     }
-                    .disabled(category.wrappedValue.tickers.last?.id == ticker.id)
 
-                    Button(role: .destructive) {
-                        category.wrappedValue.deleteTicker(id: ticker.id)
-                    } label: {
-                        Image(systemName: "trash")
+                    if let message = ticker.marketDataStatusMessage {
+                        Label(message, systemImage: ticker.hasInvalidMarketData ? "exclamationmark.triangle.fill" : "exclamationmark.circle")
+                            .font(.caption)
+                            .foregroundStyle(ticker.hasInvalidMarketData ? .red : .orange)
+                            .accessibilityIdentifier("holdings.ticker.marketDataWarning")
                     }
                 }
             }
