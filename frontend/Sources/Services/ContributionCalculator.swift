@@ -238,6 +238,10 @@ enum ContributionOutputValidator {
       return .allocationTotalMismatch(expected: output.totalAmount, actual: actualTotal)
     }
 
+    guard abs(output.totalAmount - expectedTotal) <= tolerance else {
+      return .outputTotalMismatch(expected: expectedTotal, actual: output.totalAmount)
+    }
+
     return nil
   }
 

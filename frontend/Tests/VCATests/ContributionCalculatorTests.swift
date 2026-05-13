@@ -249,6 +249,23 @@ final class ContributionCalculatorTests: XCTestCase {
       mismatchResult.error as? ContributionCalculationError,
       .allocationTotalMismatch(expected: Decimal(75), actual: Decimal(50))
     )
+
+    let outputTotalMismatch = ContributionOutput(
+      totalAmount: Decimal(75),
+      allocations: [
+        TickerContributionAllocation(
+          tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(75), allocatedWeight: 1)
+      ]
+    )
+    let outputTotalMismatchResult = ContributionCalculationService.calculate(
+      portfolio: portfolio,
+      calculator: SpyCalculator(output: outputTotalMismatch)
+    )
+
+    XCTAssertEqual(
+      outputTotalMismatchResult.error as? ContributionCalculationError,
+      .outputTotalMismatch(expected: Decimal(100), actual: Decimal(75))
+    )
   }
 
   private func makeValidPortfolio(monthlyBudget: Decimal) -> Portfolio {

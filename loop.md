@@ -19,7 +19,7 @@ description: "My squad work loop"
 5. Monitor CI/CD for squad PRs, fix failing checks, address comments, and squash merge to `main` when green so linked issues close with the merge.
 6. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
 7. Use the MVP milestone tag on new issues
-8. maintain clean code, use docs/python/coding_standards.md and docs/swift/coding_standards.md. Always look to remove/delete stale code and files.
+8. Maintain clean code, use docs/python/coding_standards.md and docs/swift/coding_standards.md. Always look to remove/delete stale code and files.
 9. After completing work, output:
 	- blockers
 	- risky changes
