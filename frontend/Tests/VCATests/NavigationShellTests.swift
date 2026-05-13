@@ -3,6 +3,14 @@ import XCTest
 @testable import VCA
 
 final class NavigationShellTests: XCTestCase {
+    func testAppBrandUsesPublicName() {
+        XCTAssertEqual(AppBrand.displayName, "Investrum")
+    }
+
+    func testBundledSourceIconIsAvailable() {
+        XCTAssertNotNil(Bundle.main.url(forResource: "icon", withExtension: "svg"))
+    }
+
     func testCompactWidthUsesNavigationStack() {
         XCTAssertEqual(MainView.navigationShellKind(for: .compact), .stack)
     }
