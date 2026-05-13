@@ -91,6 +91,21 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.categories.flatMap(\.tickers).first { $0.symbol == "VTI" }?.parentCategory?.name, "Equity")
     }
 
+    func testPortfolioDeleteRemovesSavedPortfolio() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolio = Portfolio(name: "Delete Me", monthlyBudget: Decimal(250), maWindow: 50)
+
+        context.insert(portfolio)
+        try context.save()
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Portfolio>()).count, 1)
+
+        context.delete(portfolio)
+        try context.save()
+
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Portfolio>()).isEmpty)
+    }
+
     func testContributionRecordStoresImmutableSnapshotOffline() throws {
         let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
         let context = ModelContext(container)
