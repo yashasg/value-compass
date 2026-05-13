@@ -1,25 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 801 1281" role="img" aria-label="Investrum app icon">
   <title>Investrum</title>
   <defs>
-    <clipPath id="tile-clip">
-      <rect x="57" y="337" width="670" height="700" rx="143"/>
-    </clipPath>
-    <linearGradient id="icon-bg" x1="392" y1="337" x2="392" y2="1037" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#07193C"/>
-      <stop offset="0.42" stop-color="#061532"/>
-      <stop offset="0.72" stop-color="#051128"/>
-      <stop offset="1" stop-color="#030916"/>
-    </linearGradient>
-    <radialGradient id="bg-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(292 650) rotate(48) scale(430 455)">
-      <stop offset="0" stop-color="#123164" stop-opacity="0.45"/>
-      <stop offset="0.48" stop-color="#0A224B" stop-opacity="0.2"/>
-      <stop offset="1" stop-color="#050B1E" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="edge-shade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(394 677) scale(390 405)">
-      <stop offset="0.58" stop-color="#000000" stop-opacity="0"/>
-      <stop offset="0.86" stop-color="#00040E" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0.54"/>
-    </radialGradient>
     <linearGradient id="mark" x1="385" y1="482" x2="385" y2="756" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2AF5DE"/>
       <stop offset="0.48" stop-color="#16B8F4"/>
@@ -28,33 +9,12 @@
     <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000514" flood-opacity="0.45"/>
     </filter>
-    <filter id="bg-texture" x="57" y="337" width="670" height="700" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.75 0.48" numOctaves="5" seed="37" result="noise"/>
-      <feColorMatrix in="noise" type="matrix"
-                     values="0 0 0 0 0.025
-                             0 0 0 0 0.075
-                             0 0 0 0 0.16
-                             0 0 0 0.34 0"
-                     result="navy-noise"/>
-    </filter>
   </defs>
 
   <rect width="801" height="1281" fill="#000000"/>
 
   <g filter="url(#soft-shadow)">
-    <g clip-path="url(#tile-clip)">
-      <rect x="57" y="337" width="670" height="700" fill="url(#icon-bg)"/>
-      <rect x="57" y="337" width="670" height="700" fill="url(#bg-glow)"/>
-      <rect x="57" y="337" width="670" height="700" filter="url(#bg-texture)" opacity="0.52"/>
-      <g opacity="0.12" stroke="#17305C" stroke-width="1">
-        <path d="M75 409 C229 371 379 382 548 352 C631 338 682 354 742 382"/>
-        <path d="M48 515 C233 481 393 490 544 461 C626 445 695 452 751 475"/>
-        <path d="M48 633 C222 601 381 607 547 579 C636 564 700 571 748 594"/>
-        <path d="M49 760 C223 729 379 735 540 708 C632 692 698 700 749 724"/>
-        <path d="M53 897 C216 859 381 873 542 838 C637 818 695 829 743 857"/>
-      </g>
-      <rect x="57" y="337" width="670" height="700" fill="url(#edge-shade)"/>
-    </g>
+    <rect x="57" y="337" width="670" height="700" rx="143" fill="#060C24"/>
 
     <g fill="url(#mark)">
       <polygon points="388,482 480,625 297,625"/>
