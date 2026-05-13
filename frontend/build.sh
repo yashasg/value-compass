@@ -149,6 +149,7 @@ should_run_swift_format() {
 
 lint_swift_format() {
   command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
+  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required for Swift style lint. Install a recent Xcode toolchain or set RUN_SWIFT_FORMAT_LINT=false."
 
   printf '\n==> Linting Swift style\n'
   xcrun swift-format lint \
