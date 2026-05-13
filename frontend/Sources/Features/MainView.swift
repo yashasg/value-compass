@@ -421,7 +421,7 @@ struct PortfolioDetailView: View {
 
   init(
     portfolio: Portfolio,
-    calculator: any ContributionCalculating = ProportionalSplitContributionCalculator()
+    calculator: any ContributionCalculating = MovingAverageContributionCalculator()
   ) {
     self.portfolio = portfolio
     self.calculator = calculator
@@ -465,7 +465,7 @@ struct PortfolioDetailView: View {
 
   private var marketDataCompletionText: String {
     let tickers = portfolio.categories.flatMap(\.tickers)
-    let completeCount = tickers.filter { $0.currentPrice != nil && $0.bandPosition != nil }.count
+    let completeCount = tickers.filter { $0.currentPrice != nil && $0.movingAverage != nil }.count
     let incompleteCount = tickers.count - completeCount
     return "\(completeCount) complete / \(incompleteCount) incomplete"
   }
@@ -538,11 +538,11 @@ struct PortfolioDetailView: View {
 
   private func marketDataSummary(for ticker: TickerDraft) -> String {
     guard ticker.hasCompleteMarketData else {
-      return "Missing price/band"
+      return "Missing price/MA"
     }
 
     return
-      "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | Band \(TickerDraft.displayDecimalText(for: ticker.bandPosition))"
+      "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | MA \(TickerDraft.displayDecimalText(for: ticker.movingAverage))"
   }
 
   private var calculateSection: some View {
@@ -593,7 +593,7 @@ struct PortfolioDetailView: View {
         }
       } else {
         Text(
-          "Uses the local proportional-split calculator seam after validating budget, weights, tickers, and market data."
+          "Uses the local moving-average VCA calculator after validating budget, weights, tickers, and market data."
         )
         .foregroundStyle(.secondary)
       }
