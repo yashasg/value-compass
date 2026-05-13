@@ -77,9 +77,12 @@ CI runs on git events. Apple deployment to App Store Connect is manually trigger
 | `APNS_CERT`                      | Backend runtime   |
 | `APPLE_DEV_CERTIFICATE`          | `ios-deploy`      |
 | `APPLE_DEV_CERTIFICATE_PASSWORD` | `ios-deploy`      |
+| `APPLE_PROVISIONING_PROFILE`     | `ios-deploy`      |
+| `APPLE_TEAM_ID`                  | `ios-deploy`      |
 | `APP_STORE_CONNECT_API_KEY`      | `ios-deploy`      |
 | `APP_STORE_CONNECT_API_KEY_ID`   | `ios-deploy`      |
 | `APP_STORE_CONNECT_ISSUER_ID`    | `ios-deploy`      |
+| `API_BASE_URL`                   | `ios-deploy`      |
 
 Backend runtime secrets (`SUPABASE_URL`, `POLYGON_API_KEY`, `APNS_CERT`)
 are not consumed by the workflow itself — they are read by the systemd
@@ -103,6 +106,10 @@ git push origin backend-v<...>
 ```
 
 For iOS rollback, manually run `ios-deploy.yml` from GitHub Actions and set `ref` to the previous good commit SHA, branch, or tag.
+
+### TestFlight setup
+
+The iOS deploy workflow uses manual signing for repeatable CI uploads. Complete the Apple Developer, App Store Connect, and GitHub secret checklist in `docs/testflight-readiness.md` before running `ios-deploy.yml`.
 
 ### Initial VM setup (one time, manual)
 
