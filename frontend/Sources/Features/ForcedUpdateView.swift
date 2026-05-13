@@ -12,18 +12,21 @@ struct ForcedUpdateView: View {
         .resizable()
         .scaledToFit()
         .frame(width: 96, height: 96)
-        .foregroundStyle(.tint)
+        .foregroundStyle(Color.appPrimary)
         .accessibilityHidden(true)
 
       Text("Update Required")
         .valueCompassTextStyle(.displayLarge)
+        .foregroundStyle(Color.appContentPrimary)
 
       if let minimumVersion {
         Text("\(AppBrand.displayName) \(minimumVersion) or later is required to continue.")
           .multilineTextAlignment(.center)
+          .foregroundStyle(Color.appContentSecondary)
       } else {
         Text("A newer version of \(AppBrand.displayName) is required to continue.")
           .multilineTextAlignment(.center)
+          .foregroundStyle(Color.appContentSecondary)
       }
 
       // Open the App Store. Prefer an explicit App Store ID when one
@@ -36,6 +39,7 @@ struct ForcedUpdateView: View {
     .padding(32)
     .frame(maxWidth: 640)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.appBackground)
   }
 
   private static var appStoreURL: URL {

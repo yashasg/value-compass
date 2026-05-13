@@ -14,11 +14,13 @@ struct SettingsView: View {
       Section("Disclaimer") {
         Text(Disclaimer.text)
           .valueCompassTextStyle(.bodySmall)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Color.appContentSecondary)
           .fixedSize(horizontal: false, vertical: true)
+          .accessibilityIdentifier("settings.disclaimer")
       }
     }
     .navigationTitle("Settings")
+    .tint(Color.appPrimary)
   }
 
   private static var appVersionString: String {

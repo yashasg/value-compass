@@ -15,9 +15,11 @@ struct OnboardingView: View {
 
         Text("Important Disclaimer")
           .valueCompassTextStyle(.headlineMedium)
+          .foregroundStyle(Color.appContentPrimary)
 
         Text(Disclaimer.text)
           .valueCompassTextStyle(.bodyLarge)
+          .foregroundStyle(Color.appContentSecondary)
           .fixedSize(horizontal: false, vertical: true)
 
         Button {
@@ -33,10 +35,12 @@ struct OnboardingView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .padding(.top, 8)
+        .accessibilityIdentifier("onboarding.disclaimer.accept")
       }
       .padding(24)
       .frame(maxWidth: 640)  // Comfortable reading width on iPad.
       .frame(maxWidth: .infinity)
     }
+    .background(Color.appBackground)
   }
 }
