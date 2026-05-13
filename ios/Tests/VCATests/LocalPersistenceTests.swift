@@ -212,4 +212,50 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(fetchedRecord.tickerAllocations.first?.tickerSymbol, "VTI")
         XCTAssertEqual(fetchedRecord.tickerAllocations.first?.allocatedWeight, 1)
     }
+
+    func testContributionRecordSnapshotMapsResultBreakdownAndRejectsFailures() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolio = Portfolio(name: "Result Source", monthlyBudget: Decimal(1_000))
+        let output = ContributionOutput(
+            totalAmount: Decimal(1_000),
+            categoryBreakdown: [
+                CategoryContributionResult(categoryName: "Equity", amount: Decimal(600), allocatedWeight: Decimal(string: "0.60")!),
+                CategoryContributionResult(categoryName: "Bonds", amount: Decimal(400), allocatedWeight: Decimal(string: "0.40")!),
+            ],
+            allocations: [
+                TickerContributionAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(300), allocatedWeight: Decimal(string: "0.50")!),
+                TickerContributionAllocation(tickerSymbol: "VXUS", categoryName: "Equity", amount: Decimal(300), allocatedWeight: Decimal(string: "0.50")!),
+                TickerContributionAllocation(tickerSymbol: "BND", categoryName: "Bonds", amount: Decimal(400), allocatedWeight: Decimal(1)),
+            ]
+        )
+
+        context.insert(portfolio)
+        let record = try ContributionRecord(
+            snapshotFor: portfolio,
+            output: output,
+            date: Date(timeIntervalSince1970: 2_000)
+        )
+        context.insert(record)
+        try context.save()
+
+        portfolio.monthlyBudget = Decimal(2_000)
+        try context.save()
+
+        let fetchedRecord = try XCTUnwrap(context.fetch(FetchDescriptor<ContributionRecord>()).first)
+        XCTAssertEqual(fetchedRecord.portfolioId, portfolio.id)
+        XCTAssertEqual(fetchedRecord.totalAmount, Decimal(1_000))
+        XCTAssertEqual(fetchedRecord.categoryBreakdown.map(\.categoryName).sorted(), ["Bonds", "Equity"])
+        XCTAssertEqual(fetchedRecord.tickerAllocations.map(\.tickerSymbol).sorted(), ["BND", "VTI", "VXUS"])
+
+        XCTAssertThrowsError(try ContributionRecord(
+            snapshotFor: portfolio,
+            output: .failure(ContributionCalculationError.noCategories)
+        )) { error in
+            XCTAssertEqual(
+                error as? ContributionRecordSnapshotError,
+                .failedCalculation(ContributionCalculationError.noCategories.localizedDescription)
+            )
+        }
+    }
 }
