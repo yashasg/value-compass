@@ -28,3 +28,18 @@ User clarified Stitch screens are placeholder content + provisional colors; func
 ## 2026-05-12T17:02:11.019-07:00 — Sessions and orchestration logged
 
 Scribe processed Tess design review, Stitch reframing, and user directives. Inbox files merged to decisions.md. Session log and orchestration logs written.
+
+## 2026-05-12T17:02:11.019-07:00 — Platform requirement confirmed: iPhone + iPad, light + dark
+
+User confirmed v1 must ship both iPhone and iPad layouts and both light and dark mode. Combined with the prior reframe (Stitch is functional scaffolding only, not final visual spec), this unblocks Basher to begin SwiftUI screen scaffolding using adaptive layouts (NavigationStack on iPhone, NavigationSplitView on iPad) and semantic system colors so light/dark fall out of the design tokens. Tess approval scope is now: screen inventory, navigation, fields, and adaptive/appearance behavior — visual design system (typography, palette, iconography) deferred until functional MVP is walkable.
+
+## 2026-05-12T19:05:12.285-07:00 — Design follow-up issues created
+
+Created 4 non-blocking design follow-up issues to support app development alongside functional scaffolding:
+
+- **#34 Design System Refresh: Light/Dark Color Tokens** — Replace current Stitch palette with accessible light/dark color system supporting financial data legibility and semantic color signaling (positive/negative/error/warning/info).
+- **#35 Typography System: Font Integration and Dynamic Type** — Formalize Manrope/Work Sans/IBM Plex Sans usage, establish type scale and hierarchy, plan Dynamic Type support and SF fallbacks, document tabular lining for data columns.
+- **#37 Onboarding, Disclaimer, and Empty States Design** — Create first-run onboarding flow, prominent disclaimer presentation, and empty states for portfolio/history/empty screens to guide new users without blocking functionality.
+- **#38 iPad Layout Polish: Split-View Navigation and Adaptive Spacing** — Ensure NavigationSplitView layouts work comfortably on iPad (Pro/Air/mini), verify touch targets, balanced spacing, and readable line lengths across compact/regular width classes.
+
+All issues labeled with "squad" for visibility. Issues are intentionally non-blocking design follow-ups that allow Basher's implementation work to proceed while planning visual system refinement.

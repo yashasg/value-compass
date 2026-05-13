@@ -2,11 +2,11 @@ name: ios-deploy
 
 # Builds, signs, and uploads the iOS app to App Store Connect.
 #
-# Triggers (per CI/CD spec — all deploys are git-event driven):
-#   * push of a tag matching `ios-v*` — release deploy.
-#       Rollback procedure: re-tag a previous good commit with a new
-#       `ios-v<timestamp>` tag and push it.
-#   * workflow_dispatch              — manual re-run of an existing ref.
+# Trigger:
+#   * workflow_dispatch — manual-only deployment of a selected ref for MVP.
+#
+# Rollback procedure: manually dispatch this workflow with a previous good
+# commit SHA, branch, or tag as the `ref` input.
 #
 # Secrets used (from GitHub Secrets):
 #   * APPLE_DEV_CERTIFICATE          — base64-encoded .p12 distribution cert
@@ -17,9 +17,6 @@ name: ios-deploy
 #   * APP_STORE_CONNECT_ISSUER_ID    — Issuer ID for the App Store Connect API key
 
 on:
-  push:
-    tags:
-      - "ios-v*"
   workflow_dispatch:
     inputs:
       ref:
@@ -71,7 +68,7 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
       - name: Archive
-        working-directory: ios
+        working-directory: frontend
         run: |
           xcodebuild \
             -project VCA.xcodeproj \
@@ -82,7 +79,7 @@ jobs:
             archive
 
       - name: Export IPA
-        working-directory: ios
+        working-directory: frontend
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
