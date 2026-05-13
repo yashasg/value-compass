@@ -56,6 +56,7 @@ CI runs on git events. Apple deployment to App Store Connect is manually trigger
 |----------------------|------------------------------------------|--------------------------------------------------------|
 | `backend-ci.yml`     | PR / push to `main` touching `backend/`  | Install deps, compile-check, run tests.                |
 | `backend-deploy.yml` | Push to `main` or `backend-v*` tag       | SSH to Azure VM, pull, install, **migrate**, restart, health-check, tag. |
+| `vc-services-AutoDeployTrigger-*.yml` | Manual `workflow_dispatch` only | Build and deploy the FastAPI Container Apps service from `backend/api`. |
 | `ios-ci.yml`         | PR / push to `main` touching `frontend/`      | `xcodebuild` on macOS (no signing).                    |
 | `ios-deploy.yml`     | Manual `workflow_dispatch` with target ref | Sign, archive, export, upload to App Store Connect.    |
 
@@ -65,6 +66,12 @@ CI runs on git events. Apple deployment to App Store Connect is manually trigger
 |----------------------------------|-------------------|
 | `AZURE_VM_SSH_KEY`               | `backend-deploy`  |
 | `AZURE_VM_HOST`                  | `backend-deploy`  |
+| `AZURE_CREDENTIALS`              | `vc-services-AutoDeployTrigger-*` |
+| `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER` | `vc-services-AutoDeployTrigger-*` |
+| `AZURE_CONTAINER_REGISTRY_USERNAME` | `vc-services-AutoDeployTrigger-*` |
+| `AZURE_CONTAINER_REGISTRY_PASSWORD` | `vc-services-AutoDeployTrigger-*` |
+| `AZURE_CONTAINER_APP_NAME`       | `vc-services-AutoDeployTrigger-*` |
+| `AZURE_RESOURCE_GROUP`           | `vc-services-AutoDeployTrigger-*` |
 | `SUPABASE_URL`                   | Backend runtime   |
 | `POLYGON_API_KEY`                | Backend runtime   |
 | `APNS_CERT`                      | Backend runtime   |
