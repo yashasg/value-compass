@@ -712,9 +712,6 @@ struct ContributionResultView: View {
         do {
             let record = try ContributionRecord(snapshotFor: portfolio, output: output)
             modelContext.insert(record)
-            if !portfolio.contributionRecords.contains(where: { $0.id == record.id }) {
-                portfolio.contributionRecords.append(record)
-            }
             try modelContext.save()
             saveConfirmation = SaveConfirmation(message: "Saved $\(decimalText(record.totalAmount)) for \(portfolio.name).")
         } catch {
