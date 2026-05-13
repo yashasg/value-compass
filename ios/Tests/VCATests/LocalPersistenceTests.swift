@@ -18,4 +18,119 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(portfolios.first?.monthlyBudget, Decimal(1_000))
         XCTAssertEqual(portfolios.first?.maWindow, 50)
     }
+
+    func testPortfolioValidationRejectsInvalidBudgetAndMAWindow() {
+        let portfolio = Portfolio(name: "Invalid", monthlyBudget: 0, maWindow: 100)
+
+        XCTAssertFalse(portfolio.isValid())
+        XCTAssertEqual(portfolio.validationErrors(), [
+            .nonPositiveMonthlyBudget,
+            .invalidMAWindow(100),
+        ])
+        XCTAssertThrowsError(try portfolio.validate()) { error in
+            XCTAssertEqual(error as? PortfolioValidationError, .nonPositiveMonthlyBudget)
+        }
+    }
+
+    func testPortfolioHelpersCalculateCategoryWeightAndTickerCount() {
+        let equity = Category(name: "Equity", weight: Decimal(string: "0.60")!, sortOrder: 1, tickers: [
+            Ticker(symbol: "VTI", sortOrder: 1),
+            Ticker(symbol: "VXUS", sortOrder: 2),
+        ])
+        let bonds = Category(name: "Bonds", weight: Decimal(string: "0.40")!, sortOrder: 2)
+        let portfolio = Portfolio(name: "Core", monthlyBudget: Decimal(500), categories: [equity, bonds])
+
+        XCTAssertEqual(portfolio.totalCategoryWeight(), 1)
+        XCTAssertEqual(equity.tickerCount(), 2)
+        XCTAssertTrue(portfolio.isValid())
+    }
+
+    func testDuplicateTickerSymbolsAreRejectedAcrossCategories() {
+        let portfolio = Portfolio(
+            name: "Duplicate symbols",
+            monthlyBudget: Decimal(500),
+            categories: [
+                Category(name: "US", weight: Decimal(string: "0.50")!, sortOrder: 1, tickers: [
+                    Ticker(symbol: " vti ", sortOrder: 1),
+                ]),
+                Category(name: "Growth", weight: Decimal(string: "0.50")!, sortOrder: 2, tickers: [
+                    Ticker(symbol: "VTI", sortOrder: 1),
+                ]),
+            ]
+        )
+
+        XCTAssertEqual(portfolio.duplicateTickerSymbols(), ["VTI"])
+        XCTAssertEqual(portfolio.validationErrors(), [.duplicateTickerSymbols(["VTI"])])
+        XCTAssertFalse(portfolio.isValid())
+    }
+
+    func testRelationshipsPersistAndLoadFromSwiftData() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolio = Portfolio(
+            name: "Offline Portfolio",
+            monthlyBudget: Decimal(750),
+            categories: [
+                Category(name: "Equity", weight: Decimal(string: "0.70")!, sortOrder: 1, tickers: [
+                    Ticker(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 1),
+                    Ticker(symbol: "VXUS", currentPrice: Decimal(60), movingAverage: Decimal(58), sortOrder: 2),
+                ]),
+                Category(name: "Bonds", weight: Decimal(string: "0.30")!, sortOrder: 2, tickers: [
+                    Ticker(symbol: "BND", currentPrice: Decimal(75), movingAverage: Decimal(74), sortOrder: 1),
+                ]),
+            ]
+        )
+
+        context.insert(portfolio)
+        try context.save()
+
+        let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Portfolio>()).first)
+        XCTAssertEqual(fetched.categories.count, 2)
+        XCTAssertEqual(fetched.categories.flatMap(\.tickers).count, 3)
+        XCTAssertEqual(fetched.categories.first { $0.name == "Equity" }?.parentPortfolio?.id, fetched.id)
+        XCTAssertEqual(fetched.categories.flatMap(\.tickers).first { $0.symbol == "VTI" }?.parentCategory?.name, "Equity")
+    }
+
+    func testContributionRecordStoresImmutableSnapshotOffline() throws {
+        let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+        let context = ModelContext(container)
+        let portfolioID = UUID()
+        let portfolio = Portfolio(
+            id: portfolioID,
+            name: "Snapshot Source",
+            monthlyBudget: Decimal(1_000),
+            categories: [
+                Category(name: "Equity", weight: 1, sortOrder: 1, tickers: [
+                    Ticker(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 1),
+                ]),
+            ]
+        )
+        let record = ContributionRecord(
+            portfolioId: portfolioID,
+            date: Date(timeIntervalSince1970: 1_000),
+            totalAmount: Decimal(1_000),
+            portfolio: portfolio,
+            categoryBreakdown: [
+                CategoryContribution(categoryName: "Equity", amount: Decimal(1_000), allocatedWeight: 1),
+            ],
+            tickerAllocations: [
+                TickerAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(1_000), allocatedWeight: 1),
+            ]
+        )
+        portfolio.contributionRecords = [record]
+
+        context.insert(portfolio)
+        try context.save()
+        portfolio.name = "Edited Later"
+        portfolio.categories[0].tickers[0].symbol = "VOO"
+        try context.save()
+
+        let fetchedRecord = try XCTUnwrap(context.fetch(FetchDescriptor<ContributionRecord>()).first)
+        XCTAssertEqual(fetchedRecord.portfolioId, portfolioID)
+        XCTAssertEqual(fetchedRecord.totalAmount, Decimal(1_000))
+        XCTAssertEqual(fetchedRecord.categoryBreakdown.first?.categoryName, "Equity")
+        XCTAssertEqual(fetchedRecord.categoryBreakdown.first?.allocatedWeight, 1)
+        XCTAssertEqual(fetchedRecord.tickerAllocations.first?.tickerSymbol, "VTI")
+        XCTAssertEqual(fetchedRecord.tickerAllocations.first?.allocatedWeight, 1)
+    }
 }

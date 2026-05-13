@@ -7,6 +7,7 @@ enum LocalPersistence {
             Category.self,
             Ticker.self,
             ContributionRecord.self,
+            CategoryContribution.self,
             TickerAllocation.self,
         ])
     }
