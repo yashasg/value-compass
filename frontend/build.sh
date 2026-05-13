@@ -18,11 +18,12 @@ DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
+RUN_SWIFT_FORMAT_LINT="${RUN_SWIFT_FORMAT_LINT:-true}" # true, false
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_SWIFT_FORMAT_LINT=true|false] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
@@ -31,7 +32,7 @@ Defaults:
   IPHONE_DEVICE=$IPHONE_DEVICE
   IPAD_DEVICE=$IPAD_DEVICE
 
-This script runs Xcode analyze, build, and tests on explicit simulator destinations.
+This script runs Swift format lint plus Xcode analyze, build, and tests on explicit simulator destinations.
 USAGE
 }
 
@@ -138,6 +139,28 @@ should_run_analyze() {
   esac
 }
 
+should_run_swift_format_lint() {
+  case "$RUN_SWIFT_FORMAT_LINT" in
+    true|1|yes) return 0 ;;
+    false|0|no) return 1 ;;
+    *) fail "Unknown RUN_SWIFT_FORMAT_LINT '$RUN_SWIFT_FORMAT_LINT'. Use true or false." ;;
+  esac
+}
+
+run_swift_format_lint() {
+  local paths=("$FRONTEND_DIR/Sources")
+  if [ -d "$FRONTEND_DIR/Tests" ]; then
+    paths+=("$FRONTEND_DIR/Tests")
+  fi
+
+  printf '\n==> lint Swift format\n'
+  xcrun swift-format lint \
+    --recursive \
+    --parallel \
+    --configuration "$REPO_ROOT/.swift-format" \
+    "${paths[@]}"
+}
+
 run_xcodebuild() {
   local action="$1"
   local device="$2"
@@ -201,6 +224,9 @@ fi
 
 require_xcode
 validate_project
+if should_run_swift_format_lint; then
+  run_swift_format_lint
+fi
 
 case "$PLATFORM_MODE" in
   iphone|ipad) run_for_platform "$PLATFORM_MODE" ;;
