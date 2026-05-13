@@ -72,6 +72,18 @@ final class ContributionCalculatorTests: XCTestCase {
         XCTAssertEqual(spy.callCount, 1)
     }
 
+    func testMarketDataSnapshotNormalizesDuplicateSymbolsWithoutTrapping() {
+        let snapshot = MarketDataSnapshot(quotesBySymbol: [
+            " VTI ": MarketDataQuote(currentPrice: Decimal(1), movingAverage: Decimal(1)),
+            "vti": MarketDataQuote(currentPrice: Decimal(2), movingAverage: Decimal(2)),
+        ])
+
+        XCTAssertEqual(
+            snapshot.quote(for: "VTI"),
+            MarketDataQuote(currentPrice: Decimal(2), movingAverage: Decimal(2))
+        )
+    }
+
     func testValidationRequiresPortfolioCategoriesWeightsTickersAndMarketData() {
         XCTAssertEqual(
             ProportionalSplitContributionCalculator().calculate(input: ContributionInput(portfolio: nil)).error as? ContributionCalculationError,
@@ -139,6 +151,22 @@ final class ContributionCalculatorTests: XCTestCase {
         )
 
         XCTAssertEqual(negativeResult.error as? ContributionCalculationError, .negativeAllocation("VTI"))
+
+        let totalMismatchOutput = ContributionOutput(
+            totalAmount: Decimal(75),
+            allocations: [
+                TickerContributionAllocation(tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(100), allocatedWeight: 1),
+            ]
+        )
+        let totalMismatchResult = ContributionCalculationService.calculate(
+            portfolio: portfolio,
+            calculator: SpyCalculator(output: totalMismatchOutput)
+        )
+
+        XCTAssertEqual(
+            totalMismatchResult.error as? ContributionCalculationError,
+            .outputTotalMismatch(expected: Decimal(100), actual: Decimal(75))
+        )
 
         let mismatchOutput = ContributionOutput(
             totalAmount: Decimal(100),

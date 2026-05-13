@@ -24,11 +24,11 @@ struct MarketDataSnapshot: Equatable {
     var quotesBySymbol: [String: MarketDataQuote]
 
     init(quotesBySymbol: [String: MarketDataQuote] = [:]) {
-        self.quotesBySymbol = Dictionary(
-            uniqueKeysWithValues: quotesBySymbol.map { key, quote in
-                (Self.normalizedSymbol(key), quote)
-            }
-        )
+        var normalizedQuotes: [String: MarketDataQuote] = [:]
+        for symbol in quotesBySymbol.keys.sorted() {
+            normalizedQuotes[Self.normalizedSymbol(symbol)] = quotesBySymbol[symbol]
+        }
+        self.quotesBySymbol = normalizedQuotes
     }
 
     init(portfolio: Portfolio?) {
@@ -105,6 +105,7 @@ enum ContributionCalculationError: LocalizedError, Equatable {
     case missingMarketData(String)
     case invalidMarketData(String)
     case negativeAllocation(String)
+    case outputTotalMismatch(expected: Decimal, actual: Decimal)
     case allocationTotalMismatch(expected: Decimal, actual: Decimal)
 
     var errorDescription: String? {
@@ -125,6 +126,8 @@ enum ContributionCalculationError: LocalizedError, Equatable {
             return "\(symbol) market data must be greater than 0."
         case .negativeAllocation(let symbol):
             return "\(symbol) produced a negative allocation."
+        case .outputTotalMismatch(let expected, let actual):
+            return "Calculation total \(actual) but must equal \(expected)."
         case .allocationTotalMismatch(let expected, let actual):
             return "Allocations total \(actual) but must equal \(expected)."
         }
@@ -205,8 +208,13 @@ enum ContributionOutputValidator {
             return .negativeAllocation(allocation.tickerSymbol)
         }
 
+        let tolerance = Decimal(string: "0.01")!
+        guard abs(output.totalAmount - expectedTotal) <= tolerance else {
+            return .outputTotalMismatch(expected: expectedTotal, actual: output.totalAmount)
+        }
+
         let actualTotal = output.allocations.reduce(Decimal(0)) { $0 + $1.amount }
-        guard abs(actualTotal - expectedTotal) <= Decimal(string: "0.01")! else {
+        guard abs(actualTotal - expectedTotal) <= tolerance else {
             return .allocationTotalMismatch(expected: expectedTotal, actual: actualTotal)
         }
 
