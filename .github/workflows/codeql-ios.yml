@@ -7,14 +7,12 @@ on:
   pull_request:
     paths:
       - "frontend/**"
-      - "ios/**"
       - "openapi.json"
       - ".github/workflows/codeql-ios.yml"
   push:
     branches: [main]
     paths:
       - "frontend/**"
-      - "ios/**"
       - "openapi.json"
       - ".github/workflows/codeql-ios.yml"
   workflow_dispatch:

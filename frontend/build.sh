@@ -5,7 +5,7 @@ FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$FRONTEND_DIR/.." && pwd)"
 cd "$FRONTEND_DIR"
 
-PROJECT_PATH="${PROJECT_PATH:-../ios/VCA.xcodeproj}"
+PROJECT_PATH="${PROJECT_PATH:-VCA.xcodeproj}"
 WORKSPACE_PATH="${WORKSPACE_PATH:-}"
 SCHEME="${SCHEME:-VCA}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
@@ -21,7 +21,7 @@ VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=../ios/VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
