@@ -403,6 +403,41 @@ During MVP, deployment to Apple/App Store Connect is manual-only via the `ios-de
 
 **Next Steps:** When app MVP is ready, evaluate promotion to automatic deployment based on branch or tag events.
 
+### 2026-05-13T03:45:16Z: CI/CD Secret Logging Validation
+**By:** Livingston (DevOps Engineer) | **Status:** Implemented (PR #51)
+
+Implement mandatory secret logging validation for all CI/CD workflow changes before PR creation.
+
+**Decision:** GitHub secrets should never be echoed or printed to logs where they could be exposed in build artifacts, logs, or console output. The squad loop must enforce this check before PRs are created.
+
+**Implementation:**
+1. **Validation script:** `.github/scripts/validate-secrets.sh`
+   - Detects unsafe patterns: echo/printf of SECRET, PASSWORD, API, KEY, TOKEN variables
+   - Excludes safe patterns: piped commands, file redirects
+   - Returns exit code 0 if all workflows pass, 1 if unsafe patterns found
+
+2. **Loop enforcement:** Updated `loop.md` step 3
+   - All squad members must run validation before creating PRs
+   - Validation failure blocks PR creation
+
+**Impact:**
+- **Backend team:** No impact — backend-deploy uses secure SSH key handling (file-based, no echo)
+- **iOS team:** No impact — ios-deploy uses secure certificate handling (piped base64 decode)
+- **Future workflows:** Developers must avoid direct echo of secrets; pipe to commands or redirect to files
+
+**Validation Status:**
+- ✓ All current workflows (backend-ci, backend-deploy, ios-deploy, Azure workflows) pass validation
+- ✓ Script correctly handles false positives (e.g., `echo | base64` is safe)
+
+**Key Files:**
+- `.github/scripts/validate-secrets.sh` — 60-line validation script (executable)
+- `loop.md` — added mandatory pre-PR secret validation check (step 3)
+
+**Next Steps:**
+- Merge PR #51 to activate validation (✓ completed, merged to main)
+- Squad loop enforces validation before each PR creation
+- Update onboarding docs to mention this requirement for new developers
+
 ## Governance
 
 - All meaningful changes require team consensus
