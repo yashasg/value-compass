@@ -48,6 +48,10 @@ The combined v1 technical specification has been split into three focused docume
 
 4. **Small Incremental Issues (16:34 UTC):** GitHub implementation issues for services and database work should be small, incremental issues that build on top of each other rather than one massive issue.
 
+5. **Stitch Scope (16:56 UTC):** Hold off on Tess's standalone app design work. The user will provide Stitch designs; Tess should review and approve those designs before the team proceeds.
+
+6. **Stitch as Functional Scaffolding (17:02 UTC):** Treat Stitch screen content as placeholder. Focus on building functionality first. User does not prefer the current color scheme and is mainly a starting point. Tess may propose a better color scheme and design system later.
+
 ### 2026-05-12: App Implementation — Offline-First Backend Sync Alignment
 **Author:** Basher (iOS Dev) | **Status:** Adopted
 
@@ -88,6 +92,19 @@ V1 backend is optional sync persistence for portfolios and flattened holdings.
 - Contribution history, snapshots, manual current values, manual moving-average inputs are local-only and never sync.
 - Backend Postgres schema (flat holdings) is sufficient; v1 does not block offline app execution.
 - iOS preserves local categories as the richer source of truth; backend holdings are a lossy sync projection.
+
+### 2026-05-12: Stitch Screens as Functional Scaffolding, Not Visual Spec
+**By:** Tess (iOS/iPadOS Designer) with user clarification | **Status:** Active
+
+After user clarification, the Stitch `stitch_value_compass_vca_calculator` designs are reframed as functional scaffolding, not a final visual specification.
+
+**Direction:**
+1. **Stitch = functional scaffolding only.** Use to confirm screen inventory, navigation, and field-level intent. Do not treat its copy, iconography, or color palette as canonical.
+2. **Functionality first.** Engineering should build against data model and flows, not pixel-match Stitch. SwiftUI views may use placeholder styling and system colors during MVP.
+3. **New design system later.** Tess will propose a replacement color scheme, typography scale, and component tokens after functional MVP is walkable; this becomes a follow-up design pass, not a blocker.
+4. **Review gating narrows.** Approval-blocking questions now limited to product/UX decisions affecting data model and implementation order (calculation methodology, persistence, watchlist scope, auth, units, offline). Visual-fidelity and content-copy questions deferred.
+
+**Unblocks:** Engineering can start scaffolding screens and models in parallel without waiting for visual design finalization.
 
 ## Governance
 
