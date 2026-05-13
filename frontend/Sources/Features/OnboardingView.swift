@@ -10,8 +10,7 @@ struct OnboardingView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Welcome to Value Compass")
-                    .font(.largeTitle.bold())
+                AppBrandHeader(logoSize: 72, subtitle: "Personal contribution planning")
                     .accessibilityAddTraits(.isHeader)
 
                 Text("Important Disclaimer")

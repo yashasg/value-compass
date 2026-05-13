@@ -1,6 +1,6 @@
 # Frontend
 
-SwiftUI client for value-compass. The Xcode project lives in
+SwiftUI client for the Investrum app. The Xcode project lives in
 `frontend/VCA.xcodeproj` and builds a universal app for iPhone and iPad.
 
 ## Target

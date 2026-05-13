@@ -22,12 +22,16 @@ struct MainView: View {
         switch Self.navigationShellKind(for: horizontalSizeClass) {
         case .stack:
             NavigationStack {
-                List(Section.allCases) { section in
-                    NavigationLink(value: section) {
-                        Label(section.rawValue, systemImage: icon(for: section))
+                List {
+                    AppBrandSidebarHeader()
+
+                    ForEach(Section.allCases) { section in
+                        NavigationLink(value: section) {
+                            Label(section.rawValue, systemImage: icon(for: section))
+                        }
                     }
                 }
-                .navigationTitle("Value Compass")
+                .navigationTitle(AppBrand.displayName)
                 .navigationDestination(for: Section.self) { section in
                     destination(for: section)
                 }
@@ -43,12 +47,16 @@ struct MainView: View {
 
     private var splitView: some View {
         NavigationSplitView {
-            List(Section.allCases, selection: $selection) { section in
-                NavigationLink(value: section) {
-                    Label(section.rawValue, systemImage: icon(for: section))
+            List(selection: $selection) {
+                AppBrandSidebarHeader()
+
+                ForEach(Section.allCases) { section in
+                    NavigationLink(value: section) {
+                        Label(section.rawValue, systemImage: icon(for: section))
+                    }
                 }
             }
-            .navigationTitle("Value Compass")
+            .navigationTitle(AppBrand.displayName)
         } detail: {
             destination(for: selection ?? .dashboard)
         }
@@ -69,6 +77,15 @@ struct MainView: View {
         case .dashboard: return "chart.line.uptrend.xyaxis"
         case .settings:  return "gear"
         }
+    }
+}
+
+private struct AppBrandSidebarHeader: View {
+    var body: some View {
+        AppBrandHeader(logoSize: 44, subtitle: nil)
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
+            .accessibilityIdentifier("app.brand.header")
     }
 }
 
