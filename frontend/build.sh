@@ -18,11 +18,12 @@ DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
+RUN_SWIFT_FORMAT_LINT="${RUN_SWIFT_FORMAT_LINT:-true}" # true, false
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_SWIFT_FORMAT_LINT=true|false] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
@@ -31,7 +32,7 @@ Defaults:
   IPHONE_DEVICE=$IPHONE_DEVICE
   IPAD_DEVICE=$IPAD_DEVICE
 
-This script runs Xcode analyze, build, and tests on explicit simulator destinations.
+This script runs Swift format lint, Xcode analyze, build, and tests on explicit simulator destinations.
 USAGE
 }
 
@@ -43,6 +44,10 @@ fail() {
 require_xcode() {
   command -v xcodebuild >/dev/null 2>&1 || fail "xcodebuild is required. Install Xcode and select it with xcode-select."
   command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
+}
+
+require_swift_format() {
+  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required. Install an Xcode toolchain that includes swift-format."
 }
 
 validate_project() {
@@ -138,6 +143,19 @@ should_run_analyze() {
   esac
 }
 
+should_run_swift_format_lint() {
+  case "$RUN_SWIFT_FORMAT_LINT" in
+    true|1|yes) return 0 ;;
+    false|0|no) return 1 ;;
+    *) fail "Unknown RUN_SWIFT_FORMAT_LINT '$RUN_SWIFT_FORMAT_LINT'. Use true or false." ;;
+  esac
+}
+
+run_swift_format_lint() {
+  printf '\n==> Linting Swift formatting\n'
+  xcrun swift-format lint --configuration "$REPO_ROOT/.swift-format" --recursive --parallel Sources Tests
+}
+
 run_xcodebuild() {
   local action="$1"
   local device="$2"
@@ -153,6 +171,8 @@ run_xcodebuild() {
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \
+    GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+    SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
     VCA_API_BASE_URL="$VCA_API_BASE_URL" \
     "$action"
 }
@@ -201,6 +221,11 @@ fi
 
 require_xcode
 validate_project
+
+if should_run_swift_format_lint; then
+  require_swift_format
+  run_swift_format_lint
+fi
 
 case "$PLATFORM_MODE" in
   iphone|ipad) run_for_platform "$PLATFORM_MODE" ;;
