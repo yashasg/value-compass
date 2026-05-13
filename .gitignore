@@ -47,4 +47,4 @@ frontend/*.profdata
 # Generated Swift module interfaces
 frontend/*.swiftinterface
 
-ecalidraw.log
+excalidraw.log
