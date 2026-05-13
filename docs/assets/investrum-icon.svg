@@ -17,18 +17,23 @@
   <!-- Rounded-square app icon background -->
   <rect x="0" y="0" width="1024" height="1024" rx="225" ry="225" fill="url(#bg)"/>
 
-  <!-- Logo mark: stylized "A" formed by an upward arrow and a smaller triangle -->
+  <!-- Logo mark: two stacked triangles; the lower one is split by a horizontal arrow shaft -->
   <g fill="url(#mark)">
-    <!-- Large upward arrow (head + shaft) -->
-    <path d="M 512 245
-             L 706 480
-             L 566 480
-             L 566 700
-             L 458 700
-             L 458 480
-             L 318 480 Z"/>
-    <!-- Smaller triangle to the right, forming the right leg of the 'A' -->
-    <polygon points="612,455 760,700 464,700"/>
+    <!-- Top (smaller) triangle -->
+    <polygon points="470,260 600,440 340,440"/>
+
+    <!-- Lower (larger) triangle: LEFT portion (above the horizontal slash) -->
+    <!-- The horizontal arrow shaft pokes out on the left, then cuts across to the right -->
+    <path d="M 470 460
+             L 645 700
+             L 280 700
+             L 380 575
+             L 245 575
+             L 245 535
+             L 412 535 Z"/>
+
+    <!-- Lower (larger) triangle: RIGHT portion (below the slash) — appears as a smaller offset triangle -->
+    <polygon points="555,560 720,760 390,760"/>
   </g>
 
   <!-- Wordmark -->
