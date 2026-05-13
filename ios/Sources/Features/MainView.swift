@@ -392,6 +392,7 @@ struct PortfolioDetailView: View {
     let calculator: any ContributionCalculating
 
     @State private var calculationOutput: ContributionOutput?
+    @State private var isShowingResult = false
 
     init(portfolio: Portfolio, calculator: any ContributionCalculating = ProportionalSplitContributionCalculator()) {
         self.portfolio = portfolio
@@ -409,6 +410,13 @@ struct PortfolioDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle(portfolio.name)
+        .navigationDestination(isPresented: $isShowingResult) {
+            if let calculationOutput {
+                ContributionResultView(portfolio: portfolio, initialOutput: calculationOutput) {
+                    ContributionCalculationService.calculate(portfolio: portfolio, calculator: calculator)
+                }
+            }
+        }
         .accessibilityIdentifier("portfolio.detail")
     }
 
@@ -514,10 +522,7 @@ struct PortfolioDetailView: View {
                 Spacer()
 
                 Button {
-                    calculationOutput = ContributionCalculationService.calculate(
-                        portfolio: portfolio,
-                        calculator: calculator
-                    )
+                    showCalculationResult()
                 } label: {
                     Label("Calculate", systemImage: "play.fill")
                 }
@@ -536,6 +541,11 @@ struct PortfolioDetailView: View {
                             .font(.headline)
                         Text("\(calculationOutput.allocations.count) ticker allocations ready.")
                             .foregroundStyle(.secondary)
+                        Button("View Result") {
+                            isShowingResult = true
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("portfolio.detail.viewResult")
                     }
                     .accessibilityIdentifier("portfolio.detail.calculateSuccess")
                 }
@@ -547,9 +557,222 @@ struct PortfolioDetailView: View {
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
+
+    private func showCalculationResult() {
+        calculationOutput = ContributionCalculationService.calculate(
+            portfolio: portfolio,
+            calculator: calculator
+        )
+        isShowingResult = true
+    }
+}
+
+struct ContributionResultView: View {
+    let portfolio: Portfolio
+    let recalculate: () -> ContributionOutput
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var output: ContributionOutput
+    @State private var saveError: SaveError?
+    @State private var saveConfirmation: SaveConfirmation?
+
+    init(
+        portfolio: Portfolio,
+        initialOutput: ContributionOutput,
+        recalculate: @escaping () -> ContributionOutput
+    ) {
+        self.portfolio = portfolio
+        self.recalculate = recalculate
+        _output = State(initialValue: initialOutput)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if let error = output.error {
+                    calculationErrorView(error)
+                } else {
+                    resultSummary
+                    categoryBreakdown
+                    actions
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .navigationTitle(output.error == nil ? "Contribution Result" : "Calculation Failed")
+        .alert(item: $saveError) { error in
+            Alert(
+                title: Text("Could Not Save Result"),
+                message: Text(error.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .alert(item: $saveConfirmation) { confirmation in
+            Alert(
+                title: Text("Result Saved"),
+                message: Text(confirmation.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .accessibilityIdentifier("contribution.result")
+    }
+
+    private var resultSummary: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Total Monthly Contribution")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("$\(decimalText(output.totalAmount))")
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.7)
+                .accessibilityIdentifier("contribution.result.total")
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var categoryBreakdown: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Breakdown")
+                .font(.title2.bold())
+
+            ForEach(Array(output.categoryBreakdown.enumerated()), id: \.offset) { _, category in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(category.categoryName)
+                            .font(.headline)
+                        Spacer()
+                        Text("$\(decimalText(category.amount))")
+                            .font(.headline)
+                    }
+
+                    ForEach(Array(output.allocations.filter { $0.categoryName == category.categoryName }.enumerated()), id: \.offset) { _, allocation in
+                        HStack {
+                            Text(allocation.tickerSymbol)
+                                .font(.body.weight(.semibold))
+                            Spacer()
+                            Text("$\(decimalText(allocation.amount))")
+                            Text("\(percentText(allocation.allocatedWeight))%")
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityIdentifier("contribution.result.ticker")
+                    }
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("contribution.result.category")
+            }
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 12) {
+            Button {
+                saveResult()
+            } label: {
+                Label("Save", systemImage: "tray.and.arrow.down")
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("contribution.result.save")
+
+            NavigationLink {
+                ContributionHistoryListView(portfolio: portfolio)
+            } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("contribution.result.history")
+        }
+    }
+
+    private func calculationErrorView(_ error: LocalizedError) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
+                .font(.headline)
+                .foregroundStyle(.orange)
+                .accessibilityIdentifier("contribution.result.error")
+
+            Button {
+                output = recalculate()
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("contribution.result.retry")
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func saveResult() {
+        do {
+            let record = try ContributionRecord(snapshotFor: portfolio, output: output)
+            modelContext.insert(record)
+            if !portfolio.contributionRecords.contains(where: { $0.id == record.id }) {
+                portfolio.contributionRecords.append(record)
+            }
+            try modelContext.save()
+            saveConfirmation = SaveConfirmation(message: "Saved $\(decimalText(record.totalAmount)) for \(portfolio.name).")
+        } catch {
+            saveError = SaveError(message: error.localizedDescription)
+        }
+    }
+
+    private func decimalText(_ value: Decimal) -> String {
+        NSDecimalNumber(decimal: value).stringValue
+    }
+
+    private func percentText(_ value: Decimal) -> String {
+        decimalText(value * 100)
+    }
+}
+
+struct ContributionHistoryListView: View {
+    let portfolio: Portfolio
+
+    var body: some View {
+        List {
+            if records.isEmpty {
+                ContentUnavailableView {
+                    Label("No Saved Results", systemImage: "clock")
+                } description: {
+                    Text("Save a contribution result to build local history.")
+                }
+            } else {
+                ForEach(records) { record in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(record.date, style: .date)
+                            .font(.headline)
+                        Text("$\(decimalText(record.totalAmount))")
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("contribution.history.record")
+                }
+            }
+        }
+        .navigationTitle("History")
+        .accessibilityIdentifier("contribution.history")
+    }
+
+    private var records: [ContributionRecord] {
+        portfolio.contributionRecords.sorted { $0.date > $1.date }
+    }
+
+    private func decimalText(_ value: Decimal) -> String {
+        NSDecimalNumber(decimal: value).stringValue
+    }
 }
 
 struct SaveError: Identifiable {
+    let id = UUID()
+    let message: String
+}
+
+struct SaveConfirmation: Identifiable {
     let id = UUID()
     let message: String
 }

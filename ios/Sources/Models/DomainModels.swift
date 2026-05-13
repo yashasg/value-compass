@@ -8,6 +8,17 @@ enum PortfolioValidationError: Error, Equatable {
     case duplicateTickerSymbols([String])
 }
 
+enum ContributionRecordSnapshotError: LocalizedError, Equatable {
+    case failedCalculation(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .failedCalculation(let message):
+            return "Cannot save a failed calculation: \(message)"
+        }
+    }
+}
+
 @Model
 final class Portfolio {
     static let allowedMAWindows = [50, 200]
@@ -186,6 +197,38 @@ final class ContributionRecord {
         self.portfolio = portfolio
         self.categoryBreakdown = categoryBreakdown
         self.tickerAllocations = tickerAllocations.isEmpty ? breakdown : tickerAllocations
+    }
+
+    convenience init(
+        snapshotFor portfolio: Portfolio,
+        output: ContributionOutput,
+        date: Date = Date()
+    ) throws {
+        if let error = output.error {
+            throw ContributionRecordSnapshotError.failedCalculation(error.localizedDescription)
+        }
+
+        self.init(
+            portfolioId: portfolio.id,
+            date: date,
+            totalAmount: output.totalAmount,
+            portfolio: portfolio,
+            categoryBreakdown: output.categoryBreakdown.map {
+                CategoryContribution(
+                    categoryName: $0.categoryName,
+                    amount: $0.amount,
+                    allocatedWeight: $0.allocatedWeight
+                )
+            },
+            tickerAllocations: output.allocations.map {
+                TickerAllocation(
+                    tickerSymbol: $0.tickerSymbol,
+                    categoryName: $0.categoryName,
+                    amount: $0.amount,
+                    allocatedWeight: $0.allocatedWeight
+                )
+            }
+        )
     }
 }
 
