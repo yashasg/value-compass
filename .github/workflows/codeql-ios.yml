@@ -40,8 +40,7 @@ jobs:
       - name: Build for analysis
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
-        run: PLATFORM_MODE=iphone ./frontend/build.sh
+        run: PLATFORM_MODE=iphone RUN_TESTS=false ./frontend/build.sh
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
-
