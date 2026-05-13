@@ -4,6 +4,13 @@ protocol ContributionCalculating {
     func calculate(input: ContributionInput) -> ContributionOutput
 }
 
+enum BandMultiplierPolicy {
+    // Normalized band position is 0...1, so raw multiplier naturally spans 1.5...0.5.
+    static let midpoint = Decimal(string: "0.5")!
+    static let defaultMinimum = Decimal(string: "0.5")!
+    static let defaultMaximum = Decimal(string: "1.5")!
+}
+
 struct ContributionInput {
     let portfolio: Portfolio?
     let monthlyBudget: Decimal
@@ -15,8 +22,8 @@ struct ContributionInput {
         portfolio: Portfolio?,
         monthlyBudget: Decimal? = nil,
         marketDataSnapshot: MarketDataSnapshot? = nil,
-        minMultiplier: Decimal = Decimal(string: "0.5")!,
-        maxMultiplier: Decimal = Decimal(string: "1.5")!
+        minMultiplier: Decimal = BandMultiplierPolicy.defaultMinimum,
+        maxMultiplier: Decimal = BandMultiplierPolicy.defaultMaximum
     ) {
         self.portfolio = portfolio
         self.monthlyBudget = monthlyBudget ?? portfolio?.monthlyBudget ?? 0
@@ -267,7 +274,7 @@ struct BandAdjustedContributionCalculator: ContributionCalculating {
                 }
 
                 let multiplier = clamp(
-                    1 + (Decimal(string: "0.5")! - position),
+                    1 + (BandMultiplierPolicy.midpoint - position),
                     min: input.minMultiplier,
                     max: input.maxMultiplier
                 )
