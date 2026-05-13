@@ -12,7 +12,7 @@ Runs as systemd service: **`vca-api.service`** (see `backend/infra/systemd/`).
 |--------|-----------------------|---------------------------------------------------|----------------------------------------------------|
 | GET    | `/health`             | `200` if API and Postgres are reachable           | Liveness + DB reachability check.                  |
 | GET    | `/portfolio/status`   | `last_modified`, `next_modified`                  | Lightweight, Cloudflare-cacheable.                 |
-| GET    | `/portfolio/data`     | Full portfolio allocation for the device          | Only called on client cache miss.                  |
+| GET    | `/portfolio/data`     | Full portfolio allocation + band metrics          | Only called on client cache miss.                  |
 | GET    | `/schema/version`     | Current API schema version number                 |                                                    |
 | POST   | `/portfolio/holdings` | `202 Accepted`, queues a background fetch         | See [New Ticker Flow](#new-ticker-flow).           |
 
@@ -47,7 +47,7 @@ POST /portfolio/holdings
     │
     ▼
 Background task fetches from Polygon
-    │ writes to stock_cache
+    │ computes OHLC band metrics and writes to stock_cache
     ▼
 APNs push → client dismisses spinner, renders allocation
 ```

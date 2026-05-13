@@ -138,6 +138,11 @@ def test_portfolio_data_returns_holdings(
             current_price=Decimal("150"),
             sma_50=Decimal("149"),
             sma_200=Decimal("148"),
+            midline=Decimal("149.5"),
+            atr=Decimal("2.5"),
+            upper_band=Decimal("155.075"),
+            lower_band=Decimal("143.925"),
+            band_position=Decimal("0.5448430493273542600896860987"),
             last_modified=datetime.now(UTC),
             next_modified=None,
             job_status="success",
@@ -158,6 +163,11 @@ def test_portfolio_data_returns_holdings(
     h = body["holdings"][0]
     assert h["ticker"] == "AAPL"
     assert h["current_price"] == 150.0
+    assert h["midline"] == 149.5
+    assert h["atr"] == 2.5
+    assert h["upper_band"] == 155.075
+    assert h["lower_band"] == 143.925
+    assert h["band_position"] == 0.5448430493
 
 
 def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(

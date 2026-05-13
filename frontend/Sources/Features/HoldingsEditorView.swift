@@ -206,6 +206,7 @@ struct HoldingsDraft: Equatable {
                 symbol: tickerDraft.normalizedSymbol,
                 currentPrice: tickerDraft.currentPrice,
                 movingAverage: tickerDraft.movingAverage,
+                bandPosition: tickerDraft.bandPosition,
                 sortOrder: tickerIndex
             )
             if currentTickers[tickerDraft.id] == nil {
@@ -215,6 +216,7 @@ struct HoldingsDraft: Equatable {
             ticker.symbol = tickerDraft.normalizedSymbol
             ticker.currentPrice = tickerDraft.currentPrice
             ticker.movingAverage = tickerDraft.movingAverage
+            ticker.bandPosition = tickerDraft.bandPosition
             ticker.sortOrder = tickerIndex
             ticker.category = category
             updatedTickers.append(ticker)
@@ -327,6 +329,7 @@ struct TickerDraft: Identifiable, Equatable {
     var symbol: String
     var currentPriceText: String
     var movingAverageText: String
+    var bandPositionText: String
     var sortOrder: Int
 
     init(
@@ -334,12 +337,14 @@ struct TickerDraft: Identifiable, Equatable {
         symbol: String,
         currentPrice: Decimal? = nil,
         movingAverage: Decimal? = nil,
+        bandPosition: Decimal? = nil,
         sortOrder: Int
     ) {
         self.id = id
         self.symbol = symbol
         self.currentPriceText = Self.displayDecimalText(for: currentPrice)
         self.movingAverageText = Self.displayDecimalText(for: movingAverage)
+        self.bandPositionText = Self.displayDecimalText(for: bandPosition)
         self.sortOrder = sortOrder
     }
 
@@ -348,6 +353,7 @@ struct TickerDraft: Identifiable, Equatable {
         symbol = ticker.symbol
         currentPriceText = Self.displayDecimalText(for: ticker.currentPrice)
         movingAverageText = Self.displayDecimalText(for: ticker.movingAverage)
+        bandPositionText = Self.displayDecimalText(for: ticker.bandPosition)
         sortOrder = ticker.sortOrder
     }
 
@@ -363,20 +369,24 @@ struct TickerDraft: Identifiable, Equatable {
         Self.validPositiveDecimal(from: movingAverageText)
     }
 
+    var bandPosition: Decimal? {
+        Self.validDecimal(from: bandPositionText)
+    }
+
     var hasCompleteMarketData: Bool {
-        currentPrice != nil && movingAverage != nil
+        currentPrice != nil && bandPosition != nil
     }
 
     var hasInvalidMarketData: Bool {
-        Self.hasInvalidPositiveDecimal(currentPriceText) || Self.hasInvalidPositiveDecimal(movingAverageText)
+        Self.hasInvalidPositiveDecimal(currentPriceText) || Self.hasInvalidDecimal(bandPositionText)
     }
 
     var marketDataStatusMessage: String? {
         if hasInvalidMarketData {
-            return "Price and moving average must be greater than 0."
+            return "Price must be greater than 0 and band position must be numeric."
         }
         if !hasCompleteMarketData {
-            return "Current price and moving average are required before calculating."
+            return "Current price and band position are required before calculating."
         }
         return nil
     }
@@ -396,11 +406,18 @@ struct TickerDraft: Identifiable, Equatable {
     }
 
     private static func validPositiveDecimal(from text: String) -> Decimal? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let value = Decimal(string: trimmed), value > 0 else {
+        guard let value = validDecimal(from: text), value > 0 else {
             return nil
         }
         return value
+    }
+
+    private static func validDecimal(from text: String) -> Decimal? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+        return Decimal(string: trimmed)
     }
 
     private static func hasInvalidPositiveDecimal(_ text: String) -> Bool {
@@ -409,6 +426,14 @@ struct TickerDraft: Identifiable, Equatable {
             return false
         }
         return validPositiveDecimal(from: trimmed) == nil
+    }
+
+    private static func hasInvalidDecimal(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        return validDecimal(from: trimmed) == nil
     }
 }
 
@@ -544,9 +569,9 @@ struct HoldingsEditorView: View {
                             .keyboardType(.decimalPad)
                             .accessibilityIdentifier("holdings.ticker.currentPrice")
 
-                        TextField("Moving Average", text: $ticker.movingAverageText)
+                        TextField("Band Position", text: $ticker.bandPositionText)
                             .keyboardType(.decimalPad)
-                            .accessibilityIdentifier("holdings.ticker.movingAverage")
+                            .accessibilityIdentifier("holdings.ticker.bandPosition")
                     }
 
                     if let message = ticker.marketDataStatusMessage {

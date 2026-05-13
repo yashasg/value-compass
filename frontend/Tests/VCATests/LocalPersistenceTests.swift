@@ -103,10 +103,10 @@ final class LocalPersistenceTests: XCTestCase {
         let bndID = UUID()
         let draft = HoldingsDraft(categories: [
             CategoryDraft(id: equityID, name: "Equity", weightPercentText: "70", sortOrder: 0, tickers: [
-                TickerDraft(id: vtiID, symbol: " vti ", currentPrice: Decimal(string: "250.25"), movingAverage: Decimal(245), sortOrder: 0),
+                TickerDraft(id: vtiID, symbol: " vti ", currentPrice: Decimal(string: "250.25"), movingAverage: Decimal(245), bandPosition: Decimal(string: "0.4"), sortOrder: 0),
             ]),
             CategoryDraft(id: bondsID, name: "Bonds", weightPercentText: "30", sortOrder: 1, tickers: [
-                TickerDraft(id: bndID, symbol: "bnd", currentPrice: Decimal(75), movingAverage: Decimal(string: "74.50"), sortOrder: 0),
+                TickerDraft(id: bndID, symbol: "bnd", currentPrice: Decimal(75), movingAverage: Decimal(string: "74.50"), bandPosition: Decimal(string: "0.6"), sortOrder: 0),
             ]),
         ])
 
@@ -120,8 +120,10 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(categories[1].tickers.map(\.symbol), ["BND"])
         XCTAssertEqual(categories[0].tickers[0].currentPrice, Decimal(string: "250.25"))
         XCTAssertEqual(categories[0].tickers[0].movingAverage, Decimal(245))
+        XCTAssertEqual(categories[0].tickers[0].bandPosition, Decimal(string: "0.4"))
         XCTAssertEqual(categories[1].tickers[0].currentPrice, Decimal(75))
         XCTAssertEqual(categories[1].tickers[0].movingAverage, Decimal(string: "74.50"))
+        XCTAssertEqual(categories[1].tickers[0].bandPosition, Decimal(string: "0.6"))
     }
 
     func testHoldingsDraftDeletesRemovedCategoriesAndTickers() throws {

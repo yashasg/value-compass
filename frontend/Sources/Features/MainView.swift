@@ -436,7 +436,7 @@ struct PortfolioDetailView: View {
 
     private var marketDataCompletionText: String {
         let tickers = portfolio.categories.flatMap(\.tickers)
-        let completeCount = tickers.filter { $0.currentPrice != nil && $0.movingAverage != nil }.count
+        let completeCount = tickers.filter { $0.currentPrice != nil && $0.bandPosition != nil }.count
         let incompleteCount = tickers.count - completeCount
         return "\(completeCount) complete / \(incompleteCount) incomplete"
     }
@@ -507,10 +507,10 @@ struct PortfolioDetailView: View {
 
     private func marketDataSummary(for ticker: TickerDraft) -> String {
         guard ticker.hasCompleteMarketData else {
-            return "Missing price/MA"
+            return "Missing price/band"
         }
 
-        return "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | MA \(TickerDraft.displayDecimalText(for: ticker.movingAverage))"
+        return "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | Band \(TickerDraft.displayDecimalText(for: ticker.bandPosition))"
     }
 
     private var calculateSection: some View {
