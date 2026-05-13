@@ -58,8 +58,6 @@ The combined v1 technical specification has been split into three focused docume
 
 9. **Manual Apple Deployment (20:07 UTC):** App deployment to Apple should be a manual trigger only, similar to backend deployment. Do not automatically deploy the iOS app to Apple/App Store Connect from push or tag events.
 
-10. **Agent Model Defaults (20:47 UTC):** All agents default to `claude-sonnet-4.6`; Tess uses `claude-opus-4.7`; Ralph and Scribe use `claude-haiku-4.5` (captured in `.squad/config.json`).
-
 ### 2026-05-12: App Implementation — Offline-First Backend Sync Alignment
 **Author:** Basher (iOS Dev) | **Status:** Adopted
 
