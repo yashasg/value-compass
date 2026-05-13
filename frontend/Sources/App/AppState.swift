@@ -30,9 +30,13 @@ final class AppState: ObservableObject {
 
   init(userDefaults: UserDefaults = .standard) {
     self.userDefaults = userDefaults
-    self.hasSeenDisclaimer =
+    let migratedHasSeenDisclaimer =
       userDefaults.bool(forKey: Self.disclaimerKey)
       || userDefaults.bool(forKey: Self.legacyOnboardingKey)
+    if migratedHasSeenDisclaimer {
+      userDefaults.set(true, forKey: Self.disclaimerKey)
+    }
+    self.hasSeenDisclaimer = migratedHasSeenDisclaimer
     self.appTheme =
       AppTheme(rawValue: userDefaults.string(forKey: Self.themeKey) ?? "") ?? .system
     self.appLanguage =

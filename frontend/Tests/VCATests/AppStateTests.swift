@@ -28,6 +28,7 @@ final class AppStateTests: XCTestCase {
     let relaunchedState = AppState(userDefaults: defaults)
 
     XCTAssertTrue(relaunchedState.hasSeenDisclaimer)
+    XCTAssertTrue(defaults.bool(forKey: AppState.disclaimerKey))
   }
 
   func testLocalSettingsDefaultToSystemAndPersist() {
