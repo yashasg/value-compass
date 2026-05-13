@@ -55,10 +55,18 @@ struct MainView: View {
         }
       }
       .navigationTitle(AppBrand.displayName)
+      .navigationSplitViewColumnWidth(
+        min: AppLayoutMetrics.sidebarMinWidth,
+        ideal: AppLayoutMetrics.sidebarIdealWidth,
+        max: AppLayoutMetrics.sidebarMaxWidth)
     } content: {
       switch sidebarSelection ?? .portfolios {
       case .portfolios:
         PortfolioListView(selectedPortfolioID: $selectedPortfolioID, showsSettingsLink: false)
+          .navigationSplitViewColumnWidth(
+            min: AppLayoutMetrics.sidebarMinWidth,
+            ideal: AppLayoutMetrics.sidebarIdealWidth,
+            max: AppLayoutMetrics.sidebarMaxWidth)
       case .settings:
         SettingsView()
       }
@@ -501,6 +509,7 @@ struct PortfolioDetailView: View {
   let portfolio: Portfolio
   let calculator: any ContributionCalculating
 
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @State private var calculationOutput: ContributionOutput?
   @State private var isShowingResult = false
 
@@ -519,8 +528,9 @@ struct PortfolioDetailView: View {
         holdingsSection
         calculateSection
       }
-      .padding()
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(AppLayoutMetrics.mainMargin)
+      .frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
     }
     .navigationTitle(portfolio.name)
     .navigationDestination(isPresented: $isShowingResult) {
@@ -576,6 +586,7 @@ struct PortfolioDetailView: View {
           Label("Edit Holdings", systemImage: "list.bullet.rectangle")
         }
         .buttonStyle(.borderedProminent)
+        .appMinimumTouchTarget()
         .accessibilityIdentifier("portfolio.detail.editHoldings")
       }
 
@@ -602,18 +613,12 @@ struct PortfolioDetailView: View {
                 .foregroundStyle(Color.appNegative)
                 .accessibilityIdentifier("portfolio.detail.holdings.warning")
             } else {
+              if horizontalSizeClass == .regular {
+                tickerTableHeader
+              }
+
               ForEach(category.tickers, id: \.id) { (ticker: TickerDraft) in
-                HStack {
-                  Text(ticker.normalizedSymbol)
-                    .valueCompassTextStyle(.labelCaps)
-                    .foregroundStyle(Color.appContentPrimary)
-                  Spacer()
-                  Text(marketDataSummary(for: ticker))
-                    .valueCompassTextStyle(.data)
-                    .foregroundStyle(
-                      ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative)
-                }
-                .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+                tickerMarketDataRow(for: ticker)
               }
             }
           }
@@ -632,6 +637,56 @@ struct PortfolioDetailView: View {
     .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
+  private var tickerTableHeader: some View {
+    HStack(spacing: AppLayoutMetrics.gridGutter) {
+      Text("Ticker")
+        .frame(width: 80, alignment: .leading)
+      Text("Current Price")
+        .frame(maxWidth: .infinity, alignment: .trailing)
+      Text("\(portfolio.maWindow)-day MA")
+        .frame(maxWidth: .infinity, alignment: .trailing)
+      Text("Status")
+        .frame(width: 88, alignment: .trailing)
+    }
+    .valueCompassTextStyle(.labelCaps)
+    .foregroundStyle(Color.appContentSecondary)
+  }
+
+  @ViewBuilder
+  private func tickerMarketDataRow(for ticker: TickerDraft) -> some View {
+    if horizontalSizeClass == .regular {
+      HStack(spacing: AppLayoutMetrics.gridGutter) {
+        Text(ticker.normalizedSymbol)
+          .valueCompassTextStyle(.labelCaps)
+          .foregroundStyle(Color.appContentPrimary)
+          .frame(width: 80, alignment: .leading)
+        Text(TickerDraft.displayDecimalText(for: ticker.currentPrice))
+          .valueCompassTextStyle(.data)
+          .frame(maxWidth: .infinity, alignment: .trailing)
+        Text(TickerDraft.displayDecimalText(for: ticker.movingAverage))
+          .valueCompassTextStyle(.data)
+          .frame(maxWidth: .infinity, alignment: .trailing)
+        Text(ticker.hasCompleteMarketData ? "Ready" : "Missing")
+          .valueCompassTextStyle(.labelCaps)
+          .foregroundStyle(tickerMarketDataStatusColor(for: ticker))
+          .frame(width: 88, alignment: .trailing)
+      }
+      .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+    } else {
+      HStack {
+        Text(ticker.normalizedSymbol)
+          .valueCompassTextStyle(.labelCaps)
+          .foregroundStyle(Color.appContentPrimary)
+        Spacer()
+        Text(marketDataSummary(for: ticker))
+          .valueCompassTextStyle(.data)
+          .foregroundStyle(
+            ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative)
+      }
+      .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+    }
+  }
+
   private func marketDataSummary(for ticker: TickerDraft) -> String {
     guard ticker.hasCompleteMarketData else {
       return "Missing price/MA"
@@ -639,6 +694,10 @@ struct PortfolioDetailView: View {
 
     return
       "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | MA \(TickerDraft.displayDecimalText(for: ticker.movingAverage))"
+  }
+
+  private func tickerMarketDataStatusColor(for ticker: TickerDraft) -> Color {
+    ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative
   }
 
   private var calculateSection: some View {
@@ -656,6 +715,7 @@ struct PortfolioDetailView: View {
           Label("History", systemImage: "clock.arrow.circlepath")
         }
         .buttonStyle(.bordered)
+        .appMinimumTouchTarget()
         .accessibilityIdentifier("portfolio.detail.history")
 
         Button {
@@ -664,6 +724,7 @@ struct PortfolioDetailView: View {
           Label("Calculate", systemImage: "play.fill")
         }
         .buttonStyle(.borderedProminent)
+        .appMinimumTouchTarget()
         .accessibilityIdentifier("portfolio.detail.calculate")
       }
 

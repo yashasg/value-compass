@@ -454,10 +454,12 @@ struct TickerDraft: Identifiable, Equatable {
 struct HoldingsEditorView: View {
   let portfolio: Portfolio
 
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
   @State private var draft: HoldingsDraft
   @State private var saveError: SaveError?
+  @State private var selectedCategoryID: UUID?
 
   init(portfolio: Portfolio) {
     self.portfolio = portfolio
@@ -465,6 +467,48 @@ struct HoldingsEditorView: View {
   }
 
   var body: some View {
+    Group {
+      if horizontalSizeClass == .regular {
+        splitEditor
+      } else {
+        compactEditor
+      }
+    }
+    .navigationTitle("Edit Holdings")
+    .toolbar {
+      ToolbarItem(placement: .cancellationAction) {
+        Button("Cancel") {
+          dismiss()
+        }
+      }
+
+      if horizontalSizeClass != .regular {
+        ToolbarItem(placement: .primaryAction) {
+          addCategoryButton
+        }
+      }
+
+      ToolbarItem(placement: .confirmationAction) {
+        Button("Save") {
+          save()
+        }
+        .accessibilityIdentifier("holdings.editor.save")
+      }
+    }
+    .alert(item: $saveError) { error in
+      Alert(
+        title: Text("Could Not Save Holdings"),
+        message: Text(error.message),
+        dismissButton: .default(Text("OK"))
+      )
+    }
+    .onAppear(perform: selectInitialCategoryIfNeeded)
+    .onChange(of: draft.categories.map(\.id)) { _, _ in
+      selectInitialCategoryIfNeeded()
+    }
+  }
+
+  private var compactEditor: some View {
     Form {
       if draft.categories.isEmpty {
         ContentUnavailableView {
@@ -482,41 +526,90 @@ struct HoldingsEditorView: View {
         }
       }
     }
-    .navigationTitle("Edit Holdings")
-    .toolbar {
-      ToolbarItem(placement: .cancellationAction) {
-        Button("Cancel") {
-          dismiss()
+  }
+
+  private var splitEditor: some View {
+    NavigationSplitView {
+      List(selection: $selectedCategoryID) {
+        if draft.categories.isEmpty {
+          ContentUnavailableView {
+            Label("No Categories", systemImage: "folder.badge.plus")
+          } description: {
+            Text("Add a category to start organizing tickers.")
+          } actions: {
+            addCategoryButton
+          }
+        } else {
+          validationSummaryRow
+
+          ForEach(draft.categories) { category in
+            VStack(alignment: .leading, spacing: 6) {
+              Text(category.displayName)
+                .valueCompassTextStyle(.bodyLarge)
+              HStack {
+                Text("\(category.weightPercentText)% target")
+                Spacer()
+                Text("\(category.tickers.count) tickers")
+              }
+              .valueCompassTextStyle(.labelCaps)
+              .foregroundStyle(Color.appContentSecondary)
+            }
+            .padding(.vertical, 6)
+            .tag(category.id)
+            .accessibilityIdentifier("holdings.category.sidebarRow")
+          }
+          .onDelete(perform: deleteCategories)
         }
       }
-
-      ToolbarItem(placement: .primaryAction) {
-        addCategoryButton
-      }
-
-      ToolbarItem(placement: .confirmationAction) {
-        Button("Save") {
-          save()
+      .navigationTitle("Categories")
+      .toolbar {
+        ToolbarItem(placement: .primaryAction) {
+          addCategoryButton
         }
-        .accessibilityIdentifier("holdings.editor.save")
       }
-    }
-    .alert(item: $saveError) { error in
-      Alert(
-        title: Text("Could Not Save Holdings"),
-        message: Text(error.message),
-        dismissButton: .default(Text("OK"))
-      )
+      .navigationSplitViewColumnWidth(
+        min: AppLayoutMetrics.sidebarMinWidth,
+        ideal: AppLayoutMetrics.sidebarIdealWidth,
+        max: AppLayoutMetrics.sidebarMaxWidth)
+    } detail: {
+      if draft.categories.isEmpty {
+        ContentUnavailableView {
+          Label("No Categories", systemImage: "folder.badge.plus")
+        } description: {
+          Text("Add a category to edit target weights and ticker market data.")
+        } actions: {
+          addCategoryButton
+        }
+      } else if let selectedCategory {
+        categoryDetail(category: selectedCategory)
+      } else {
+        ContentUnavailableView {
+          Label("Select a Category", systemImage: "sidebar.leading")
+        } description: {
+          Text("Choose a category from the sidebar.")
+        }
+      }
     }
   }
 
   private var addCategoryButton: some View {
     Button {
-      draft.addCategory()
+      addCategory()
     } label: {
       Label("Add Category", systemImage: "plus")
     }
+    .appMinimumTouchTarget()
     .accessibilityIdentifier("holdings.category.add")
+  }
+
+  @ViewBuilder
+  private var validationSummaryRow: some View {
+    let issues = draft.issues()
+    if !issues.isEmpty {
+      Label("\(issues.count) warnings", systemImage: "exclamationmark.triangle")
+        .foregroundStyle(validationSummaryColor(for: issues))
+        .accessibilityIdentifier("holdings.validation.summary")
+    }
   }
 
   @ViewBuilder
@@ -561,40 +654,10 @@ struct HoldingsEditorView: View {
               .autocorrectionDisabled()
               .accessibilityIdentifier("holdings.ticker.symbol")
 
-            Button {
-              category.wrappedValue.moveTicker(id: ticker.id, direction: .up)
-            } label: {
-              Image(systemName: "chevron.up")
-            }
-            .disabled(category.wrappedValue.tickers.first?.id == ticker.id)
-            .accessibilityLabel("Move ticker up")
-
-            Button {
-              category.wrappedValue.moveTicker(id: ticker.id, direction: .down)
-            } label: {
-              Image(systemName: "chevron.down")
-            }
-            .disabled(category.wrappedValue.tickers.last?.id == ticker.id)
-            .accessibilityLabel("Move ticker down")
-
-            Button(role: .destructive) {
-              category.wrappedValue.deleteTicker(id: ticker.id)
-            } label: {
-              Image(systemName: "trash")
-            }
-            .tint(Color.appError)
-            .accessibilityLabel("Delete ticker")
+            tickerControls(category: category, tickerID: ticker.id)
           }
 
-          HStack {
-            TextField("Current Price", text: $ticker.currentPriceText)
-              .keyboardType(.decimalPad)
-              .accessibilityIdentifier("holdings.ticker.currentPrice")
-
-            TextField("Moving Average", text: $ticker.movingAverageText)
-              .keyboardType(.decimalPad)
-              .accessibilityIdentifier("holdings.ticker.movingAverage")
-          }
+          tickerMarketDataFields(ticker: $ticker)
 
           if let message = ticker.marketDataStatusMessage {
             Label(
@@ -614,6 +677,7 @@ struct HoldingsEditorView: View {
       } label: {
         Label("Add Ticker", systemImage: "plus")
       }
+      .appMinimumTouchTarget()
       .accessibilityIdentifier("holdings.ticker.add")
     } header: {
       HStack {
@@ -633,6 +697,7 @@ struct HoldingsEditorView: View {
         Image(systemName: "chevron.up")
       }
       .disabled(draft.categories.first?.id == categoryID)
+      .appMinimumTouchTarget()
       .accessibilityLabel("Move category up")
 
       Button {
@@ -641,6 +706,7 @@ struct HoldingsEditorView: View {
         Image(systemName: "chevron.down")
       }
       .disabled(draft.categories.last?.id == categoryID)
+      .appMinimumTouchTarget()
       .accessibilityLabel("Move category down")
 
       Button(role: .destructive) {
@@ -649,9 +715,181 @@ struct HoldingsEditorView: View {
         Image(systemName: "trash")
       }
       .tint(Color.appError)
+      .appMinimumTouchTarget()
       .accessibilityLabel("Delete category")
     }
     .buttonStyle(.borderless)
+  }
+
+  private var selectedCategory: Binding<CategoryDraft>? {
+    guard let selectedCategoryID,
+      let index = draft.categories.firstIndex(where: { $0.id == selectedCategoryID })
+    else {
+      return nil
+    }
+    return $draft.categories[index]
+  }
+
+  private func categoryDetail(category: Binding<CategoryDraft>) -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
+        validationSection
+
+        VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
+          Text("Category")
+            .valueCompassTextStyle(.headlineMedium)
+
+          HStack(spacing: AppLayoutMetrics.gridGutter) {
+            TextField("Category name", text: category.name)
+              .textInputAutocapitalization(.words)
+              .accessibilityIdentifier("holdings.category.name")
+
+            TextField("Weight %", text: category.weightPercentText)
+              .keyboardType(.decimalPad)
+              .frame(width: 120)
+              .accessibilityIdentifier("holdings.category.weight")
+
+            categoryControls(categoryID: category.wrappedValue.id)
+          }
+        }
+        .padding()
+        .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
+
+        VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
+          HStack {
+            Text("Tickers")
+              .valueCompassTextStyle(.headlineMedium)
+            Spacer()
+            Button {
+              category.wrappedValue.addTicker()
+            } label: {
+              Label("Add Ticker", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .appMinimumTouchTarget()
+            .accessibilityIdentifier("holdings.ticker.add")
+          }
+
+          if category.wrappedValue.tickers.isEmpty {
+            Label("Warning: no tickers", systemImage: "exclamationmark.circle")
+              .foregroundStyle(Color.appNegative)
+              .accessibilityIdentifier("holdings.category.warning")
+          } else {
+            ForEach(category.tickers) { $ticker in
+              VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: AppLayoutMetrics.gridGutter) {
+                  TextField("Ticker symbol", text: $ticker.symbol)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .frame(width: 120)
+                    .accessibilityIdentifier("holdings.ticker.symbol")
+
+                  tickerMarketDataFields(ticker: $ticker)
+
+                  tickerControls(category: category, tickerID: ticker.id)
+                }
+
+                if let message = ticker.marketDataStatusMessage {
+                  Label(
+                    message,
+                    systemImage: ticker.hasInvalidMarketData
+                      ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
+                  )
+                  .valueCompassTextStyle(.labelCaps)
+                  .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appNegative)
+                  .accessibilityIdentifier("holdings.ticker.marketDataWarning")
+                }
+              }
+              .padding()
+              .background(Color.appSurface, in: RoundedRectangle(cornerRadius: 12))
+              .accessibilityIdentifier("holdings.ticker.editorRow")
+            }
+          }
+        }
+        .padding()
+        .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
+      }
+      .padding(AppLayoutMetrics.mainMargin)
+      .frame(maxWidth: AppLayoutMetrics.wideContentMaxWidth, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
+    }
+    .navigationTitle(category.wrappedValue.displayName)
+  }
+
+  private func tickerMarketDataFields(ticker: Binding<TickerDraft>) -> some View {
+    HStack(spacing: AppLayoutMetrics.gridGutter) {
+      TextField("Current Price", text: ticker.currentPriceText)
+        .keyboardType(.decimalPad)
+        .accessibilityIdentifier("holdings.ticker.currentPrice")
+
+      TextField("Moving Average", text: ticker.movingAverageText)
+        .keyboardType(.decimalPad)
+        .accessibilityIdentifier("holdings.ticker.movingAverage")
+    }
+  }
+
+  private func tickerControls(category: Binding<CategoryDraft>, tickerID: UUID) -> some View {
+    HStack(spacing: 4) {
+      Button {
+        category.wrappedValue.moveTicker(id: tickerID, direction: .up)
+      } label: {
+        Image(systemName: "chevron.up")
+      }
+      .disabled(category.wrappedValue.tickers.first?.id == tickerID)
+      .appMinimumTouchTarget()
+      .accessibilityLabel("Move ticker up")
+
+      Button {
+        category.wrappedValue.moveTicker(id: tickerID, direction: .down)
+      } label: {
+        Image(systemName: "chevron.down")
+      }
+      .disabled(category.wrappedValue.tickers.last?.id == tickerID)
+      .appMinimumTouchTarget()
+      .accessibilityLabel("Move ticker down")
+
+      Button(role: .destructive) {
+        category.wrappedValue.deleteTicker(id: tickerID)
+      } label: {
+        Image(systemName: "trash")
+      }
+      .tint(Color.appError)
+      .appMinimumTouchTarget()
+      .accessibilityLabel("Delete ticker")
+    }
+    .buttonStyle(.borderless)
+  }
+
+  private func addCategory() {
+    draft.addCategory()
+    selectedCategoryID = draft.categories.last?.id
+  }
+
+  private func deleteCategories(at offsets: IndexSet) {
+    let deletedIDs = offsets.map { draft.categories[$0].id }
+    for id in deletedIDs {
+      draft.deleteCategory(id: id)
+    }
+    if let selectedCategoryID, deletedIDs.contains(selectedCategoryID) {
+      self.selectedCategoryID = draft.categories.first?.id
+    }
+  }
+
+  private func selectInitialCategoryIfNeeded() {
+    guard !draft.categories.isEmpty else {
+      selectedCategoryID = nil
+      return
+    }
+
+    if selectedCategoryID == nil
+      || !draft.categories.contains(where: { $0.id == selectedCategoryID })
+    {
+      selectedCategoryID = draft.categories.first?.id
+    }
+  }
+
+  private func validationSummaryColor(for issues: [HoldingsDraftIssue]) -> Color {
+    issues.contains(where: \.blocksSaving) ? Color.appError : Color.appNegative
   }
 
   private func save() {
