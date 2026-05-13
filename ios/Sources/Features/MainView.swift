@@ -416,9 +416,17 @@ struct PortfolioDetailView: View {
             LabeledContent("Monthly Budget", value: "$\(PortfolioFormDraft.displayText(for: portfolio.monthlyBudget))")
             LabeledContent("Moving Average", value: "\(portfolio.maWindow) days")
             LabeledContent("Categories", value: "\(portfolio.categories.count)")
+            LabeledContent("Market Data", value: marketDataCompletionText)
         }
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var marketDataCompletionText: String {
+        let tickers = portfolio.categories.flatMap(\.tickers)
+        let completeCount = tickers.filter { $0.currentPrice != nil && $0.movingAverage != nil }.count
+        let incompleteCount = tickers.count - completeCount
+        return "\(completeCount) complete / \(incompleteCount) incomplete"
     }
 
     private var holdingsSection: some View {
@@ -443,7 +451,7 @@ struct PortfolioDetailView: View {
                 Text("No categories yet. Add categories and tickers before calculating.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(draft.categories) { category in
+                ForEach(draft.categories, id: \.id) { (category: CategoryDraft) in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text(category.displayName)
@@ -459,9 +467,17 @@ struct PortfolioDetailView: View {
                                 .font(.caption)
                                 .accessibilityIdentifier("portfolio.detail.holdings.warning")
                         } else {
-                            Text(category.tickers.map(\.normalizedSymbol).joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            ForEach(category.tickers, id: \.id) { (ticker: TickerDraft) in
+                                HStack {
+                                    Text(ticker.normalizedSymbol)
+                                        .font(.caption.bold())
+                                    Spacer()
+                                    Text(marketDataSummary(for: ticker))
+                                        .font(.caption)
+                                        .foregroundStyle(ticker.hasCompleteMarketData ? Color.secondary : Color.orange)
+                                }
+                                .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+                            }
                         }
                     }
                 }
@@ -475,6 +491,14 @@ struct PortfolioDetailView: View {
         }
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func marketDataSummary(for ticker: TickerDraft) -> String {
+        guard ticker.hasCompleteMarketData else {
+            return "Missing price/MA"
+        }
+
+        return "Price \(TickerDraft.displayDecimalText(for: ticker.currentPrice)) | MA \(TickerDraft.displayDecimalText(for: ticker.movingAverage))"
     }
 
     private func placeholderSection(title: String, systemImage: String, message: String) -> some View {

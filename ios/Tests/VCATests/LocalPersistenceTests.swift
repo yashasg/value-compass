@@ -103,10 +103,10 @@ final class LocalPersistenceTests: XCTestCase {
         let bndID = UUID()
         let draft = HoldingsDraft(categories: [
             CategoryDraft(id: equityID, name: "Equity", weightPercentText: "70", sortOrder: 0, tickers: [
-                TickerDraft(id: vtiID, symbol: " vti ", sortOrder: 0),
+                TickerDraft(id: vtiID, symbol: " vti ", currentPrice: Decimal(string: "250.25"), movingAverage: Decimal(245), sortOrder: 0),
             ]),
             CategoryDraft(id: bondsID, name: "Bonds", weightPercentText: "30", sortOrder: 1, tickers: [
-                TickerDraft(id: bndID, symbol: "bnd", sortOrder: 0),
+                TickerDraft(id: bndID, symbol: "bnd", currentPrice: Decimal(75), movingAverage: Decimal(string: "74.50"), sortOrder: 0),
             ]),
         ])
 
@@ -118,6 +118,10 @@ final class LocalPersistenceTests: XCTestCase {
         XCTAssertEqual(categories.map(\.weight), [Decimal(string: "0.7"), Decimal(string: "0.3")])
         XCTAssertEqual(categories[0].tickers.map(\.symbol), ["VTI"])
         XCTAssertEqual(categories[1].tickers.map(\.symbol), ["BND"])
+        XCTAssertEqual(categories[0].tickers[0].currentPrice, Decimal(string: "250.25"))
+        XCTAssertEqual(categories[0].tickers[0].movingAverage, Decimal(245))
+        XCTAssertEqual(categories[1].tickers[0].currentPrice, Decimal(75))
+        XCTAssertEqual(categories[1].tickers[0].movingAverage, Decimal(string: "74.50"))
     }
 
     func testHoldingsDraftDeletesRemovedCategoriesAndTickers() throws {

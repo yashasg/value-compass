@@ -53,10 +53,10 @@ final class NavigationShellTests: XCTestCase {
     func testHoldingsDraftValidatesWeightsAndDuplicateSymbols() {
         let draft = HoldingsDraft(categories: [
             CategoryDraft(name: "US", weightPercentText: "60", tickers: [
-                TickerDraft(symbol: " vti ", sortOrder: 0),
+                TickerDraft(symbol: " vti ", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 0),
             ]),
             CategoryDraft(name: "Growth", weightPercentText: "30", tickers: [
-                TickerDraft(symbol: "VTI", sortOrder: 0),
+                TickerDraft(symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245), sortOrder: 0),
             ]),
         ])
 
@@ -100,5 +100,49 @@ final class NavigationShellTests: XCTestCase {
         XCTAssertEqual(draft.categories.map(\.sortOrder), [0, 1])
         XCTAssertEqual(draft.categories[0].tickers.map(\.id), [secondTickerID, firstTickerID])
         XCTAssertEqual(draft.categories[0].tickers.map(\.sortOrder), [0, 1])
+    }
+
+    func testTickerDraftFormatsAndValidatesManualMarketData() {
+        var ticker = TickerDraft(
+            symbol: "vti",
+            currentPrice: Decimal(string: "250.5"),
+            movingAverage: Decimal(string: "245"),
+            sortOrder: 0
+        )
+
+        XCTAssertEqual(ticker.currentPriceText, "250.50")
+        XCTAssertEqual(ticker.movingAverageText, "245.00")
+        XCTAssertEqual(ticker.currentPrice, Decimal(string: "250.50"))
+        XCTAssertEqual(ticker.movingAverage, Decimal(245))
+        XCTAssertTrue(ticker.hasCompleteMarketData)
+        XCTAssertFalse(ticker.hasInvalidMarketData)
+
+        ticker.currentPriceText = "0"
+        XCTAssertTrue(ticker.hasInvalidMarketData)
+        XCTAssertFalse(ticker.hasCompleteMarketData)
+        XCTAssertEqual(ticker.marketDataStatusMessage, "Price and moving average must be greater than 0.")
+    }
+
+    func testHoldingsDraftBlocksCalculationForMissingOrInvalidMarketData() {
+        let missingMarketDataDraft = HoldingsDraft(categories: [
+            CategoryDraft(name: "Equity", weightPercentText: "100", tickers: [
+                TickerDraft(symbol: "VTI", currentPrice: Decimal(250), sortOrder: 0),
+            ]),
+        ])
+
+        XCTAssertEqual(missingMarketDataDraft.issues(), [.missingTickerMarketData("VTI")])
+        XCTAssertTrue(missingMarketDataDraft.saveBlockingIssues().isEmpty)
+        XCTAssertFalse(missingMarketDataDraft.canCalculate())
+
+        var invalidTicker = TickerDraft(symbol: "BND", sortOrder: 0)
+        invalidTicker.currentPriceText = "-1"
+        invalidTicker.movingAverageText = "74"
+        let invalidMarketDataDraft = HoldingsDraft(categories: [
+            CategoryDraft(name: "Bonds", weightPercentText: "100", tickers: [invalidTicker]),
+        ])
+
+        XCTAssertEqual(invalidMarketDataDraft.issues(), [.invalidTickerMarketData("BND")])
+        XCTAssertEqual(invalidMarketDataDraft.saveBlockingIssues(), [.invalidTickerMarketData("BND")])
+        XCTAssertFalse(invalidMarketDataDraft.canCalculate())
     }
 }
