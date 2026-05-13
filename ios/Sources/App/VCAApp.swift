@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct VCAApp: App {
@@ -9,10 +10,20 @@ struct VCAApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var minVersionMonitor = MinAppVersionMonitor.shared
     @StateObject private var pushManager = PushNotificationManager.shared
+    private let modelContainer: ModelContainer
+
+    init() {
+        do {
+            self.modelContainer = try LocalPersistence.makeModelContainer()
+        } catch {
+            fatalError("Unable to initialize SwiftData container: \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                .modelContainer(modelContainer)
                 .environmentObject(appState)
                 .environmentObject(minVersionMonitor)
                 .environmentObject(pushManager)

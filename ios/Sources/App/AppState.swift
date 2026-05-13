@@ -8,13 +8,15 @@ final class AppState: ObservableObject {
     /// the disclaimer). Persisted across launches via `UserDefaults`.
     @Published var hasCompletedOnboarding: Bool {
         didSet {
-            UserDefaults.standard.set(hasCompletedOnboarding, forKey: Self.onboardingKey)
+            userDefaults.set(hasCompletedOnboarding, forKey: Self.onboardingKey)
         }
     }
 
-    private static let onboardingKey = "com.valuecompass.hasCompletedOnboarding"
+    static let onboardingKey = "com.valuecompass.hasCompletedOnboarding"
+    private let userDefaults: UserDefaults
 
-    init() {
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: Self.onboardingKey)
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        self.hasCompletedOnboarding = userDefaults.bool(forKey: Self.onboardingKey)
     }
 }
