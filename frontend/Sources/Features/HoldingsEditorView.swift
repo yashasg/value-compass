@@ -482,8 +482,10 @@ struct HoldingsEditorView: View {
         }
       }
 
-      ToolbarItem(placement: .primaryAction) {
-        addCategoryButton
+      if horizontalSizeClass != .regular {
+        ToolbarItem(placement: .primaryAction) {
+          addCategoryButton
+        }
       }
 
       ToolbarItem(placement: .confirmationAction) {
@@ -560,6 +562,11 @@ struct HoldingsEditorView: View {
         }
       }
       .navigationTitle("Categories")
+      .toolbar {
+        ToolbarItem(placement: .primaryAction) {
+          addCategoryButton
+        }
+      }
       .navigationSplitViewColumnWidth(
         min: AppLayoutMetrics.sidebarMinWidth,
         ideal: AppLayoutMetrics.sidebarIdealWidth,
