@@ -13,6 +13,7 @@
 		A0000000000000000000B004 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F004 /* PushNotificationManager.swift */; };
 		A0000000000000000000B005 /* LocalPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F005 /* LocalPersistence.swift */; };
 		A0000000000000000000B006 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F006 /* AppBrand.swift */; };
+		A0000000000000000000B007 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F007 /* DesignSystem.swift */; };
 		A0000000000000000000B010 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F010 /* RootView.swift */; };
 		A0000000000000000000B011 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F011 /* OnboardingView.swift */; };
 		A0000000000000000000B012 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F012 /* SettingsView.swift */; };
@@ -40,6 +41,7 @@
 		C0000000000000000000B006 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F006 /* APIClientTests.swift */; };
 		C0000000000000000000B007 /* ContributionCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F007 /* ContributionCalculatorTests.swift */; };
 		C0000000000000000000B008 /* ValueCompassTypographyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F008 /* ValueCompassTypographyTests.swift */; };
+		C0000000000000000000B009 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F009 /* DesignSystemTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +64,7 @@
 		A0000000000000000000F004 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
 		A0000000000000000000F006 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
+		A0000000000000000000F007 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		A0000000000000000000F010 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F011 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -90,6 +93,7 @@
 		C0000000000000000000F006 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F007 /* ContributionCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F008 /* ValueCompassTypographyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValueCompassTypographyTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F009 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +147,7 @@
 				A0000000000000000000F004 /* PushNotificationManager.swift */,
 				A0000000000000000000F005 /* LocalPersistence.swift */,
 				A0000000000000000000F006 /* AppBrand.swift */,
+				A0000000000000000000F007 /* DesignSystem.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -237,6 +242,7 @@
 				C0000000000000000000F006 /* APIClientTests.swift */,
 				C0000000000000000000F007 /* ContributionCalculatorTests.swift */,
 				C0000000000000000000F008 /* ValueCompassTypographyTests.swift */,
+				C0000000000000000000F009 /* DesignSystemTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -348,6 +354,7 @@
 				A0000000000000000000B004 /* PushNotificationManager.swift in Sources */,
 				A0000000000000000000B005 /* LocalPersistence.swift in Sources */,
 				A0000000000000000000B006 /* AppBrand.swift in Sources */,
+				A0000000000000000000B007 /* DesignSystem.swift in Sources */,
 				A0000000000000000000B010 /* RootView.swift in Sources */,
 				A0000000000000000000B011 /* OnboardingView.swift in Sources */,
 				A0000000000000000000B012 /* SettingsView.swift in Sources */,
@@ -379,6 +386,7 @@
 				C0000000000000000000B006 /* APIClientTests.swift in Sources */,
 				C0000000000000000000B007 /* ContributionCalculatorTests.swift in Sources */,
 				C0000000000000000000B008 /* ValueCompassTypographyTests.swift in Sources */,
+				C0000000000000000000B009 /* DesignSystemTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

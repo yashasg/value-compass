@@ -19,5 +19,8 @@ struct RootView: View {
         MainView()
       }
     }
+    .tint(Color.appPrimary)
+    .foregroundStyle(Color.appContentPrimary)
+    .background(Color.appBackground)
   }
 }

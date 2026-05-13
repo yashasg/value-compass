@@ -530,7 +530,7 @@ struct HoldingsEditorView: View {
             systemImage: issue.blocksSaving
               ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
           )
-          .foregroundStyle(issue.blocksSaving ? .red : .orange)
+          .foregroundStyle(issue.blocksSaving ? Color.appError : Color.appNegative)
         }
       }
       .accessibilityIdentifier("holdings.validation")
@@ -549,7 +549,7 @@ struct HoldingsEditorView: View {
 
       if category.wrappedValue.tickers.isEmpty {
         Label("Warning: no tickers", systemImage: "exclamationmark.circle")
-          .foregroundStyle(.orange)
+          .foregroundStyle(Color.appNegative)
           .accessibilityIdentifier("holdings.category.warning")
       }
 
@@ -567,6 +567,7 @@ struct HoldingsEditorView: View {
               Image(systemName: "chevron.up")
             }
             .disabled(category.wrappedValue.tickers.first?.id == ticker.id)
+            .accessibilityLabel("Move ticker up")
 
             Button {
               category.wrappedValue.moveTicker(id: ticker.id, direction: .down)
@@ -574,12 +575,15 @@ struct HoldingsEditorView: View {
               Image(systemName: "chevron.down")
             }
             .disabled(category.wrappedValue.tickers.last?.id == ticker.id)
+            .accessibilityLabel("Move ticker down")
 
             Button(role: .destructive) {
               category.wrappedValue.deleteTicker(id: ticker.id)
             } label: {
               Image(systemName: "trash")
             }
+            .tint(Color.appError)
+            .accessibilityLabel("Delete ticker")
           }
 
           HStack {
@@ -599,7 +603,7 @@ struct HoldingsEditorView: View {
                 ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
             )
             .valueCompassTextStyle(.labelCaps)
-            .foregroundStyle(ticker.hasInvalidMarketData ? .red : .orange)
+            .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appNegative)
             .accessibilityIdentifier("holdings.ticker.marketDataWarning")
           }
         }
@@ -629,6 +633,7 @@ struct HoldingsEditorView: View {
         Image(systemName: "chevron.up")
       }
       .disabled(draft.categories.first?.id == categoryID)
+      .accessibilityLabel("Move category up")
 
       Button {
         draft.moveCategory(id: categoryID, direction: .down)
@@ -636,12 +641,15 @@ struct HoldingsEditorView: View {
         Image(systemName: "chevron.down")
       }
       .disabled(draft.categories.last?.id == categoryID)
+      .accessibilityLabel("Move category down")
 
       Button(role: .destructive) {
         draft.deleteCategory(id: categoryID)
       } label: {
         Image(systemName: "trash")
       }
+      .tint(Color.appError)
+      .accessibilityLabel("Delete category")
     }
     .buttonStyle(.borderless)
   }

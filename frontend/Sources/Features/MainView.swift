@@ -317,7 +317,7 @@ struct PortfolioListView: View {
           Spacer()
           if selectedPortfolioID.wrappedValue == portfolio.id {
             Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.tint)
+              .foregroundStyle(Color.appPrimary)
               .accessibilityHidden(true)
           }
         }
@@ -376,7 +376,7 @@ struct PortfolioRowView: View {
         Label("\(portfolio.maWindow)-day MA", systemImage: "chart.line.uptrend.xyaxis")
       }
       .valueCompassTextStyle(.labelCaps)
-      .foregroundStyle(.secondary)
+      .foregroundStyle(Color.appContentSecondary)
     }
     .accessibilityElement(children: .combine)
   }
@@ -454,7 +454,7 @@ struct PortfolioEditorView: View {
 
         if let validationError {
           Text(validationError.localizedDescription)
-            .foregroundStyle(.red)
+            .foregroundStyle(Color.appError)
             .accessibilityIdentifier("portfolio.editor.validationError")
         }
       }
@@ -537,6 +537,7 @@ struct PortfolioDetailView: View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Summary")
         .valueCompassTextStyle(.headlineMedium)
+        .foregroundStyle(Color.appContentPrimary)
 
       LabeledContent(
         "Monthly Budget", value: "$\(PortfolioFormDraft.displayText(for: portfolio.monthlyBudget))"
@@ -550,7 +551,7 @@ struct PortfolioDetailView: View {
         .valueCompassTextStyle(.data)
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
   private var marketDataCompletionText: String {
@@ -565,6 +566,7 @@ struct PortfolioDetailView: View {
       HStack {
         Text("Holdings")
           .valueCompassTextStyle(.headlineMedium)
+          .foregroundStyle(Color.appContentPrimary)
 
         Spacer()
 
@@ -580,33 +582,36 @@ struct PortfolioDetailView: View {
       let draft = HoldingsDraft(portfolio: portfolio)
       if draft.categories.isEmpty {
         Text("No categories yet. Add categories and tickers before calculating.")
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Color.appContentSecondary)
       } else {
         ForEach(draft.categories, id: \.id) { (category: CategoryDraft) in
           VStack(alignment: .leading, spacing: 6) {
             HStack {
               Text(category.displayName)
                 .valueCompassTextStyle(.bodyLarge)
+                .foregroundStyle(Color.appContentPrimary)
               Spacer()
               Text("\(category.weightPercentText)%")
                 .valueCompassTextStyle(.data)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.appContentSecondary)
             }
 
             if category.tickers.isEmpty {
               Label("Warning: no tickers", systemImage: "exclamationmark.circle")
-                .foregroundStyle(.orange)
                 .valueCompassTextStyle(.labelCaps)
+                .foregroundStyle(Color.appNegative)
                 .accessibilityIdentifier("portfolio.detail.holdings.warning")
             } else {
               ForEach(category.tickers, id: \.id) { (ticker: TickerDraft) in
                 HStack {
                   Text(ticker.normalizedSymbol)
                     .valueCompassTextStyle(.labelCaps)
+                    .foregroundStyle(Color.appContentPrimary)
                   Spacer()
                   Text(marketDataSummary(for: ticker))
                     .valueCompassTextStyle(.data)
-                    .foregroundStyle(ticker.hasCompleteMarketData ? Color.secondary : Color.orange)
+                    .foregroundStyle(
+                      ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative)
                 }
                 .accessibilityIdentifier("portfolio.detail.tickerMarketData")
               }
@@ -618,13 +623,13 @@ struct PortfolioDetailView: View {
           Label(
             "Warnings must be resolved before calculating.", systemImage: "exclamationmark.triangle"
           )
-          .foregroundStyle(.orange)
+          .foregroundStyle(Color.appNegative)
           .accessibilityIdentifier("portfolio.detail.calculateBlocked")
         }
       }
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
   private func marketDataSummary(for ticker: TickerDraft) -> String {
@@ -641,6 +646,7 @@ struct PortfolioDetailView: View {
       HStack {
         Label("Calculate", systemImage: "function")
           .valueCompassTextStyle(.headlineMedium)
+          .foregroundStyle(Color.appContentPrimary)
 
         Spacer()
 
@@ -664,7 +670,7 @@ struct PortfolioDetailView: View {
       if let calculationOutput {
         if let error = calculationOutput.error {
           Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
-            .foregroundStyle(.orange)
+            .foregroundStyle(Color.appNegative)
             .accessibilityIdentifier("portfolio.detail.calculateError")
         } else {
           VStack(alignment: .leading, spacing: 6) {
@@ -672,8 +678,9 @@ struct PortfolioDetailView: View {
               "Monthly contribution: $\(PortfolioFormDraft.displayText(for: calculationOutput.totalAmount))"
             )
             .valueCompassTextStyle(.data)
+            .foregroundStyle(Color.appContentPrimary)
             Text("\(calculationOutput.allocations.count) ticker allocations ready.")
-              .foregroundStyle(.secondary)
+              .foregroundStyle(Color.appContentSecondary)
             Button("View Result") {
               isShowingResult = true
             }
@@ -686,11 +693,11 @@ struct PortfolioDetailView: View {
         Text(
           "Uses the local moving-average VCA calculator after validating budget, weights, tickers, and market data."
         )
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.appContentSecondary)
       }
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
   private func showCalculationResult() {
@@ -757,31 +764,35 @@ struct ContributionResultView: View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Total Monthly Contribution")
         .valueCompassTextStyle(.labelCaps)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.appContentSecondary)
 
       Text("$\(decimalText(output.totalAmount))")
         .valueCompassTextStyle(.displayLarge)
         .minimumScaleFactor(0.7)
+        .foregroundStyle(Color.appContentPrimary)
         .accessibilityIdentifier("contribution.result.total")
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
   private var categoryBreakdown: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Breakdown")
         .valueCompassTextStyle(.headlineMedium)
+        .foregroundStyle(Color.appContentPrimary)
 
       ForEach(Array(output.categoryBreakdown.enumerated()), id: \.offset) { _, category in
         VStack(alignment: .leading, spacing: 8) {
           HStack {
             Text(category.categoryName)
               .valueCompassTextStyle(.bodyLarge)
+              .foregroundStyle(Color.appContentPrimary)
             Spacer()
             Text("$\(decimalText(category.amount))")
               .valueCompassTextStyle(.data)
+              .foregroundStyle(Color.appContentPrimary)
           }
 
           ForEach(
@@ -792,18 +803,20 @@ struct ContributionResultView: View {
             HStack {
               Text(allocation.tickerSymbol)
                 .valueCompassTextStyle(.labelCaps)
+                .foregroundStyle(Color.appContentPrimary)
               Spacer()
               Text("$\(decimalText(allocation.amount))")
                 .valueCompassTextStyle(.data)
+                .foregroundStyle(Color.appContentPrimary)
               Text("\(percentText(allocation.allocatedWeight))%")
                 .valueCompassTextStyle(.data)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.appContentSecondary)
             }
             .accessibilityIdentifier("contribution.result.ticker")
           }
         }
         .padding()
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.appSurface, in: RoundedRectangle(cornerRadius: 12))
         .accessibilityIdentifier("contribution.result.category")
       }
     }
@@ -833,7 +846,7 @@ struct ContributionResultView: View {
     VStack(alignment: .leading, spacing: 16) {
       Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
         .valueCompassTextStyle(.bodyLarge)
-        .foregroundStyle(.orange)
+        .foregroundStyle(Color.appNegative)
         .accessibilityIdentifier("contribution.result.error")
 
       Button {
@@ -846,7 +859,7 @@ struct ContributionResultView: View {
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
   }
 
   private func saveResult() {
@@ -981,15 +994,17 @@ struct ContributionHistoryRowView: View {
       VStack(alignment: .leading, spacing: 4) {
         Text(ContributionHistoryDateFormatters.day.string(from: record.date))
           .valueCompassTextStyle(.bodyLarge)
+          .foregroundStyle(Color.appContentPrimary)
         Text("\(record.tickerAllocations.count) ticker allocations")
           .valueCompassTextStyle(.bodySmall)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Color.appContentSecondary)
       }
 
       Spacer()
 
       Text("$\(decimalText(record.totalAmount))")
         .valueCompassTextStyle(.data)
+        .foregroundStyle(Color.appContentPrimary)
     }
     .accessibilityElement(children: .combine)
   }
@@ -1023,13 +1038,15 @@ struct ContributionHistoryDetailView: View {
             HStack {
               Text(allocation.tickerSymbol)
                 .valueCompassTextStyle(.labelCaps)
+                .foregroundStyle(Color.appContentPrimary)
               Spacer()
               Text("$\(decimalText(allocation.amount))")
                 .valueCompassTextStyle(.data)
+                .foregroundStyle(Color.appContentPrimary)
             }
             Text(allocation.categoryName)
               .valueCompassTextStyle(.bodySmall)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(Color.appContentSecondary)
           }
           .accessibilityIdentifier("contribution.history.detail.ticker")
         }

@@ -10,15 +10,15 @@ struct AppLogoMark: View {
   var body: some View {
     ZStack {
       RoundedRectangle(cornerRadius: size * 0.16, style: .continuous)
-        .fill(Color(red: 0.02, green: 0.05, blue: 0.14))
+        .fill(Color.appBackground)
 
       logoShape
         .fill(
           LinearGradient(
             colors: [
-              Color(red: 0.16, green: 0.96, blue: 0.87),
-              Color(red: 0.09, green: 0.72, blue: 0.96),
-              Color(red: 0.09, green: 0.34, blue: 1.00),
+              Color.appTertiary,
+              Color.appSecondary,
+              Color.appPrimary,
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -80,7 +80,7 @@ struct AppBrandHeader: View {
         if let subtitle {
           Text(subtitle)
             .valueCompassTextStyle(.bodySmall)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.appContentSecondary)
         }
       }
     }
