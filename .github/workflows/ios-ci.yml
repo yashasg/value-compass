@@ -7,12 +7,14 @@ on:
   pull_request:
     paths:
       - "frontend/**"
+      - "ios/**"
       - "openapi.json"
       - ".github/workflows/ios-ci.yml"
   push:
     branches: [main]
     paths:
       - "frontend/**"
+      - "ios/**"
       - "openapi.json"
       - ".github/workflows/ios-ci.yml"
 
@@ -29,12 +31,4 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Build (no signing)
-        working-directory: frontend
-        run: |
-          xcodebuild \
-            -project VCA.xcodeproj \
-            -scheme VCA \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+        run: PLATFORM_MODE=iphone ./frontend/build.sh
