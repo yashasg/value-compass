@@ -47,3 +47,18 @@ The iOS App Store Connect deployment workflow must remain manual-only during MVP
 ### 2026-05-13T03:07:05.152Z: Scribe Session — Apple Deployment Decision Archived
 
 iOS App Deployment decision archived to `.squad/decisions.md` as "iOS App Deployment — Manual Trigger Only" (Adopted). MVP policy confirmed: manual-only via `workflow_dispatch`, no automatic TestFlight/App Store uploads from push or tag events. Orchestration log written at `.squad/orchestration-log/2026-05-13T03-07-05-152Z-livingston.md`.
+
+### 2026-05-12T20:16:21-07:00: Staging & Validation Process for Multi-Domain Changes
+
+**Process learning:** When committing cross-cutting changes (docs, team infrastructure, frontend rename, deploy policy), isolate intentional artifacts from scratch/runtime files:
+
+1. **Inspect untracked files carefully** — distinguish project artifacts (docs, frontend/, stitch_value_compass_vca_calculator/, .squad/, .copilot/, .github/agents/, .gitattributes) from session scratch (excalidraw.log, loop.md, loop.sh).
+2. **Stage explicitly by path** — avoid `git add .` blindly. Use `git add path1 path2 ...` grouped by logical domain.
+3. **Validate before commit:**
+   - Shell scripts with `bash -n` to catch syntax errors
+   - Workflow YAML structure (especially `workflow_dispatch` constraints for deploy workflows)
+   - .gitignore patterns with `git check-ignore` to verify artifact exclusion
+4. **Single comprehensive commit** — summarize all changes (specs, team scaffolding, frontend setup, deploy policy) in one message with full context.
+5. **Document blockers prominently** — note missing project.pbxproj so next engineer understands xcodebuild will fail.
+
+**Result:** Commit 151a739 (PR #47): 147 files, 17.5K lines, clean staging with no scratch artifacts.
