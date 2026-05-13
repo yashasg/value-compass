@@ -1,8 +1,17 @@
 import Foundation
 import SwiftData
 
+enum PortfolioValidationError: Error, Equatable {
+    case emptyName
+    case nonPositiveMonthlyBudget
+    case invalidMAWindow(Int)
+    case duplicateTickerSymbols([String])
+}
+
 @Model
 final class Portfolio {
+    static let allowedMAWindows = [50, 200]
+
     @Attribute(.unique) var id: UUID
     var name: String
     var monthlyBudget: Decimal
@@ -27,6 +36,56 @@ final class Portfolio {
         self.createdAt = createdAt
         self.categories = categories
         self.contributionRecords = contributionRecords
+    }
+
+    func totalCategoryWeight() -> Decimal {
+        categories.reduce(0) { $0 + $1.weight }
+    }
+
+    func duplicateTickerSymbols() -> [String] {
+        var seen = Set<String>()
+        var duplicates = Set<String>()
+
+        for symbol in categories.flatMap(\.tickers).map(\.normalizedSymbol) where !symbol.isEmpty {
+            if !seen.insert(symbol).inserted {
+                duplicates.insert(symbol)
+            }
+        }
+
+        return duplicates.sorted()
+    }
+
+    func validationErrors() -> [PortfolioValidationError] {
+        var errors: [PortfolioValidationError] = []
+
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            errors.append(.emptyName)
+        }
+
+        if monthlyBudget <= 0 {
+            errors.append(.nonPositiveMonthlyBudget)
+        }
+
+        if !Self.allowedMAWindows.contains(maWindow) {
+            errors.append(.invalidMAWindow(maWindow))
+        }
+
+        let duplicateSymbols = duplicateTickerSymbols()
+        if !duplicateSymbols.isEmpty {
+            errors.append(.duplicateTickerSymbols(duplicateSymbols))
+        }
+
+        return errors
+    }
+
+    func isValid() -> Bool {
+        validationErrors().isEmpty
+    }
+
+    func validate() throws {
+        if let firstError = validationErrors().first {
+            throw firstError
+        }
     }
 }
 
@@ -54,6 +113,15 @@ final class Category {
         self.portfolio = portfolio
         self.tickers = tickers
     }
+
+    var parentPortfolio: Portfolio? {
+        get { portfolio }
+        set { portfolio = newValue }
+    }
+
+    func tickerCount() -> Int {
+        tickers.count
+    }
 }
 
 @Model
@@ -80,6 +148,15 @@ final class Ticker {
         self.sortOrder = sortOrder
         self.category = category
     }
+
+    var parentCategory: Category? {
+        get { category }
+        set { category = newValue }
+    }
+
+    var normalizedSymbol: String {
+        symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
 }
 
 @Model
@@ -89,7 +166,8 @@ final class ContributionRecord {
     var date: Date
     var totalAmount: Decimal
     var portfolio: Portfolio?
-    @Relationship(deleteRule: .cascade, inverse: \TickerAllocation.record) var breakdown: [TickerAllocation]
+    @Relationship(deleteRule: .cascade, inverse: \CategoryContribution.record) var categoryBreakdown: [CategoryContribution]
+    @Relationship(deleteRule: .cascade, inverse: \TickerAllocation.record) var tickerAllocations: [TickerAllocation]
 
     init(
         id: UUID = UUID(),
@@ -97,6 +175,8 @@ final class ContributionRecord {
         date: Date = Date(),
         totalAmount: Decimal,
         portfolio: Portfolio? = nil,
+        categoryBreakdown: [CategoryContribution] = [],
+        tickerAllocations: [TickerAllocation] = [],
         breakdown: [TickerAllocation] = []
     ) {
         self.id = id
@@ -104,7 +184,28 @@ final class ContributionRecord {
         self.date = date
         self.totalAmount = totalAmount
         self.portfolio = portfolio
-        self.breakdown = breakdown
+        self.categoryBreakdown = categoryBreakdown
+        self.tickerAllocations = tickerAllocations.isEmpty ? breakdown : tickerAllocations
+    }
+}
+
+@Model
+final class CategoryContribution {
+    var categoryName: String
+    var amount: Decimal
+    var allocatedWeight: Decimal
+    var record: ContributionRecord?
+
+    init(
+        categoryName: String,
+        amount: Decimal,
+        allocatedWeight: Decimal,
+        record: ContributionRecord? = nil
+    ) {
+        self.categoryName = categoryName
+        self.amount = amount
+        self.allocatedWeight = allocatedWeight
+        self.record = record
     }
 }
 
@@ -113,17 +214,20 @@ final class TickerAllocation {
     var tickerSymbol: String
     var categoryName: String
     var amount: Decimal
+    var allocatedWeight: Decimal
     var record: ContributionRecord?
 
     init(
         tickerSymbol: String,
         categoryName: String,
         amount: Decimal,
+        allocatedWeight: Decimal = 0,
         record: ContributionRecord? = nil
     ) {
         self.tickerSymbol = tickerSymbol
         self.categoryName = categoryName
         self.amount = amount
+        self.allocatedWeight = allocatedWeight
         self.record = record
     }
 }
