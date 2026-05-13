@@ -3,6 +3,62 @@ import XCTest
 @testable import VCA
 
 final class ContributionCalculatorTests: XCTestCase {
+  func testMovingAverageCalculatorTiltsTowardTickersBelowMovingAverage() {
+    let portfolio = Portfolio(
+      name: "Signals",
+      monthlyBudget: Decimal(300),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "UNDER", currentPrice: 80, movingAverage: 100, sortOrder: 0),
+            Ticker(symbol: "OVER", currentPrice: 125, movingAverage: 100, sortOrder: 1),
+          ])
+      ]
+    )
+
+    let output = MovingAverageContributionCalculator().calculate(
+      input: ContributionInput(portfolio: portfolio))
+
+    XCTAssertNil(output.error)
+    XCTAssertEqual(output.totalAmount, Decimal(300))
+    XCTAssertEqual(
+      output.allocations,
+      [
+        TickerContributionAllocation(
+          tickerSymbol: "UNDER", categoryName: "Equity",
+          amount: Decimal(string: "182.93")!, allocatedWeight: Decimal(string: "0.6098")!),
+        TickerContributionAllocation(
+          tickerSymbol: "OVER", categoryName: "Equity",
+          amount: Decimal(string: "117.07")!, allocatedWeight: Decimal(string: "0.3902")!),
+      ])
+  }
+
+  func testDefaultCalculationServiceUsesMovingAverageCalculator() {
+    let portfolio = Portfolio(
+      name: "Default",
+      monthlyBudget: Decimal(300),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "UNDER", currentPrice: 80, movingAverage: 100, sortOrder: 0),
+            Ticker(symbol: "OVER", currentPrice: 125, movingAverage: 100, sortOrder: 1),
+          ])
+      ]
+    )
+
+    let output = ContributionCalculationService.calculate(portfolio: portfolio)
+
+    XCTAssertNil(output.error)
+    XCTAssertEqual(
+      output.allocations.map(\.amount),
+      [
+        Decimal(string: "182.93")!,
+        Decimal(string: "117.07")!,
+      ])
+  }
+
   func testProportionalSplitCalculatorAllocatesByCategoryWeightThenEquallyByTicker() {
     let portfolio = makeValidPortfolio(monthlyBudget: Decimal(1_000))
     let output = ProportionalSplitContributionCalculator().calculate(
@@ -33,21 +89,27 @@ final class ContributionCalculatorTests: XCTestCase {
       ])
   }
 
-  func testBandAdjustedCalculatorAppliesClampedBandMultiplier() {
+  func testBandAdjustedCalculatorUsesNaturalBandMultiplierBounds() {
     let portfolio = Portfolio(
       name: "Bands",
-      monthlyBudget: Decimal(300),
+      monthlyBudget: Decimal(500),
       categories: [
         Category(
           name: "Equity", weight: 1, sortOrder: 0,
           tickers: [
             Ticker(
-              symbol: "LOW", currentPrice: 100, movingAverage: 99, bandPosition: 0, sortOrder: 0),
+              symbol: "UNDER", currentPrice: 100, movingAverage: 99,
+              bandPosition: Decimal(string: "-0.25")!, sortOrder: 0),
+            Ticker(
+              symbol: "LOW", currentPrice: 100, movingAverage: 99, bandPosition: 0, sortOrder: 1),
             Ticker(
               symbol: "MID", currentPrice: 100, movingAverage: 99,
-              bandPosition: Decimal(string: "0.5")!, sortOrder: 1),
+              bandPosition: Decimal(string: "0.5")!, sortOrder: 2),
             Ticker(
-              symbol: "HIGH", currentPrice: 100, movingAverage: 99, bandPosition: 1, sortOrder: 2),
+              symbol: "HIGH", currentPrice: 100, movingAverage: 99, bandPosition: 1, sortOrder: 3),
+            Ticker(
+              symbol: "OVER", currentPrice: 100, movingAverage: 99,
+              bandPosition: Decimal(string: "1.25")!, sortOrder: 4),
           ])
       ]
     )
@@ -56,20 +118,24 @@ final class ContributionCalculatorTests: XCTestCase {
       input: ContributionInput(portfolio: portfolio))
 
     XCTAssertNil(output.error)
-    XCTAssertEqual(output.totalAmount, Decimal(300))
+    XCTAssertEqual(output.totalAmount, Decimal(500))
     XCTAssertEqual(
       output.allocations.map(\.amount),
       [
         Decimal(150),
+        Decimal(150),
         Decimal(100),
+        Decimal(50),
         Decimal(50),
       ])
     XCTAssertEqual(
       output.allocations.map(\.allocatedWeight),
       [
-        Decimal(string: "1.5")!,
+        BandMultiplierPolicy.defaultMaximum,
+        BandMultiplierPolicy.defaultMaximum,
         Decimal(1),
-        Decimal(string: "0.5")!,
+        BandMultiplierPolicy.defaultMinimum,
+        BandMultiplierPolicy.defaultMinimum,
       ])
   }
 
@@ -214,6 +280,24 @@ final class ContributionCalculatorTests: XCTestCase {
       ).error as? ContributionCalculationError,
       .missingMarketData("VTI")
     )
+
+    let missingMovingAverage = Portfolio(
+      name: "Missing MA",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "VTI", currentPrice: 1, movingAverage: nil, sortOrder: 0)
+          ])
+      ]
+    )
+    XCTAssertEqual(
+      ProportionalSplitContributionCalculator().calculate(
+        input: ContributionInput(portfolio: missingMovingAverage)
+      ).error as? ContributionCalculationError,
+      .missingMarketData("VTI")
+    )
   }
 
   func testServiceRejectsInvalidOutputContract() {
@@ -233,6 +317,23 @@ final class ContributionCalculatorTests: XCTestCase {
     XCTAssertEqual(
       negativeResult.error as? ContributionCalculationError, .negativeAllocation("VTI"))
 
+    let mismatchOutput = ContributionOutput(
+      totalAmount: Decimal(75),
+      allocations: [
+        TickerContributionAllocation(
+          tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(50), allocatedWeight: 1)
+      ]
+    )
+    let mismatchResult = ContributionCalculationService.calculate(
+      portfolio: portfolio,
+      calculator: SpyCalculator(output: mismatchOutput)
+    )
+
+    XCTAssertEqual(
+      mismatchResult.error as? ContributionCalculationError,
+      .allocationTotalMismatch(expected: Decimal(75), actual: Decimal(50))
+    )
+
     let outputTotalMismatch = ContributionOutput(
       totalAmount: Decimal(75),
       allocations: [
@@ -248,23 +349,6 @@ final class ContributionCalculatorTests: XCTestCase {
     XCTAssertEqual(
       outputTotalMismatchResult.error as? ContributionCalculationError,
       .outputTotalMismatch(expected: Decimal(100), actual: Decimal(75))
-    )
-
-    let mismatchOutput = ContributionOutput(
-      totalAmount: Decimal(100),
-      allocations: [
-        TickerContributionAllocation(
-          tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(50), allocatedWeight: 1)
-      ]
-    )
-    let mismatchResult = ContributionCalculationService.calculate(
-      portfolio: portfolio,
-      calculator: SpyCalculator(output: mismatchOutput)
-    )
-
-    XCTAssertEqual(
-      mismatchResult.error as? ContributionCalculationError,
-      .allocationTotalMismatch(expected: Decimal(100), actual: Decimal(50))
     )
   }
 

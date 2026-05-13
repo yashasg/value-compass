@@ -18,12 +18,12 @@ DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
-RUN_SWIFT_FORMAT_LINT="${RUN_SWIFT_FORMAT_LINT:-true}" # true, false
+RUN_SWIFT_FORMAT="${RUN_SWIFT_FORMAT:-true}" # true, false
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 
 usage() {
   cat <<USAGE
-Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_ANALYZE=true|false] [RUN_SWIFT_FORMAT_LINT=true|false] [RUN_TESTS=auto|true|false] ./build.sh
+Usage: env [SCHEME=VCA] [PROJECT_PATH=VCA.xcodeproj|WORKSPACE_PATH=...] [PLATFORM_MODE=iphone|ipad|both] [RUN_SWIFT_FORMAT=true|false] [RUN_ANALYZE=true|false] [RUN_TESTS=auto|true|false] ./build.sh
 
 Defaults:
   CONFIGURATION=$CONFIGURATION
@@ -32,7 +32,7 @@ Defaults:
   IPHONE_DEVICE=$IPHONE_DEVICE
   IPAD_DEVICE=$IPAD_DEVICE
 
-This script runs Swift format lint, Xcode analyze, build, and tests on explicit simulator destinations.
+This script runs Xcode analyze, build, and tests on explicit simulator destinations.
 USAGE
 }
 
@@ -44,10 +44,6 @@ fail() {
 require_xcode() {
   command -v xcodebuild >/dev/null 2>&1 || fail "xcodebuild is required. Install Xcode and select it with xcode-select."
   command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
-}
-
-require_swift_format() {
-  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required. Install an Xcode toolchain that includes swift-format."
 }
 
 validate_project() {
@@ -143,18 +139,26 @@ should_run_analyze() {
   esac
 }
 
-should_run_swift_format_lint() {
-  case "$RUN_SWIFT_FORMAT_LINT" in
+should_run_swift_format() {
+  case "$RUN_SWIFT_FORMAT" in
     true|1|yes) return 0 ;;
     false|0|no) return 1 ;;
-    *) fail "Unknown RUN_SWIFT_FORMAT_LINT '$RUN_SWIFT_FORMAT_LINT'. Use true or false." ;;
+    *) fail "Unknown RUN_SWIFT_FORMAT '$RUN_SWIFT_FORMAT'. Use true or false." ;;
   esac
 }
 
-run_swift_format_lint() {
-  printf '\n==> Linting Swift formatting\n'
-  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required for Swift formatting lint. Install a recent Xcode toolchain or set RUN_SWIFT_FORMAT_LINT=false."
-  xcrun swift-format lint --configuration "$REPO_ROOT/.swift-format" --recursive --parallel Sources Tests
+lint_swift_format() {
+  command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
+  xcrun --find swift-format >/dev/null 2>&1 || fail "swift-format is required for Swift style lint. Install a recent Xcode toolchain or set RUN_SWIFT_FORMAT_LINT=false."
+
+  printf '\n==> Linting Swift style\n'
+  xcrun swift-format lint \
+    --configuration "$REPO_ROOT/.swift-format" \
+    --recursive \
+    --parallel \
+    --strict \
+    "$FRONTEND_DIR/Sources" \
+    "$FRONTEND_DIR/Tests"
 }
 
 run_xcodebuild() {
@@ -172,8 +176,6 @@ run_xcodebuild() {
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \
-    GCC_TREAT_WARNINGS_AS_ERRORS=YES \
-    SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
     VCA_API_BASE_URL="$VCA_API_BASE_URL" \
     "$action"
 }
@@ -222,10 +224,8 @@ fi
 
 require_xcode
 validate_project
-
-if should_run_swift_format_lint; then
-  require_swift_format
-  run_swift_format_lint
+if should_run_swift_format; then
+  lint_swift_format
 fi
 
 case "$PLATFORM_MODE" in

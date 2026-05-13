@@ -2,8 +2,8 @@ import XCTest
 
 @testable import VCA
 
+@MainActor
 final class AppStateTests: XCTestCase {
-  @MainActor
   func testOnboardingFlagDefaultsToFalseAndPersistsWhenCompleted() {
     let suiteName = "com.valuecompass.tests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

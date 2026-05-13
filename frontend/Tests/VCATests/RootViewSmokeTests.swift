@@ -4,8 +4,8 @@ import XCTest
 
 @testable import VCA
 
+@MainActor
 final class RootViewSmokeTests: XCTestCase {
-  @MainActor
   func testRootViewCanBeHostedWithRequiredDependencies() throws {
     let suiteName = "com.valuecompass.tests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

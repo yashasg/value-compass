@@ -3,8 +3,8 @@ import XCTest
 
 @testable import VCA
 
+@MainActor
 final class LocalPersistenceTests: XCTestCase {
-  @MainActor
   func testInMemoryContainerSavesAndFetchesPortfolio() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -20,7 +20,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertEqual(portfolios.first?.maWindow, 50)
   }
 
-  @MainActor
   func testPortfolioValidationRejectsInvalidBudgetAndMAWindow() {
     let portfolio = Portfolio(name: "Invalid", monthlyBudget: 0, maWindow: 100)
 
@@ -36,7 +35,6 @@ final class LocalPersistenceTests: XCTestCase {
     }
   }
 
-  @MainActor
   func testPortfolioHelpersCalculateCategoryWeightAndTickerCount() {
     let equity = Category(
       name: "Equity", weight: Decimal(string: "0.60")!, sortOrder: 1,
@@ -53,7 +51,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertTrue(portfolio.isValid())
   }
 
-  @MainActor
   func testDuplicateTickerSymbolsAreRejectedAcrossCategories() {
     let portfolio = Portfolio(
       name: "Duplicate symbols",
@@ -77,7 +74,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertFalse(portfolio.isValid())
   }
 
-  @MainActor
   func testRelationshipsPersistAndLoadFromSwiftData() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -115,7 +111,6 @@ final class LocalPersistenceTests: XCTestCase {
       "Equity")
   }
 
-  @MainActor
   func testHoldingsDraftAppliesCategoriesTickersAndSortOrderToSwiftData() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -160,7 +155,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertEqual(categories[1].tickers[0].bandPosition, Decimal(string: "0.6"))
   }
 
-  @MainActor
   func testHoldingsDraftDeletesRemovedCategoriesAndTickers() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -199,7 +193,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertEqual(try context.fetch(FetchDescriptor<VCA.Ticker>()).count, 1)
   }
 
-  @MainActor
   func testPortfolioDeleteRemovesSavedPortfolio() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -215,7 +208,39 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertTrue(try context.fetch(FetchDescriptor<Portfolio>()).isEmpty)
   }
 
-  @MainActor
+  func testPortfolioDeleteCascadesContributionHistory() throws {
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = ModelContext(container)
+    let portfolio = Portfolio(name: "Delete History", monthlyBudget: Decimal(250), maWindow: 50)
+    let record = ContributionRecord(
+      portfolioId: portfolio.id,
+      totalAmount: Decimal(250),
+      portfolio: portfolio,
+      categoryBreakdown: [
+        CategoryContribution(categoryName: "Equity", amount: Decimal(250), allocatedWeight: 1)
+      ],
+      tickerAllocations: [
+        TickerAllocation(
+          tickerSymbol: "VTI", categoryName: "Equity", amount: Decimal(250), allocatedWeight: 1)
+      ]
+    )
+    portfolio.contributionRecords = [record]
+
+    context.insert(portfolio)
+    try context.save()
+    XCTAssertEqual(try context.fetch(FetchDescriptor<ContributionRecord>()).count, 1)
+    XCTAssertEqual(try context.fetch(FetchDescriptor<CategoryContribution>()).count, 1)
+    XCTAssertEqual(try context.fetch(FetchDescriptor<TickerAllocation>()).count, 1)
+
+    context.delete(portfolio)
+    try context.save()
+
+    XCTAssertTrue(try context.fetch(FetchDescriptor<Portfolio>()).isEmpty)
+    XCTAssertTrue(try context.fetch(FetchDescriptor<ContributionRecord>()).isEmpty)
+    XCTAssertTrue(try context.fetch(FetchDescriptor<CategoryContribution>()).isEmpty)
+    XCTAssertTrue(try context.fetch(FetchDescriptor<TickerAllocation>()).isEmpty)
+  }
+
   func testContributionRecordStoresImmutableSnapshotOffline() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)
@@ -263,7 +288,6 @@ final class LocalPersistenceTests: XCTestCase {
     XCTAssertEqual(fetchedRecord.tickerAllocations.first?.allocatedWeight, 1)
   }
 
-  @MainActor
   func testContributionRecordSnapshotMapsResultBreakdownAndRejectsFailures() throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = ModelContext(container)

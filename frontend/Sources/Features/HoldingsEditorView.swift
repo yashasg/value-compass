@@ -27,7 +27,7 @@ enum HoldingsDraftIssue: Equatable {
     case .emptyTickerSymbol:
       return "Ticker symbols are required."
     case .missingTickerMarketData(let symbol):
-      return "\(symbol) is missing current price or band position."
+      return "\(symbol) is missing current price or moving average."
     case .invalidTickerMarketData(let symbol):
       return "\(symbol) market data must be greater than 0."
     case .duplicateTickerSymbols(let symbols):
@@ -386,19 +386,20 @@ struct TickerDraft: Identifiable, Equatable {
   }
 
   var hasCompleteMarketData: Bool {
-    currentPrice != nil && bandPosition != nil
+    currentPrice != nil && movingAverage != nil
   }
 
   var hasInvalidMarketData: Bool {
-    Self.hasInvalidPositiveDecimal(currentPriceText) || Self.hasInvalidDecimal(bandPositionText)
+    Self.hasInvalidPositiveDecimal(currentPriceText)
+      || Self.hasInvalidPositiveDecimal(movingAverageText)
   }
 
   var marketDataStatusMessage: String? {
     if hasInvalidMarketData {
-      return "Price must be greater than 0 and band position must be numeric."
+      return "Price and moving average must be greater than 0."
     }
     if !hasCompleteMarketData {
-      return "Current price and band position are required before calculating."
+      return "Current price and moving average are required before calculating."
     }
     return nil
   }
@@ -586,9 +587,9 @@ struct HoldingsEditorView: View {
               .keyboardType(.decimalPad)
               .accessibilityIdentifier("holdings.ticker.currentPrice")
 
-            TextField("Band Position", text: $ticker.bandPositionText)
+            TextField("Moving Average", text: $ticker.movingAverageText)
               .keyboardType(.decimalPad)
-              .accessibilityIdentifier("holdings.ticker.bandPosition")
+              .accessibilityIdentifier("holdings.ticker.movingAverage")
           }
 
           if let message = ticker.marketDataStatusMessage {

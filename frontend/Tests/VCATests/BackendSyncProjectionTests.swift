@@ -2,8 +2,8 @@ import XCTest
 
 @testable import VCA
 
+@MainActor
 final class BackendSyncProjectionTests: XCTestCase {
-  @MainActor
   func testProjectionMapsPortfolioMetadataAndSplitsCategoryWeightsAcrossTickers() throws {
     let portfolioID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
     let deviceUUID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
@@ -64,7 +64,6 @@ final class BackendSyncProjectionTests: XCTestCase {
     )
   }
 
-  @MainActor
   func testProjectionExcludesLocalOnlyFieldsByConstruction() throws {
     let portfolio = Portfolio(
       name: "Local rich model",
@@ -104,7 +103,6 @@ final class BackendSyncProjectionTests: XCTestCase {
       ])
   }
 
-  @MainActor
   func testProjectionRejectsPositiveWeightEmptyCategoryInsteadOfCreatingInvalidHolding() {
     let portfolio = Portfolio(
       name: "Invalid for sync",
@@ -120,7 +118,6 @@ final class BackendSyncProjectionTests: XCTestCase {
     }
   }
 
-  @MainActor
   func testProjectionSkipsZeroWeightEmptyCategory() throws {
     let portfolio = Portfolio(
       name: "Draft",
@@ -142,5 +139,102 @@ final class BackendSyncProjectionTests: XCTestCase {
       [
         BackendHoldingPayload(portfolioID: portfolio.id, ticker: "SCHD", weight: 1)
       ])
+  }
+
+  func testProjectionRejectsDuplicateTickerSymbolsBeforeBackendPayload() {
+    let portfolio = Portfolio(
+      name: "Duplicate sync symbols",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "US",
+          weight: Decimal(string: "0.50")!,
+          sortOrder: 1,
+          tickers: [
+            Ticker(symbol: "VOO", sortOrder: 1)
+          ]
+        ),
+        Category(
+          name: "Growth",
+          weight: Decimal(string: "0.50")!,
+          sortOrder: 2,
+          tickers: [
+            Ticker(symbol: " voo ", sortOrder: 1)
+          ]
+        ),
+      ]
+    )
+
+    XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: portfolio, deviceUUID: UUID()))
+    { error in
+      XCTAssertEqual(error as? BackendSyncProjectionError, .duplicateTickerSymbols(["VOO"]))
+    }
+  }
+
+  func testProjectionRejectsEmptyTickerSymbolBeforeBackendPayload() {
+    let portfolio = Portfolio(
+      name: "Empty sync symbol",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Invalid",
+          weight: 1,
+          sortOrder: 1,
+          tickers: [
+            Ticker(symbol: "  ", sortOrder: 1)
+          ])
+      ]
+    )
+
+    XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: portfolio, deviceUUID: UUID()))
+    { error in
+      XCTAssertEqual(error as? BackendSyncProjectionError, .emptyTickerSymbol)
+    }
+  }
+
+  func testProjectionRejectsInvalidBackendHoldingWeights() {
+    let negativeWeightPortfolio = Portfolio(
+      name: "Negative weight",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Invalid",
+          weight: Decimal(string: "-0.10")!,
+          sortOrder: 1,
+          tickers: [
+            Ticker(symbol: "BND", sortOrder: 1)
+          ])
+      ]
+    )
+    let oversizedWeightPortfolio = Portfolio(
+      name: "Oversized weight",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Invalid",
+          weight: Decimal(2),
+          sortOrder: 1,
+          tickers: [
+            Ticker(symbol: "VTI", sortOrder: 1)
+          ])
+      ]
+    )
+
+    XCTAssertThrowsError(
+      try BackendSyncProjection.makePayload(for: negativeWeightPortfolio, deviceUUID: UUID())
+    ) { error in
+      XCTAssertEqual(
+        error as? BackendSyncProjectionError,
+        .invalidHoldingWeight(ticker: "BND", weight: Decimal(string: "-0.10")!)
+      )
+    }
+    XCTAssertThrowsError(
+      try BackendSyncProjection.makePayload(for: oversizedWeightPortfolio, deviceUUID: UUID())
+    ) { error in
+      XCTAssertEqual(
+        error as? BackendSyncProjectionError,
+        .invalidHoldingWeight(ticker: "VTI", weight: Decimal(2))
+      )
+    }
   }
 }

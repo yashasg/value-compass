@@ -156,7 +156,7 @@ final class NavigationShellTests: XCTestCase {
     XCTAssertFalse(ticker.hasCompleteMarketData)
     XCTAssertEqual(
       ticker.marketDataStatusMessage,
-      "Price must be greater than 0 and band position must be numeric.")
+      "Price and moving average must be greater than 0.")
   }
 
   func testHoldingsDraftBlocksCalculationForMissingOrInvalidMarketData() {
@@ -174,7 +174,7 @@ final class NavigationShellTests: XCTestCase {
 
     var invalidTicker = TickerDraft(symbol: "BND", sortOrder: 0)
     invalidTicker.currentPriceText = "-1"
-    invalidTicker.bandPositionText = "0.4"
+    invalidTicker.movingAverageText = "74"
     let invalidMarketDataDraft = HoldingsDraft(categories: [
       CategoryDraft(name: "Bonds", weightPercentText: "100", tickers: [invalidTicker])
     ])
@@ -182,5 +182,38 @@ final class NavigationShellTests: XCTestCase {
     XCTAssertEqual(invalidMarketDataDraft.issues(), [.invalidTickerMarketData("BND")])
     XCTAssertEqual(invalidMarketDataDraft.saveBlockingIssues(), [.invalidTickerMarketData("BND")])
     XCTAssertFalse(invalidMarketDataDraft.canCalculate())
+  }
+
+  func testContributionHistoryGroupsRecordsByMonthNewestFirst() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let may12 = date(year: 2026, month: 5, day: 12, calendar: calendar)
+    let may2 = date(year: 2026, month: 5, day: 2, calendar: calendar)
+    let april30 = date(year: 2026, month: 4, day: 30, calendar: calendar)
+    let mayRecent = ContributionRecord(portfolioId: UUID(), date: may12, totalAmount: Decimal(600))
+    let april = ContributionRecord(portfolioId: UUID(), date: april30, totalAmount: Decimal(250))
+    let mayOlder = ContributionRecord(portfolioId: UUID(), date: may2, totalAmount: Decimal(400))
+
+    let sections = ContributionHistoryMonthSection.group(
+      records: [mayOlder, april, mayRecent],
+      calendar: calendar
+    )
+
+    XCTAssertEqual(sections.map(\.title), ["May 2026", "April 2026"])
+    XCTAssertEqual(sections[0].records.map(\.id), [mayRecent.id, mayOlder.id])
+    XCTAssertEqual(sections[0].totalAmount, Decimal(1_000))
+    XCTAssertEqual(sections[1].records.map(\.id), [april.id])
+    XCTAssertEqual(sections[1].totalAmount, Decimal(250))
+  }
+
+  private func date(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
+    calendar.date(
+      from: DateComponents(
+        timeZone: calendar.timeZone,
+        year: year,
+        month: month,
+        day: day,
+        hour: 12
+      ))!
   }
 }
