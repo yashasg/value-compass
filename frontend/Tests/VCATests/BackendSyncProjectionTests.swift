@@ -94,6 +94,56 @@ final class BackendSyncProjectionTests: XCTestCase {
         ])
     }
 
+    func testProjectionRejectsDuplicateTickerSymbolsBeforeBackendPayload() {
+        let portfolio = Portfolio(
+            name: "Duplicate sync symbols",
+            monthlyBudget: Decimal(100),
+            categories: [
+                Category(name: "US", weight: Decimal(string: "0.50")!, sortOrder: 1, tickers: [
+                    Ticker(symbol: "VOO", sortOrder: 1),
+                ]),
+                Category(name: "Growth", weight: Decimal(string: "0.50")!, sortOrder: 2, tickers: [
+                    Ticker(symbol: " voo ", sortOrder: 1),
+                ]),
+            ]
+        )
+
+        XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: portfolio, deviceUUID: UUID())) { error in
+            XCTAssertEqual(error as? BackendSyncProjectionError, .duplicateTickerSymbols(["VOO"]))
+        }
+    }
+
+    func testProjectionRejectsInvalidBackendHoldingWeights() {
+        let negativeWeightPortfolio = Portfolio(
+            name: "Negative weight",
+            monthlyBudget: Decimal(100),
+            categories: [
+                Category(name: "Invalid", weight: Decimal(string: "-0.10")!, sortOrder: 1, tickers: [
+                    Ticker(symbol: "BND", sortOrder: 1),
+                ]),
+            ]
+        )
+        let oversizedWeightPortfolio = Portfolio(
+            name: "Oversized weight",
+            monthlyBudget: Decimal(100),
+            categories: [
+                Category(name: "Invalid", weight: Decimal(2), sortOrder: 1, tickers: [
+                    Ticker(symbol: "VTI", sortOrder: 1),
+                ]),
+            ]
+        )
+
+        XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: negativeWeightPortfolio, deviceUUID: UUID())) { error in
+            XCTAssertEqual(
+                error as? BackendSyncProjectionError,
+                .invalidHoldingWeight(ticker: "BND", weight: Decimal(string: "-0.10")!)
+            )
+        }
+        XCTAssertThrowsError(try BackendSyncProjection.makePayload(for: oversizedWeightPortfolio, deviceUUID: UUID())) { error in
+            XCTAssertEqual(error as? BackendSyncProjectionError, .invalidHoldingWeight(ticker: "VTI", weight: Decimal(2)))
+        }
+    }
+
     func testProjectionRejectsPositiveWeightEmptyCategoryInsteadOfCreatingInvalidHolding() {
         let portfolio = Portfolio(
             name: "Invalid for sync",

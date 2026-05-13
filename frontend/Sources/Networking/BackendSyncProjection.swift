@@ -21,7 +21,9 @@ struct BackendHoldingPayload: Equatable {
 }
 
 enum BackendSyncProjectionError: Error, Equatable {
+    case duplicateTickerSymbols([String])
     case emptyCategory(categoryName: String)
+    case invalidHoldingWeight(ticker: String, weight: Decimal)
     case invalidMAWindow(Int)
     case nonPositiveBudget
 }
@@ -51,6 +53,11 @@ enum BackendSyncProjection {
             return $0.id.uuidString < $1.id.uuidString
         }
 
+        let duplicateSymbols = duplicateTickerSymbols(in: categories)
+        if !duplicateSymbols.isEmpty {
+            throw BackendSyncProjectionError.duplicateTickerSymbols(duplicateSymbols)
+        }
+
         let holdings = try categories.flatMap { category in
             let tickers = category.tickers.sorted {
                 if $0.sortOrder != $1.sortOrder {
@@ -70,10 +77,15 @@ enum BackendSyncProjection {
             }
 
             let holdingWeight = category.weight / Decimal(tickers.count)
-            return tickers.map { ticker in
-                BackendHoldingPayload(
+            return try tickers.map { ticker in
+                let normalizedSymbol = ticker.normalizedSymbol
+                guard isBackendHoldingWeight(holdingWeight) else {
+                    throw BackendSyncProjectionError.invalidHoldingWeight(ticker: normalizedSymbol, weight: holdingWeight)
+                }
+
+                return BackendHoldingPayload(
                     portfolioID: portfolio.id,
-                    ticker: ticker.symbol.trimmingCharacters(in: .whitespacesAndNewlines),
+                    ticker: normalizedSymbol,
                     weight: holdingWeight
                 )
             }
@@ -90,5 +102,22 @@ enum BackendSyncProjection {
             ),
             holdings: holdings
         )
+    }
+
+    private static func duplicateTickerSymbols(in categories: [Category]) -> [String] {
+        var seen = Set<String>()
+        var duplicates = Set<String>()
+
+        for symbol in categories.flatMap(\.tickers).map(\.normalizedSymbol) where !symbol.isEmpty {
+            if !seen.insert(symbol).inserted {
+                duplicates.insert(symbol)
+            }
+        }
+
+        return duplicates.sorted()
+    }
+
+    private static func isBackendHoldingWeight(_ weight: Decimal) -> Bool {
+        NSDecimalNumber(decimal: weight) != .notANumber && weight >= 0 && weight <= 1
     }
 }
