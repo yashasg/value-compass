@@ -1,14 +1,16 @@
 name: backend-ci
 
-# Lints and tests the Python backend on every PR that touches backend code.
+# Lints/tests backend code and verifies generated OpenAPI contract artifacts.
 # No deployment side effects — see backend-deploy.yml for that.
 
 on:
   pull_request:
     paths:
       - "backend/**"
+      - "frontend/Sources/Networking/openapi.json"
       - "alembic.ini"
       - "docs/python/coding_standards.md"
+      - "openapi.json"
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/backend-deploy.yml"
       - "pyproject.toml"
@@ -16,8 +18,10 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "frontend/Sources/Networking/openapi.json"
       - "alembic.ini"
       - "docs/python/coding_standards.md"
+      - "openapi.json"
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/backend-deploy.yml"
       - "pyproject.toml"
@@ -45,6 +49,9 @@ jobs:
 
       - name: Compile-check all Python sources
         run: python -m compileall -q backend
+
+      - name: Verify OpenAPI contract is current
+        run: PYTHONPATH=backend python3 -m api.export_openapi --check
 
       - name: Lint Python sources
         run: |

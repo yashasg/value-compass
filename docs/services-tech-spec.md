@@ -165,9 +165,8 @@ optional for the v1 app experience:
 - `vca-poller` stock-cache freshness and APNs notifications for future cached
   market-data flows.
 
-`openapi.json` currently remains a contract artifact and should not be edited
-manually. FastAPI/OpenAPI should become the source of truth for backend contracts
-as endpoints are implemented.
+FastAPI is the source of truth for backend contracts. `openapi.json` is a
+generated artifact and should not be edited manually.
 
 ---
 
@@ -216,15 +215,17 @@ Backend phases use OpenAPI as the backend/iOS contract:
 
 1. FastAPI owns the schema exposed at `/openapi.json`.
 2. The repo-root `openapi.json` is exported from FastAPI output, not edited by hand.
-3. SwiftOpenAPIGenerator consumes `openapi.json` to produce code under
+3. Regenerate checked-in contract artifacts with
+   `PYTHONPATH=backend python3 -m api.export_openapi`; CI verifies them with the
+   same command plus `--check`.
+4. SwiftOpenAPIGenerator consumes `openapi.json` to produce code under
    `frontend/Sources/Networking/`.
-4. Generated networking files are never manually modified.
-5. Contract changes must be backward-compatible by default: newly added response
+5. Generated networking files are never manually modified.
+6. Contract changes must be backward-compatible by default: newly added response
    fields are optional unless a versioned breaking change is intentionally planned.
-6. Minimum app support is communicated with `X-Min-App-Version` and handled by the
+7. Minimum app support is communicated with `X-Min-App-Version` and handled by the
    client with a forced-update path.
-7. API schema versioning should remain machine-readable through a schema/version
-   endpoint once backend sync is active.
+8. API schema versioning remains machine-readable through `/schema/version`.
 
 For v1 offline calculation, no OpenAPI client is required. For v1 hybrid sync or
 future market-data adapters, OpenAPI-generated clients are the only supported
