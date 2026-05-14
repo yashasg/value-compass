@@ -1,120 +1,143 @@
 import ComposableArchitecture
-import SwiftData
 import SwiftUI
 
-/// Adaptive root for post-onboarding usage. Compact widths use a
-/// `NavigationStack`; regular widths use an iPad-native `NavigationSplitView`.
+/// Adaptive root for post-onboarding usage. Compact widths render a
+/// `NavigationStack` driven by `MainFeature.path`; regular widths render an
+/// iPad-native `NavigationSplitView` whose sidebar / content / detail columns
+/// are all scoped from the same `MainFeature` store.
 ///
-/// Phase 2 (#158) adds the `init(store:)` entry point used by the new
-/// `RootView` scope. The body still relies on `@Query` / `@State` for the
-/// legacy navigation behavior; #159 wires the `MainFeature` reducer fully
-/// (sidebar / detail / path) and the legacy `@Query`-driven implementation
-/// goes away then.
+/// Phase 2 (#159) replaces the legacy `@Query` + `@State` shell with a pure
+/// store-driven shell. The only SwiftUI-side state retained here is
+/// `@Environment(\.horizontalSizeClass)`, which is required to choose between
+/// the two shells; the choice is mirrored into `MainFeature.State.shellKind`
+/// via `.shellKindChanged(_:)` so the reducer routes child delegates to the
+/// correct surface (push onto `path` for compact, set `detailPortfolio` for
+/// regular).
 struct MainView: View {
-  enum NavigationShellKind {
-    case stack
-    case splitView
-  }
-
-  enum SidebarSelection: String, Hashable, CaseIterable, Identifiable {
-    case portfolios = "Portfolios"
-    case settings = "Settings"
-    var id: String { rawValue }
-  }
-
-  enum DetailSelection: Equatable {
-    case portfolio(UUID)
-    case settings
-    case emptyPortfolioSelection
-  }
-
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-  @Query(sort: \Portfolio.createdAt, order: .reverse) private var portfolios: [Portfolio]
-  @State private var sidebarSelection: SidebarSelection? = .portfolios
-  @State private var selectedPortfolioID: UUID?
-
-  /// Phase 2 (#158): RootView scopes a `StoreOf<MainFeature>` here. The
-  /// store currently powers no UI state (legacy `@Query` / `@State` still
-  /// drives navigation); #159 takes ownership of sidebar/detail/path
-  /// through `MainFeature` and removes the legacy fields.
-  private let store: StoreOf<MainFeature>?
+  @Bindable var store: StoreOf<MainFeature>
 
   init(store: StoreOf<MainFeature>) {
     self.store = store
   }
 
-  init() {
-    self.store = nil
-  }
-
   var body: some View {
-    switch Self.navigationShellKind(for: horizontalSizeClass) {
-    case .stack:
-      NavigationStack {
-        PortfolioListView(showsSettingsLink: true)
+    Group {
+      switch MainFeature.shellKind(for: horizontalSizeClass) {
+      case .stack:
+        stackShell
+      case .splitView:
+        splitShell
       }
-    case .splitView:
-      splitView
+    }
+    .onAppear {
+      store.send(.shellKindChanged(MainFeature.shellKind(for: horizontalSizeClass)))
+    }
+    .onChange(of: horizontalSizeClass) { _, newValue in
+      store.send(.shellKindChanged(MainFeature.shellKind(for: newValue)))
     }
   }
 
-  static func navigationShellKind(for horizontalSizeClass: UserInterfaceSizeClass?)
-    -> NavigationShellKind
-  {
-    horizontalSizeClass == .compact ? .stack : .splitView
+  // MARK: - Compact stack
+
+  private var stackShell: some View {
+    NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+      PortfolioListView(store: store.scope(state: \.portfolios, action: \.portfolios))
+    } destination: { pathStore in
+      pathDestination(for: pathStore)
+    }
   }
 
-  private var splitView: some View {
-    NavigationSplitView {
-      List(selection: $sidebarSelection) {
-        AppBrandSidebarHeader()
+  // MARK: - iPad split view
 
-        ForEach(SidebarSelection.allCases) { section in
-          NavigationLink(value: section) {
-            Label(section.rawValue, systemImage: icon(for: section))
-          }
+  private var splitShell: some View {
+    NavigationSplitView {
+      sidebar
+    } content: {
+      content
+    } detail: {
+      NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+        detailRoot
+      } destination: { pathStore in
+        pathDestination(for: pathStore)
+      }
+    }
+  }
+
+  private var sidebar: some View {
+    let sidebarSelection = Binding<MainFeature.Sidebar?>(
+      get: { store.sidebar },
+      set: { newValue in
+        if let newValue {
+          store.send(.sidebarSelected(newValue))
         }
       }
-      .navigationTitle(AppBrand.displayName)
-      .navigationSplitViewColumnWidth(
-        min: AppLayoutMetrics.sidebarMinWidth,
-        ideal: AppLayoutMetrics.sidebarIdealWidth,
-        max: AppLayoutMetrics.sidebarMaxWidth)
-    } content: {
-      switch sidebarSelection ?? .portfolios {
-      case .portfolios:
-        PortfolioListView(selectedPortfolioID: $selectedPortfolioID, showsSettingsLink: false)
-          .navigationSplitViewColumnWidth(
-            min: AppLayoutMetrics.sidebarMinWidth,
-            ideal: AppLayoutMetrics.sidebarIdealWidth,
-            max: AppLayoutMetrics.sidebarMaxWidth)
-      case .settings:
-        SettingsView()
+    )
+    return List(selection: sidebarSelection) {
+      AppBrandSidebarHeader()
+
+      ForEach(MainFeature.Sidebar.allCases) { section in
+        NavigationLink(value: section) {
+          Label(label(for: section), systemImage: icon(for: section))
+        }
       }
-    } detail: {
-      detailView(
-        for: Self.detailSelection(
-          sidebarSelection: sidebarSelection,
-          selectedPortfolioID: selectedPortfolioID,
-          firstPortfolioID: portfolios.first?.id))
+    }
+    .navigationTitle(AppBrand.displayName)
+    .navigationSplitViewColumnWidth(
+      min: AppLayoutMetrics.sidebarMinWidth,
+      ideal: AppLayoutMetrics.sidebarIdealWidth,
+      max: AppLayoutMetrics.sidebarMaxWidth)
+  }
+
+  @ViewBuilder
+  private var content: some View {
+    switch store.sidebar {
+    case .portfolios:
+      PortfolioListView(store: store.scope(state: \.portfolios, action: \.portfolios))
+        .navigationSplitViewColumnWidth(
+          min: AppLayoutMetrics.sidebarMinWidth,
+          ideal: AppLayoutMetrics.sidebarIdealWidth,
+          max: AppLayoutMetrics.sidebarMaxWidth)
+    case .settings:
+      SettingsView(store: store.scope(state: \.settings, action: \.settings))
     }
   }
 
   @ViewBuilder
-  private func detailView(for detailSelection: DetailSelection) -> some View {
-    switch detailSelection {
-    case .portfolio(let id):
-      if let portfolio = portfolios.first(where: { $0.id == id }) {
-        PortfolioDetailView(portfolio: portfolio)
-      } else {
+  private var detailRoot: some View {
+    if let detailStore = store.scope(state: \.detailPortfolio, action: \.detailPortfolio) {
+      PortfolioDetailView(store: detailStore)
+    } else {
+      switch store.detail {
+      case .settings:
+        SettingsView(store: store.scope(state: \.settings, action: \.settings))
+      case .portfolio, .emptyPortfolioSelection:
         emptyPortfolioSelectionView
       }
-    case .settings:
-      SettingsView()
-    case .emptyPortfolioSelection:
-      emptyPortfolioSelectionView
     }
   }
+
+  // MARK: - Shared destination switch
+
+  @ViewBuilder
+  private func pathDestination(
+    for pathStore: StoreOf<MainFeature.Path>
+  ) -> some View {
+    switch pathStore.case {
+    case .portfolioDetail(let scoped):
+      PortfolioDetailView(store: scoped)
+    case .holdingsEditor(let scoped):
+      HoldingsEditorView(store: scoped)
+    case .contributionResult(let scoped):
+      ContributionResultView(store: scoped)
+    case .contributionHistory(let scoped):
+      ContributionHistoryView(store: scoped)
+    case .settings(let scoped):
+      SettingsView(store: scoped)
+    }
+  }
+
+  // MARK: - Helpers
 
   private var emptyPortfolioSelectionView: some View {
     ContentUnavailableView {
@@ -125,30 +148,17 @@ struct MainView: View {
     .navigationTitle("Portfolio")
   }
 
-  static func detailSelection(
-    sidebarSelection: SidebarSelection?,
-    selectedPortfolioID: UUID?,
-    firstPortfolioID: UUID?
-  ) -> DetailSelection {
-    if sidebarSelection == .settings {
-      return .settings
-    }
-
-    if let selectedPortfolioID {
-      return .portfolio(selectedPortfolioID)
-    }
-
-    if let firstPortfolioID {
-      return .portfolio(firstPortfolioID)
-    }
-
-    return .emptyPortfolioSelection
-  }
-
-  private func icon(for section: SidebarSelection) -> String {
+  private func icon(for section: MainFeature.Sidebar) -> String {
     switch section {
     case .portfolios: return "chart.line.uptrend.xyaxis"
     case .settings: return "gear"
+    }
+  }
+
+  private func label(for section: MainFeature.Sidebar) -> String {
+    switch section {
+    case .portfolios: return "Portfolios"
+    case .settings: return "Settings"
     }
   }
 }
@@ -166,6 +176,9 @@ private struct AppBrandSidebarHeader: View {
 /// client is wired up to the backend's quote/portfolio endpoints.
 struct DashboardView: View {
   var body: some View {
-    PortfolioListView()
+    PortfolioListView(
+      store: Store(initialState: PortfolioListFeature.State()) {
+        PortfolioListFeature()
+      })
   }
 }
