@@ -18,6 +18,8 @@ DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-
 SDK="${SDK:-iphonesimulator}"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-}"
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
+SIMCTL_RETRY_ATTEMPTS="${SIMCTL_RETRY_ATTEMPTS:-3}"
+SIMCTL_RETRY_DELAY_SECONDS="${SIMCTL_RETRY_DELAY_SECONDS:-2}"
 
 usage() {
   cat <<USAGE
@@ -31,12 +33,22 @@ Defaults:
   IPAD_DEVICE=$IPAD_DEVICE
 
 This script boots or creates the selected simulator, builds, installs, and launches the app.
+Simulator install/launch commands retry transient CoreSimulator failures by default.
 USAGE
 }
 
 fail() {
   printf 'run.sh: %s\n' "$*" >&2
   exit 1
+}
+
+validate_positive_integer() {
+  local name="$1"
+  local value="$2"
+
+  case "$value" in
+    ''|*[!0-9]*|0) fail "$name must be a positive integer." ;;
+  esac
 }
 
 require_xcode() {
@@ -183,6 +195,26 @@ bundle_id_for_app() {
   /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist" 2>/dev/null || fail "Could not read CFBundleIdentifier from '$app_path/Info.plist'. Set APP_BUNDLE_ID explicitly."
 }
 
+retry_command() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  while [ "$attempt" -le "$SIMCTL_RETRY_ATTEMPTS" ]; do
+    if "$@"; then
+      return
+    fi
+
+    if [ "$attempt" -eq "$SIMCTL_RETRY_ATTEMPTS" ]; then
+      fail "$description failed after $SIMCTL_RETRY_ATTEMPTS attempt(s)."
+    fi
+
+    printf '==> %s failed on attempt %s/%s; retrying in %ss\n' "$description" "$attempt" "$SIMCTL_RETRY_ATTEMPTS" "$SIMCTL_RETRY_DELAY_SECONDS"
+    sleep "$SIMCTL_RETRY_DELAY_SECONDS"
+    attempt=$((attempt + 1))
+  done
+}
+
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   usage
   exit 0
@@ -190,6 +222,8 @@ fi
 
 require_xcode
 validate_project
+validate_positive_integer SIMCTL_RETRY_ATTEMPTS "$SIMCTL_RETRY_ATTEMPTS"
+validate_positive_integer SIMCTL_RETRY_DELAY_SECONDS "$SIMCTL_RETRY_DELAY_SECONDS"
 select_values
 SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION" | tail -n 1)"
 build_app "$DEVICE_NAME" "$OS_VERSION"
@@ -198,6 +232,6 @@ APP_PATH="$(built_app_path)"
 BUNDLE_ID="$(bundle_id_for_app "$APP_PATH")"
 
 printf '==> Installing %s on %s\n' "$APP_PATH" "$SIM_UDID"
-xcrun simctl install "$SIM_UDID" "$APP_PATH"
+retry_command "simctl install" xcrun simctl install "$SIM_UDID" "$APP_PATH"
 printf '==> Launching %s\n' "$BUNDLE_ID"
-xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
+retry_command "simctl launch" xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
