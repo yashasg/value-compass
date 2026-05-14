@@ -97,6 +97,7 @@ struct PortfolioDetailFeature {
         return .send(.delegate(.openHoldingsEditor(portfolioID: id)))
 
       case .calculateTapped:
+        guard state.snapshot.canCalculate else { return .none }
         let id = state.portfolioID
         return .run { [modelContainer, contributionCalculator] send in
           let output = await MainActor.run { () -> ContributionOutput in

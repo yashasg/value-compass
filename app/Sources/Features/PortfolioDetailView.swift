@@ -248,6 +248,7 @@ private struct PortfolioDetailContent: View {
         }
         .buttonStyle(.borderedProminent)
         .appMinimumTouchTarget()
+        .disabled(!store.snapshot.canCalculate)
         .accessibilityIdentifier("portfolio.detail.calculate")
       }
 
