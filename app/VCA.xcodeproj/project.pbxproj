@@ -75,6 +75,7 @@
 		C0000000000000000000B007 /* ContributionCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F007 /* ContributionCalculatorTests.swift */; };
 		C0000000000000000000B008 /* ValueCompassTypographyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F008 /* ValueCompassTypographyTests.swift */; };
 		C0000000000000000000B009 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F009 /* DesignSystemTests.swift */; };
+		C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00A /* MinAppVersionClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -151,6 +152,7 @@
 		C0000000000000000000F007 /* ContributionCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F008 /* ValueCompassTypographyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValueCompassTypographyTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F009 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F00A /* MinAppVersionClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -365,6 +367,7 @@
 				C0000000000000000000F007 /* ContributionCalculatorTests.swift */,
 				C0000000000000000000F008 /* ValueCompassTypographyTests.swift */,
 				C0000000000000000000F009 /* DesignSystemTests.swift */,
+				C0000000000000000000F00A /* MinAppVersionClientTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -554,6 +557,7 @@
 				C0000000000000000000B007 /* ContributionCalculatorTests.swift in Sources */,
 				C0000000000000000000B008 /* ValueCompassTypographyTests.swift in Sources */,
 				C0000000000000000000B009 /* DesignSystemTests.swift in Sources */,
+				C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
