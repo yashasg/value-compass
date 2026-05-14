@@ -1,11 +1,46 @@
+import ComposableArchitecture
 import SwiftUI
 
 /// First-launch onboarding. The user acknowledges the disclaimer, reviews the
-/// portfolio setup path, then continues into the local-first app.
+/// portfolio setup intro, then continues into the local-first app.
+///
+/// Reads from `OnboardingFeature` and routes the disclaimer / start-setup
+/// taps through the reducer's effects (push authorization +
+/// `.delegate(.completed)`) so behavior is fully testable.
 struct OnboardingView: View {
-  @EnvironmentObject private var appState: AppState
-  @EnvironmentObject private var pushManager: PushNotificationManager
-  @State private var hasAcknowledgedDisclaimer = false
+  private let mode: Mode
+
+  init(store: StoreOf<OnboardingFeature>) {
+    self.mode = .store(store)
+  }
+
+  /// Phase 0 → Phase 2 bridge: `RootView` still constructs `OnboardingView()`
+  /// without arguments and depends on `AppState.hasSeenDisclaimer` to advance
+  /// to `MainView`. Until #158 wires the real `Store` and removes
+  /// `AppState`, render through `OnboardingLegacyBridge` which owns a
+  /// short-lived `Store` and writes back to `AppState.hasSeenDisclaimer` when
+  /// the reducer emits `.delegate(.completed)`.
+  init() {
+    self.mode = .legacy
+  }
+
+  var body: some View {
+    switch mode {
+    case .store(let store):
+      OnboardingContent(store: store)
+    case .legacy:
+      OnboardingLegacyBridge()
+    }
+  }
+
+  private enum Mode {
+    case store(StoreOf<OnboardingFeature>)
+    case legacy
+  }
+}
+
+private struct OnboardingContent: View {
+  let store: StoreOf<OnboardingFeature>
 
   var body: some View {
     ScrollView {
@@ -13,14 +48,14 @@ struct OnboardingView: View {
         AppBrandHeader(logoSize: 72, subtitle: "Personal contribution planning")
           .accessibilityAddTraits(.isHeader)
 
-        if hasAcknowledgedDisclaimer {
+        if store.hasAcknowledgedDisclaimer {
           portfolioSetupIntro
         } else {
           disclaimerAcknowledgment
         }
       }
       .padding(24)
-      .frame(maxWidth: 640)  // Comfortable reading width on iPad.
+      .frame(maxWidth: 640)
       .frame(maxWidth: .infinity)
     }
     .background(Color.appBackground)
@@ -38,7 +73,7 @@ struct OnboardingView: View {
         .fixedSize(horizontal: false, vertical: true)
 
       Button {
-        hasAcknowledgedDisclaimer = true
+        store.send(.acknowledgeDisclaimerTapped)
       } label: {
         Text("I Understand")
           .valueCompassTextStyle(.bodyLarge)
@@ -83,10 +118,7 @@ struct OnboardingView: View {
       .accessibilityIdentifier("onboarding.setup.steps")
 
       Button {
-        Task {
-          await pushManager.requestAuthorizationAndRegister()
-          appState.hasSeenDisclaimer = true
-        }
+        store.send(.startSetupTapped)
       } label: {
         Text("Start Portfolio Setup")
           .valueCompassTextStyle(.bodyLarge)
@@ -126,4 +158,64 @@ private struct OnboardingSetupStep: View {
     }
     .accessibilityElement(children: .combine)
   }
+}
+
+/// Phase 1 bridge between the legacy `RootView` (which still calls
+/// `OnboardingView()` and depends on `AppState.hasSeenDisclaimer`) and the new
+/// `OnboardingFeature`. Owns a short-lived `Store` whose only deviation from
+/// the production reducer is an extra `Reduce` that mirrors the
+/// `.delegate(.completed)` action into `AppState.hasSeenDisclaimer = true` so
+/// `RootView` can advance to `MainView` without yet observing the TCA store.
+///
+/// Removed in #158 once the real `Store` is wired at app entry and `RootView`
+/// switches over `AppFeature.State.destination`.
+private struct OnboardingLegacyBridge: View {
+  @EnvironmentObject private var appState: AppState
+  @StateObject private var holder = LegacyOnboardingStoreHolder()
+
+  var body: some View {
+    OnboardingContent(store: holder.store(persistDisclaimerSeen: appState))
+  }
+}
+
+@MainActor
+private final class LegacyOnboardingStoreHolder: ObservableObject {
+  private var cachedStore: StoreOf<OnboardingFeature>?
+
+  func store(persistDisclaimerSeen appState: AppState) -> StoreOf<OnboardingFeature> {
+    if let cachedStore {
+      return cachedStore
+    }
+    let store = Store(initialState: OnboardingFeature.State()) {
+      OnboardingFeature()
+      Reduce<OnboardingFeature.State, OnboardingFeature.Action> { _, action in
+        guard case .delegate(.completed) = action else { return .none }
+        return .run { _ in
+          await MainActor.run { appState.hasSeenDisclaimer = true }
+        }
+      }
+    }
+    cachedStore = store
+    return store
+  }
+}
+
+#Preview("OnboardingView – disclaimer step") {
+  OnboardingView(
+    store: Store(
+      initialState: OnboardingFeature.State(hasAcknowledgedDisclaimer: false)
+    ) {
+      OnboardingFeature()
+    }
+  )
+}
+
+#Preview("OnboardingView – setup step") {
+  OnboardingView(
+    store: Store(
+      initialState: OnboardingFeature.State(hasAcknowledgedDisclaimer: true)
+    ) {
+      OnboardingFeature()
+    }
+  )
 }
