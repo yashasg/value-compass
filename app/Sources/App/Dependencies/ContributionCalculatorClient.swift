@@ -8,16 +8,17 @@ import Foundation
 /// `MovingAverageContributionCalculator`. Tests can stub `calculate` to drive
 /// the reducer with deterministic outputs.
 ///
-/// Lives at this scope because only `PortfolioDetailFeature` (issue #154)
-/// needs it today; the broader Phase 0 dependency-interfaces issue (#164)
-/// intentionally deferred calculation client wiring.
+/// Lives at this scope because both `PortfolioDetailFeature` (issue #154)
+/// and `ContributionResultFeature` (issue #156) need it; the broader Phase 0
+/// dependency-interfaces issue (#164) intentionally deferred calculation
+/// client wiring.
 ///
 /// The `calculate` closure runs on `@MainActor` because `Portfolio` is a
 /// SwiftData `@Model` class and is `MainActor`-isolated when accessed via
 /// the main `ModelContext`.
 @DependencyClient
-struct ContributionCalculatorClient {
-  var calculate: @MainActor (_ portfolio: Portfolio?) -> ContributionOutput = { _ in
+struct ContributionCalculatorClient: Sendable {
+  var calculate: @MainActor @Sendable (_ portfolio: Portfolio?) -> ContributionOutput = { _ in
     ContributionOutput.failure(ContributionCalculationError.missingPortfolio)
   }
 }
