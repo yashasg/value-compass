@@ -219,7 +219,7 @@ Backend phases use OpenAPI as the backend/iOS contract:
    `PYTHONPATH=backend python3 -m api.export_openapi`; CI verifies them with the
    same command plus `--check`.
 4. SwiftOpenAPIGenerator consumes `openapi.json` to produce code under
-   `frontend/Sources/Networking/`.
+   `frontend/Sources/Backend/Networking/`.
 5. Generated networking files are never manually modified.
 6. Contract changes must be backward-compatible by default: newly added response
    fields are optional unless a versioned breaking change is intentionally planned.

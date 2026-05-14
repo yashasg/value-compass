@@ -29,6 +29,7 @@
 		A0000000000000000000B033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F033 /* KeychainStore.swift */; };
 		A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MinAppVersionMonitor.swift */; };
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
+		A0000000000000000000B070 /* BackendContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F070 /* BackendContracts.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
@@ -80,6 +81,7 @@
 		A0000000000000000000F033 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000F034 /* MinAppVersionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionMonitor.swift; sourceTree = "<group>"; };
 		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
+		A0000000000000000000F070 /* BackendContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendContracts.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
@@ -128,13 +130,30 @@
 			children = (
 				A0000000000000000000A004 /* App */,
 				A0000000000000000000A005 /* Features */,
-				A0000000000000000000A006 /* Models */,
-				A0000000000000000000A007 /* Networking */,
-				A0000000000000000000A040 /* Services */,
+				A0000000000000000000A100 /* Backend */,
 				A0000000000000000000A060 /* DesignSystem */,
 				A0000000000000000000A050 /* Assets */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000A100 /* Backend */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000A101 /* Contracts */,
+				A0000000000000000000A006 /* Models */,
+				A0000000000000000000A007 /* Networking */,
+				A0000000000000000000A040 /* Services */,
+			);
+			path = Backend;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000A101 /* Contracts */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000F070 /* BackendContracts.swift */,
+			);
+			path = Contracts;
 			sourceTree = "<group>";
 		};
 		A0000000000000000000A004 /* App */ = {
@@ -370,6 +389,7 @@
 				A0000000000000000000B033 /* KeychainStore.swift in Sources */,
 				A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */,
 				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
+				A0000000000000000000B070 /* BackendContracts.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
