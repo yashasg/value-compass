@@ -15,7 +15,6 @@ IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 15}"
 IPAD_DEVICE="${IPAD_DEVICE:-iPad (10th generation)}"
 DEVICE_KIND="${DEVICE_KIND:-iphone}" # iphone or ipad
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/app/xcode-derived-data}"
-SDK="${SDK:-iphonesimulator}"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-}"
 VCA_API_BASE_URL="${VCA_API_BASE_URL:-${API_BASE_URL:-}}"
 SIMCTL_RETRY_ATTEMPTS="${SIMCTL_RETRY_ATTEMPTS:-3}"
@@ -222,7 +221,6 @@ build_app() {
     $(xcode_container_args) \
     -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" \
-    -sdk "$SDK" \
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -skipMacroValidation \

@@ -15,7 +15,6 @@ IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 15}"
 IPAD_DEVICE="${IPAD_DEVICE:-iPad (10th generation)}"
 PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/app/xcode-derived-data}"
-SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
 RUN_SWIFT_FORMAT="${RUN_SWIFT_FORMAT:-true}" # true, false
@@ -214,7 +213,6 @@ run_xcodebuild() {
     $(xcode_container_args) \
     -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" \
-    -sdk "$SDK" \
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -skipMacroValidation \
