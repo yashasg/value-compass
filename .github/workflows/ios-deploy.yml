@@ -46,9 +46,10 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Select Xcode
+      - name: Log selected Xcode version
         # App Store Connect requires the iOS 26 SDK (Xcode 26+) for uploads.
-        # macos-26 runners ship with Xcode 26.x selected by default; just log it.
+        # macos-26 runners ship with Xcode 26.x selected by default; just log
+        # the version so it is visible in the run.
         run: sudo xcodebuild -version
 
       - name: Cache Xcode derived data

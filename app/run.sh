@@ -72,8 +72,19 @@ runtime_id() {
   # (e.g. iOS-26-4-1), so we resolve it from the runtime listing rather than
   # constructing the ID from the marketing version.
   local version="$1"
+  local list
+  local list_status=0
   local id
-  id="$(xcrun simctl list runtimes available 2>/dev/null \
+
+  # Capture the runtime listing first so a failure of `xcrun simctl` (under
+  # `set -e -o pipefail`) does not abort the script before our explicit
+  # error message can run, and so any stderr is preserved for diagnostics.
+  list="$(xcrun simctl list runtimes available)" || list_status=$?
+  if [ "$list_status" -ne 0 ]; then
+    fail "Failed to list iOS Simulator runtimes (xcrun simctl exit $list_status). Check Xcode/Simulator install with 'xcrun simctl list runtimes available'."
+  fi
+
+  id="$(printf '%s\n' "$list" \
     | sed -n "s/^iOS ${version//./\\.} .*[[:space:]]\\(com\\.apple\\.CoreSimulator\\.SimRuntime\\.iOS-[0-9-]*\\)[[:space:]]*$/\\1/p" \
     | head -n 1)"
   [ -n "$id" ] || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
@@ -114,19 +125,23 @@ simulator_udid() {
 }
 
 boot_simulator() {
+  # Boot the given simulator and wait for it to be ready. All status output
+  # (from `simctl boot`/`bootstatus`) is redirected to stderr so this function
+  # is safe to call from inside a `$(...)` capture without contaminating the
+  # captured stdout (e.g. a UDID being returned by `ensure_simulator`).
   local udid="$1"
   local boot_error
   boot_error="$(mktemp "${TMPDIR:-/tmp}/vca-sim-boot.XXXXXX")"
 
   for attempt in 1 2 3; do
-    if xcrun simctl boot "$udid" 2>"$boot_error"; then
-      xcrun simctl bootstatus "$udid" -b
+    if xcrun simctl boot "$udid" 2>"$boot_error" 1>&2; then
+      xcrun simctl bootstatus "$udid" -b 1>&2
       rm -f "$boot_error"
       return
     fi
 
     if grep -F "current state: Booted" "$boot_error" >/dev/null 2>&1; then
-      xcrun simctl bootstatus "$udid" -b
+      xcrun simctl bootstatus "$udid" -b 1>&2
       rm -f "$boot_error"
       return
     fi
