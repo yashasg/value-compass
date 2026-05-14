@@ -8,39 +8,11 @@ import SwiftUI
 /// taps through the reducer's effects (push authorization +
 /// `.delegate(.completed)`) so behavior is fully testable.
 struct OnboardingView: View {
-  private let mode: Mode
+  let store: StoreOf<OnboardingFeature>
 
   init(store: StoreOf<OnboardingFeature>) {
-    self.mode = .store(store)
+    self.store = store
   }
-
-  /// Phase 0 → Phase 2 bridge: `RootView` still constructs `OnboardingView()`
-  /// without arguments and depends on `AppState.hasSeenDisclaimer` to advance
-  /// to `MainView`. Until #158 wires the real `Store` and removes
-  /// `AppState`, render through `OnboardingLegacyBridge` which owns a
-  /// short-lived `Store` and writes back to `AppState.hasSeenDisclaimer` when
-  /// the reducer emits `.delegate(.completed)`.
-  init() {
-    self.mode = .legacy
-  }
-
-  var body: some View {
-    switch mode {
-    case .store(let store):
-      OnboardingContent(store: store)
-    case .legacy:
-      OnboardingLegacyBridge()
-    }
-  }
-
-  private enum Mode {
-    case store(StoreOf<OnboardingFeature>)
-    case legacy
-  }
-}
-
-private struct OnboardingContent: View {
-  let store: StoreOf<OnboardingFeature>
 
   var body: some View {
     ScrollView {
@@ -157,46 +129,6 @@ private struct OnboardingSetupStep: View {
       }
     }
     .accessibilityElement(children: .combine)
-  }
-}
-
-/// Phase 1 bridge between the legacy `RootView` (which still calls
-/// `OnboardingView()` and depends on `AppState.hasSeenDisclaimer`) and the new
-/// `OnboardingFeature`. Owns a short-lived `Store` whose only deviation from
-/// the production reducer is an extra `Reduce` that mirrors the
-/// `.delegate(.completed)` action into `AppState.hasSeenDisclaimer = true` so
-/// `RootView` can advance to `MainView` without yet observing the TCA store.
-///
-/// Removed in #158 once the real `Store` is wired at app entry and `RootView`
-/// switches over `AppFeature.State.destination`.
-private struct OnboardingLegacyBridge: View {
-  @EnvironmentObject private var appState: AppState
-  @StateObject private var holder = LegacyOnboardingStoreHolder()
-
-  var body: some View {
-    OnboardingContent(store: holder.store(persistDisclaimerSeen: appState))
-  }
-}
-
-@MainActor
-private final class LegacyOnboardingStoreHolder: ObservableObject {
-  private var cachedStore: StoreOf<OnboardingFeature>?
-
-  func store(persistDisclaimerSeen appState: AppState) -> StoreOf<OnboardingFeature> {
-    if let cachedStore {
-      return cachedStore
-    }
-    let store = Store(initialState: OnboardingFeature.State()) {
-      OnboardingFeature()
-      Reduce<OnboardingFeature.State, OnboardingFeature.Action> { _, action in
-        guard case .delegate(.completed) = action else { return .none }
-        return .run { _ in
-          await MainActor.run { appState.hasSeenDisclaimer = true }
-        }
-      }
-    }
-    cachedStore = store
-    return store
   }
 }
 

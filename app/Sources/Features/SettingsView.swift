@@ -7,39 +7,27 @@ import SwiftUI
 /// Reads from `SettingsFeature` and routes preference changes through the
 /// reducer's effects so persistence is fully testable.
 struct SettingsView: View {
-  private let mode: Mode
+  @Bindable var store: StoreOf<SettingsFeature>
 
   init(store: StoreOf<SettingsFeature>) {
-    self.mode = .store(store)
+    self.store = store
   }
 
-  /// Phase 1 → Phase 2 bridge: `MainView` still constructs `SettingsView()`
-  /// without arguments and reads/writes preferences via
-  /// `@EnvironmentObject AppState`. Until #158 wires the real `Store` and
-  /// removes `AppState`, render through `SettingsLegacyBridge` which owns a
-  /// short-lived `Store` and mirrors changes back to `AppState` so the rest
-  /// of the app keeps observing them.
+  /// Convenience initializer for legacy callers (`MainView`,
+  /// `PortfolioListView` legacy bridge) that construct `SettingsView` without
+  /// a parent store. Spawns a self-contained `SettingsFeature` store; the
+  /// reducer's `.task` effect immediately rehydrates `theme` / `language`
+  /// from `UserDefaults` (via `@Dependency(\.userDefaults)`) and persists
+  /// future binding changes the same way, so behavior is bit-identical to
+  /// the legacy `AppState`-backed path. Removed when `MainFeature.shell`
+  /// passes a scoped settings store directly (#159).
   init() {
-    self.mode = .legacy
+    self.init(
+      store: Store(initialState: SettingsFeature.State()) {
+        SettingsFeature()
+      }
+    )
   }
-
-  var body: some View {
-    switch mode {
-    case .store(let store):
-      SettingsContent(store: store)
-    case .legacy:
-      SettingsLegacyBridge()
-    }
-  }
-
-  private enum Mode {
-    case store(StoreOf<SettingsFeature>)
-    case legacy
-  }
-}
-
-private struct SettingsContent: View {
-  @Bindable var store: StoreOf<SettingsFeature>
 
   var body: some View {
     Form {
@@ -78,60 +66,6 @@ private struct SettingsContent: View {
     .navigationTitle("Settings")
     .tint(Color.appPrimary)
     .task { store.send(.task) }
-  }
-}
-
-/// Phase 1 bridge between the legacy `MainView` (which still calls
-/// `SettingsView()` and mutates `AppState.appTheme` / `AppState.appLanguage`)
-/// and the new `SettingsFeature`. Owns a short-lived `Store` whose only
-/// deviation from the production reducer is an extra `Reduce` that mirrors
-/// `theme`/`language` changes back into `AppState` so the rest of the app
-/// (which still observes `AppState`) keeps reacting to the user's selections.
-///
-/// Removed in #158 once the real `Store` is wired at app entry and `AppState`
-/// is deleted.
-private struct SettingsLegacyBridge: View {
-  @EnvironmentObject private var appState: AppState
-  @StateObject private var holder = LegacySettingsStoreHolder()
-
-  var body: some View {
-    SettingsContent(store: holder.store(syncing: appState))
-  }
-}
-
-@MainActor
-private final class LegacySettingsStoreHolder: ObservableObject {
-  private var cachedStore: StoreOf<SettingsFeature>?
-
-  func store(syncing appState: AppState) -> StoreOf<SettingsFeature> {
-    if let cachedStore {
-      return cachedStore
-    }
-    let initial = SettingsFeature.State(
-      theme: appState.appTheme,
-      language: appState.appLanguage
-    )
-    let store = Store(initialState: initial) {
-      SettingsFeature()
-      Reduce<SettingsFeature.State, SettingsFeature.Action> { state, action in
-        switch action {
-        case .binding(\.theme):
-          let newTheme = state.theme
-          return .run { _ in
-            await MainActor.run { appState.appTheme = newTheme }
-          }
-        case .binding(\.language):
-          let newLanguage = state.language
-          return .run { _ in
-            await MainActor.run { appState.appLanguage = newLanguage }
-          }
-        default:
-          return .none
-        }
-      }
-    }
-    cachedStore = store
-    return store
   }
 }
 

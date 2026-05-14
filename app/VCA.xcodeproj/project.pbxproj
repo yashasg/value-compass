@@ -9,8 +9,7 @@
 /* Begin PBXBuildFile section */
 		A0000000000000000000B001 /* VCAApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F001 /* VCAApp.swift */; };
 		A0000000000000000000B002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F002 /* AppDelegate.swift */; };
-		A0000000000000000000B003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F003 /* AppState.swift */; };
-		A0000000000000000000B004 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F004 /* PushNotificationManager.swift */; };
+		A0000000000000000000B0A0 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A0 /* AppPreferences.swift */; };
 		A0000000000000000000B005 /* LocalPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F005 /* LocalPersistence.swift */; };
 		A0000000000000000000B006 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F006 /* AppBrand.swift */; };
 		A0000000000000000000B007 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F007 /* DesignSystem.swift */; };
@@ -30,7 +29,6 @@
 		A0000000000000000000B031 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F031 /* AppVersion.swift */; };
 		A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F032 /* DeviceIDProvider.swift */; };
 		A0000000000000000000B033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F033 /* KeychainStore.swift */; };
-		A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MinAppVersionMonitor.swift */; };
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
 		A0000000000000000000B070 /* BackendContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F070 /* BackendContracts.swift */; };
 		A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F080 /* UserDefaultsClient.swift */; };
@@ -69,7 +67,6 @@
 		D0000000000000000000B007 /* CasePaths in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D007 /* CasePaths */; };
 		D0000000000000000000B008 /* Perception in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D008 /* Perception */; };
 		D0000000000000000000B009 /* PerceptionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D009 /* PerceptionCore */; };
-		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
 		C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F004 /* RootViewSmokeTests.swift */; };
@@ -96,8 +93,7 @@
 		A0000000000000000000F001 /* VCAApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCAApp.swift; sourceTree = "<group>"; };
 		A0000000000000000000F000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A0000000000000000000F002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		A0000000000000000000F003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		A0000000000000000000F004 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		A0000000000000000000F0A0 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
 		A0000000000000000000F006 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
 		A0000000000000000000F007 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -117,7 +113,6 @@
 		A0000000000000000000F031 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		A0000000000000000000F032 /* DeviceIDProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIDProvider.swift; sourceTree = "<group>"; };
 		A0000000000000000000F033 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
-		A0000000000000000000F034 /* MinAppVersionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionMonitor.swift; sourceTree = "<group>"; };
 		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
 		A0000000000000000000F070 /* BackendContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendContracts.swift; sourceTree = "<group>"; };
 		A0000000000000000000F080 /* UserDefaultsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsClient.swift; sourceTree = "<group>"; };
@@ -148,7 +143,6 @@
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
 		A0000000000000000000F050 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A0000000000000000000F051 /* icon.svg */ = {isa = PBXFileReference; lastKnownFileType = image.svg; path = icon.svg; sourceTree = "<group>"; };
-		C0000000000000000000F001 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F002 /* LocalPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistenceTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F003 /* NavigationShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationShellTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F004 /* RootViewSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewSmokeTests.swift; sourceTree = "<group>"; };
@@ -232,8 +226,7 @@
 				A0000000000000000000F000 /* Info.plist */,
 				A0000000000000000000F001 /* VCAApp.swift */,
 				A0000000000000000000F002 /* AppDelegate.swift */,
-				A0000000000000000000F003 /* AppState.swift */,
-				A0000000000000000000F004 /* PushNotificationManager.swift */,
+				A0000000000000000000F0A0 /* AppPreferences.swift */,
 				A0000000000000000000F005 /* LocalPersistence.swift */,
 				A0000000000000000000F006 /* AppBrand.swift */,
 				A0000000000000000000F007 /* DesignSystem.swift */,
@@ -312,7 +305,6 @@
 				A0000000000000000000F031 /* AppVersion.swift */,
 				A0000000000000000000F032 /* DeviceIDProvider.swift */,
 				A0000000000000000000F033 /* KeychainStore.swift */,
-				A0000000000000000000F034 /* MinAppVersionMonitor.swift */,
 				A0000000000000000000F035 /* BackendSyncProjection.swift */,
 				A0000000000000000000F037 /* openapi-generator-config.yaml */,
 				A0000000000000000000F036 /* openapi.json */,
@@ -365,7 +357,6 @@
 		C0000000000000000000A004 /* VCATests */ = {
 			isa = PBXGroup;
 			children = (
-				C0000000000000000000F001 /* AppStateTests.swift */,
 				C0000000000000000000F002 /* LocalPersistenceTests.swift */,
 				C0000000000000000000F003 /* NavigationShellTests.swift */,
 				C0000000000000000000F004 /* RootViewSmokeTests.swift */,
@@ -502,8 +493,7 @@
 			files = (
 				A0000000000000000000B001 /* VCAApp.swift in Sources */,
 				A0000000000000000000B002 /* AppDelegate.swift in Sources */,
-				A0000000000000000000B003 /* AppState.swift in Sources */,
-				A0000000000000000000B004 /* PushNotificationManager.swift in Sources */,
+				A0000000000000000000B0A0 /* AppPreferences.swift in Sources */,
 				A0000000000000000000B005 /* LocalPersistence.swift in Sources */,
 				A0000000000000000000B006 /* AppBrand.swift in Sources */,
 				A0000000000000000000B007 /* DesignSystem.swift in Sources */,
@@ -523,7 +513,6 @@
 				A0000000000000000000B031 /* AppVersion.swift in Sources */,
 				A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */,
 				A0000000000000000000B033 /* KeychainStore.swift in Sources */,
-				A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */,
 				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
 				A0000000000000000000B070 /* BackendContracts.swift in Sources */,
 				A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */,
@@ -557,7 +546,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C0000000000000000000B001 /* AppStateTests.swift in Sources */,
 				C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */,
 				C0000000000000000000B003 /* NavigationShellTests.swift in Sources */,
 				C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */,
