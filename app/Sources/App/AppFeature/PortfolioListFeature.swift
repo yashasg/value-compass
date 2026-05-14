@@ -1,21 +1,194 @@
 import ComposableArchitecture
+import Foundation
+import SwiftData
 
-/// Phase 0 placeholder for the portfolio-list reducer.
+/// Reducer that drives `PortfolioListView` — the post-onboarding portfolio
+/// inventory with create/edit/delete and (on iPad) selection. Replaces the
+/// Phase 0 placeholder.
 ///
-/// Issue #153 replaces this with the real reducer that owns the portfolio
-/// list + editor UI currently in `PortfolioListView`. Until then the type
-/// exists only so `MainFeature` (issue #149) can reference it via
-/// `Scope(state: \.portfolios, …)`.
+/// The reducer projects SwiftData `Portfolio` rows into `PortfolioSnapshot`
+/// values so reducer state is `Equatable`/`Sendable` and decoupled from the
+/// `@Model` class. Persistence happens through
+/// `@Dependency(\.modelContainer)`; the `task` action loads the initial
+/// snapshot list and refreshes it whenever the editor reports a save.
+///
+/// Phase 2 (#159) wires `MainFeature.path` to push `PortfolioDetailFeature`
+/// when `delegate(.portfolioOpened)` fires; until then the legacy bridge in
+/// `PortfolioListView` mirrors selection back into the `MainView` binding so
+/// the existing iPad split view keeps working.
 @Reducer
 struct PortfolioListFeature {
   @ObservableState
-  struct State: Equatable, Sendable {}
-
-  enum Action: Equatable, Sendable {
-    case _placeholder
+  struct State: Equatable {
+    var portfolios: [PortfolioSnapshot] = []
+    @Presents var editor: PortfolioEditorFeature.State?
+    var saveError: String?
+    var selectedPortfolioID: UUID?
+    /// Whether the toolbar should expose the Settings link. The legacy
+    /// `MainView` toggles this based on the navigation shell (compact stack
+    /// shows the link, iPad split view does not because Settings is its own
+    /// sidebar slot). Phase 2 (#159) wires the same toggle from
+    /// `MainFeature`.
+    var showsSettingsLink: Bool = true
   }
 
+  enum Action: Equatable {
+    case task
+    case portfoliosLoaded([PortfolioSnapshot])
+    case createTapped
+    case editTapped(id: UUID)
+    case deleteTapped(id: UUID)
+    case selected(id: UUID?)
+    case editor(PresentationAction<PortfolioEditorFeature.Action>)
+    case saveErrorDismissed
+    case delegate(Delegate)
+
+    @CasePathable
+    enum Delegate: Equatable {
+      case portfolioOpened(UUID)
+    }
+  }
+
+  @Dependency(\.modelContainer) var modelContainer
+
   var body: some ReducerOf<Self> {
-    EmptyReducer()
+    Reduce { state, action in
+      switch action {
+      case .task:
+        return .run { send in
+          let snapshots = try await loadSnapshots()
+          await send(.portfoliosLoaded(snapshots))
+        } catch: { error, send in
+          await send(.portfoliosLoaded([]))
+          _ = error
+        }
+
+      case .portfoliosLoaded(let snapshots):
+        state.portfolios = snapshots
+        if let selected = state.selectedPortfolioID,
+          !state.portfolios.contains(where: { $0.id == selected })
+        {
+          state.selectedPortfolioID = nil
+        }
+        return .none
+
+      case .createTapped:
+        state.editor = PortfolioEditorFeature.State(mode: .create)
+        return .none
+
+      case .editTapped(let id):
+        state.editor = PortfolioEditorFeature.State(mode: .edit(id))
+        return .none
+
+      case .deleteTapped(let id):
+        return .run { send in
+          do {
+            try await deleteSnapshot(id: id)
+            let snapshots = try await loadSnapshots()
+            await send(.portfoliosLoaded(snapshots))
+          } catch {
+            await send(.portfoliosLoaded((try? await loadSnapshots()) ?? []))
+            _ = error
+          }
+        }
+
+      case .selected(let id):
+        state.selectedPortfolioID = id
+        if let id {
+          return .send(.delegate(.portfolioOpened(id)))
+        }
+        return .none
+
+      case .editor(.presented(.delegate(.saved))):
+        return .run { send in
+          let snapshots = try await loadSnapshots()
+          await send(.portfoliosLoaded(snapshots))
+        } catch: { _, _ in
+        }
+
+      case .editor:
+        return .none
+
+      case .saveErrorDismissed:
+        state.saveError = nil
+        return .none
+
+      case .delegate:
+        return .none
+      }
+    }
+    .ifLet(\.$editor, action: \.editor) {
+      PortfolioEditorFeature()
+    }
+  }
+
+  private func loadSnapshots() async throws -> [PortfolioSnapshot] {
+    try await withCheckedThrowingContinuation { continuation in
+      Task {
+        do {
+          let collected = LockIsolated<[PortfolioSnapshot]>([])
+          try await modelContainer.task { actor in
+            let snapshots = try await actor.loadPortfolioSnapshots()
+            collected.setValue(snapshots)
+          }
+          continuation.resume(returning: collected.value)
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    }
+  }
+
+  private func deleteSnapshot(id: UUID) async throws {
+    try await modelContainer.task { actor in
+      try await actor.deletePortfolio(id: id)
+    }
+  }
+}
+
+/// Sendable projection of `Portfolio` for use in `PortfolioListFeature`
+/// state. SwiftData `@Model` classes are `MainActor`-isolated and not
+/// `Sendable`, so the reducer mirrors only the fields the list/sidebar UI
+/// reads.
+struct PortfolioSnapshot: Equatable, Identifiable, Sendable {
+  let id: UUID
+  let name: String
+  let monthlyBudget: Decimal
+  let maWindow: Int
+  let createdAt: Date
+  let categoryCount: Int
+}
+
+extension BackgroundModelActor {
+  /// Fetches portfolios sorted newest-first and projects them to
+  /// `PortfolioSnapshot` values inside the actor's isolation so the call
+  /// site can return the result across actor boundaries.
+  func loadPortfolioSnapshots() throws -> [PortfolioSnapshot] {
+    let descriptor = FetchDescriptor<Portfolio>(
+      sortBy: [SortDescriptor(\Portfolio.createdAt, order: .reverse)]
+    )
+    let portfolios = try modelContext.fetch(descriptor)
+    return portfolios.map { portfolio in
+      PortfolioSnapshot(
+        id: portfolio.id,
+        name: portfolio.name,
+        monthlyBudget: portfolio.monthlyBudget,
+        maWindow: portfolio.maWindow,
+        createdAt: portfolio.createdAt,
+        categoryCount: portfolio.categories.count
+      )
+    }
+  }
+
+  /// Deletes the portfolio with the given identifier and saves. No-op when
+  /// the portfolio is not present (e.g. already deleted from another
+  /// context).
+  func deletePortfolio(id: UUID) throws {
+    let descriptor = FetchDescriptor<Portfolio>(
+      predicate: #Predicate { $0.id == id }
+    )
+    guard let portfolio = try modelContext.fetch(descriptor).first else { return }
+    modelContext.delete(portfolio)
+    try modelContext.save()
   }
 }

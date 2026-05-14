@@ -49,6 +49,9 @@
 		A0000000000000000000B098 /* HoldingsEditorFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F098 /* HoldingsEditorFeature.swift */; };
 		A0000000000000000000B099 /* ContributionResultFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F099 /* ContributionResultFeature.swift */; };
 		A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09A /* ContributionHistoryFeature.swift */; };
+		A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09B /* PortfolioEditorFeature.swift */; };
+		A0000000000000000000B017 /* PortfolioListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F017 /* PortfolioListView.swift */; };
+		A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F018 /* PortfolioEditorView.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
@@ -129,6 +132,9 @@
 		A0000000000000000000F098 /* HoldingsEditorFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingsEditorFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F099 /* ContributionResultFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionResultFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F09A /* ContributionHistoryFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionHistoryFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F09B /* PortfolioEditorFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F017 /* PortfolioListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListView.swift; sourceTree = "<group>"; };
+		A0000000000000000000F018 /* PortfolioEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
@@ -243,6 +249,7 @@
 				A0000000000000000000F098 /* HoldingsEditorFeature.swift */,
 				A0000000000000000000F099 /* ContributionResultFeature.swift */,
 				A0000000000000000000F09A /* ContributionHistoryFeature.swift */,
+				A0000000000000000000F09B /* PortfolioEditorFeature.swift */,
 			);
 			path = AppFeature;
 			sourceTree = "<group>";
@@ -271,6 +278,8 @@
 				A0000000000000000000F013 /* ForcedUpdateView.swift */,
 				A0000000000000000000F014 /* MainView.swift */,
 				A0000000000000000000F015 /* HoldingsEditorView.swift */,
+				A0000000000000000000F017 /* PortfolioListView.swift */,
+				A0000000000000000000F018 /* PortfolioEditorView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -521,6 +530,9 @@
 				A0000000000000000000B098 /* HoldingsEditorFeature.swift in Sources */,
 				A0000000000000000000B099 /* ContributionResultFeature.swift in Sources */,
 				A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */,
+				A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */,
+				A0000000000000000000B017 /* PortfolioListView.swift in Sources */,
+				A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
