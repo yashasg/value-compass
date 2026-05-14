@@ -11,7 +11,7 @@ import Foundation
 ///   screen can be triggered.
 ///
 /// The generated SwiftOpenAPIGenerator client is configured to use this
-/// session as its underlying transport — see `Sources/Networking/openapi-generator-config.yaml`
+/// session as its underlying transport — see `Sources/Backend/Networking/openapi-generator-config.yaml`
 /// and the generated `Client` type that's produced at build time.
 final class APIClient {
   static let shared = APIClient()

@@ -11,7 +11,7 @@ from api.main import app
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATHS = (
     REPO_ROOT / "openapi.json",
-    REPO_ROOT / "frontend" / "Sources" / "Networking" / "openapi.json",
+    REPO_ROOT / "frontend" / "Sources" / "Backend" / "Networking" / "openapi.json",
 )
 
 

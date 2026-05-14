@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
-      - "frontend/Sources/Networking/openapi.json"
+      - "frontend/Sources/Backend/Networking/openapi.json"
       - "alembic.ini"
       - "docs/python/coding_standards.md"
       - "openapi.json"
@@ -18,7 +18,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
-      - "frontend/Sources/Networking/openapi.json"
+      - "frontend/Sources/Backend/Networking/openapi.json"
       - "alembic.ini"
       - "docs/python/coding_standards.md"
       - "openapi.json"

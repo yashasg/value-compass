@@ -17,9 +17,14 @@ frontend/
   Sources/
     App/           # Entry point, app lifecycle
     Features/      # UI screens
-    Networking/    # SwiftOpenAPIGenerator output — never edited manually
-    Models/        # Swift data models
-    Services/      # Local app services
+    Backend/       # Backend boundary — only place active code may depend on
+                   #   SwiftData, Keychain, Massive, indicators, or VCA engine
+      Contracts/   # Protocols App/Features may depend on
+      Models/      # Domain & SwiftData models
+      Networking/  # API client, version monitor, Keychain glue, SwiftOpenAPIGenerator output
+      Services/    # Local computation engines (e.g. ContributionCalculator)
+    DesignSystem/  # Typography, semantic tokens
+    Assets/        # App icon and asset catalog
   Tests/
     VCATests/
   build.sh
@@ -38,7 +43,7 @@ frontend/
 ## API Contract
 
 - The Swift client is generated from `openapi.json` via SwiftOpenAPIGenerator
-  at build time. Generated sources land in `Sources/Networking/` and are
+  at build time. Generated sources land in `Sources/Backend/Networking/` and are
   never hand-edited.
 - New server fields are optional (`Codable` with optionals) — old app
   versions never break.
