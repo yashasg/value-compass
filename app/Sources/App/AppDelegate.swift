@@ -4,8 +4,13 @@ import Foundation
   import UIKit
 
   /// Minimal `UIApplicationDelegate` whose only job is to bridge APNs callbacks
-  /// (which are still delegate-based on iOS 17) into our SwiftUI-native
-  /// `PushNotificationManager`.
+  /// (which are still delegate-based on iOS 17/18/26) into the long-lived
+  /// `PushNotificationsClient` token bridge.
+  ///
+  /// Phase 2 (#158): `PushNotificationManager.shared` is gone — the device
+  /// token is forwarded to `PushNotificationsClient.deliver(deviceToken:)`,
+  /// which feeds an `AsyncStream` consumed by reducer effects observing
+  /// `pushNotifications.tokenUpdates()`.
   final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
       _ application: UIApplication,
@@ -23,9 +28,7 @@ import Foundation
       _ application: UIApplication,
       didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-      Task { @MainActor in
-        PushNotificationManager.shared.didRegister(deviceToken: deviceToken)
-      }
+      PushNotificationsClient.deliver(deviceToken: deviceToken)
     }
 
     func application(

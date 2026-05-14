@@ -15,21 +15,6 @@ struct ForcedUpdateView: View {
     self.store = store
   }
 
-  /// Phase 0 → Phase 2 bridge: `RootView` still constructs this view with a
-  /// raw `minimumVersion` value supplied by `MinAppVersionMonitor`. Wrap that
-  /// into a short-lived `Store` so the rendered hierarchy is identical until
-  /// #158/#159 hand `RootView` the real store and this initializer is
-  /// removed alongside `MinAppVersionMonitor`.
-  init(minimumVersion: String?) {
-    self.init(
-      store: Store(
-        initialState: ForcedUpdateFeature.State(minimumVersion: minimumVersion)
-      ) {
-        ForcedUpdateFeature()
-      }
-    )
-  }
-
   var body: some View {
     VStack(spacing: 24) {
       Image(systemName: "arrow.up.circle.fill")

@@ -7,8 +7,10 @@ import Foundation
 /// - Attaches the device UUID and current app version on every request so the
 ///   backend can identify the install and decide whether to emit
 ///   `X-Min-App-Version`.
-/// - Forwards every response to `MinAppVersionMonitor` so the forced-update
-///   screen can be triggered.
+/// - Forwards every response to `MinAppVersionClient.observe(response:)` so
+///   the forced-update screen can be triggered. Phase 2 (#158) replaced the
+///   former `MinAppVersionMonitor.shared` singleton with this client-static
+///   bridge.
 ///
 /// The generated SwiftOpenAPIGenerator client is configured to use this
 /// session as its underlying transport — see `Sources/Backend/Networking/openapi-generator-config.yaml`
@@ -64,8 +66,8 @@ final class APIClient {
   }
 
   /// Sends a request and returns `(Data, HTTPURLResponse)`. Every response
-  /// is funneled through `MinAppVersionMonitor` before being returned to
-  /// the caller, regardless of HTTP status, so a 4xx with a min-version
+  /// is funneled through `MinAppVersionClient.observe` before being returned
+  /// to the caller, regardless of HTTP status, so a 4xx with a min-version
   /// header still triggers the forced-update flow.
   func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
     var req = request
@@ -78,7 +80,7 @@ final class APIClient {
     guard let http = response as? HTTPURLResponse else {
       throw APIError.nonHTTPResponse
     }
-    await MinAppVersionMonitor.shared.observe(response: http)
+    MinAppVersionClient.observe(response: http)
     return (data, http)
   }
 }

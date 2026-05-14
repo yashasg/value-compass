@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftData
 import SwiftUI
 import XCTest
@@ -7,17 +8,16 @@ import XCTest
 @MainActor
 final class RootViewSmokeTests: XCTestCase {
   func testRootViewCanBeHostedWithRequiredDependencies() throws {
-    let suiteName = "com.valuecompass.tests.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suiteName)!
-    defer { defaults.removePersistentDomain(forName: suiteName) }
-
-    let appState = AppState(userDefaults: defaults)
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
-    let view = RootView()
+    let store = Store(initialState: AppFeature.State()) {
+      AppFeature()
+    } withDependencies: {
+      $0.minAppVersion.events = {
+        AsyncStream { continuation in continuation.finish() }
+      }
+    }
+    let view = RootView(store: store)
       .modelContainer(container)
-      .environmentObject(appState)
-      .environmentObject(MinAppVersionMonitor(currentVersion: "1.0.0"))
-      .environmentObject(PushNotificationManager.shared)
     let host = UIHostingController(rootView: view)
 
     XCTAssertNotNil(host.view)

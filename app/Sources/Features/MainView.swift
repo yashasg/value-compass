@@ -1,8 +1,15 @@
+import ComposableArchitecture
 import SwiftData
 import SwiftUI
 
 /// Adaptive root for post-onboarding usage. Compact widths use a
 /// `NavigationStack`; regular widths use an iPad-native `NavigationSplitView`.
+///
+/// Phase 2 (#158) adds the `init(store:)` entry point used by the new
+/// `RootView` scope. The body still relies on `@Query` / `@State` for the
+/// legacy navigation behavior; #159 wires the `MainFeature` reducer fully
+/// (sidebar / detail / path) and the legacy `@Query`-driven implementation
+/// goes away then.
 struct MainView: View {
   enum NavigationShellKind {
     case stack
@@ -25,6 +32,20 @@ struct MainView: View {
   @Query(sort: \Portfolio.createdAt, order: .reverse) private var portfolios: [Portfolio]
   @State private var sidebarSelection: SidebarSelection? = .portfolios
   @State private var selectedPortfolioID: UUID?
+
+  /// Phase 2 (#158): RootView scopes a `StoreOf<MainFeature>` here. The
+  /// store currently powers no UI state (legacy `@Query` / `@State` still
+  /// drives navigation); #159 takes ownership of sidebar/detail/path
+  /// through `MainFeature` and removes the legacy fields.
+  private let store: StoreOf<MainFeature>?
+
+  init(store: StoreOf<MainFeature>) {
+    self.store = store
+  }
+
+  init() {
+    self.store = nil
+  }
 
   var body: some View {
     switch Self.navigationShellKind(for: horizontalSizeClass) {
