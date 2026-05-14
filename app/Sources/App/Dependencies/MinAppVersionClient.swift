@@ -80,7 +80,8 @@ extension MinAppVersionClient: DependencyKey {
   static let liveValue = MinAppVersionClient(
     events: {
       AsyncStream { continuation in
-        let cancellable = eventSubject
+        let cancellable =
+          eventSubject
           .removeDuplicates()
           .sink { event in continuation.yield(event) }
         continuation.onTermination = { _ in cancellable.cancel() }

@@ -74,7 +74,8 @@ extension PushNotificationsClient: DependencyKey {
     },
     tokenUpdates: {
       AsyncStream { continuation in
-        let cancellable = tokenSubject
+        let cancellable =
+          tokenSubject
           .removeDuplicates()
           .sink { value in continuation.yield(value) }
         continuation.onTermination = { _ in cancellable.cancel() }
