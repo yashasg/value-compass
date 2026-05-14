@@ -30,12 +30,24 @@
 		A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MinAppVersionMonitor.swift */; };
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
 		A0000000000000000000B070 /* BackendContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F070 /* BackendContracts.swift */; };
+		A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F080 /* UserDefaultsClient.swift */; };
+		A0000000000000000000B081 /* KeychainClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F081 /* KeychainClient.swift */; };
+		A0000000000000000000B082 /* DeviceIDClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F082 /* DeviceIDClient.swift */; };
+		A0000000000000000000B083 /* APIClientDependency.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F083 /* APIClientDependency.swift */; };
+		A0000000000000000000B084 /* MinAppVersionClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F084 /* MinAppVersionClient.swift */; };
+		A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F085 /* PushNotificationsClient.swift */; };
+		A0000000000000000000B086 /* ModelContainerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F086 /* ModelContainerClient.swift */; };
+		A0000000000000000000B087 /* BundleInfoClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F087 /* BundleInfoClient.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
 		A0000000000000000000B051 /* icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F051 /* icon.svg */; };
 		D0000000000000000000B001 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D001 /* ComposableArchitecture */; };
 		D0000000000000000000B002 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D002 /* ComposableArchitecture */; };
+		D0000000000000000000B003 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D003 /* Dependencies */; };
+		D0000000000000000000B004 /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D004 /* DependenciesMacros */; };
+		D0000000000000000000B005 /* ConcurrencyExtras in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D005 /* ConcurrencyExtras */; };
+		D0000000000000000000B006 /* IssueReporting in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D006 /* IssueReporting */; };
 		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
@@ -84,6 +96,14 @@
 		A0000000000000000000F034 /* MinAppVersionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionMonitor.swift; sourceTree = "<group>"; };
 		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
 		A0000000000000000000F070 /* BackendContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendContracts.swift; sourceTree = "<group>"; };
+		A0000000000000000000F080 /* UserDefaultsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F081 /* KeychainClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F082 /* DeviceIDClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIDClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F083 /* APIClientDependency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientDependency.swift; sourceTree = "<group>"; };
+		A0000000000000000000F084 /* MinAppVersionClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F085 /* PushNotificationsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationsClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F086 /* ModelContainerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelContainerClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F087 /* BundleInfoClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleInfoClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
@@ -106,6 +126,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0000000000000000000B001 /* ComposableArchitecture in Frameworks */,
+				D0000000000000000000B003 /* Dependencies in Frameworks */,
+				D0000000000000000000B004 /* DependenciesMacros in Frameworks */,
+				D0000000000000000000B005 /* ConcurrencyExtras in Frameworks */,
+				D0000000000000000000B006 /* IssueReporting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,8 +195,24 @@
 				A0000000000000000000F005 /* LocalPersistence.swift */,
 				A0000000000000000000F006 /* AppBrand.swift */,
 				A0000000000000000000F007 /* DesignSystem.swift */,
+				A0000000000000000000A080 /* Dependencies */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000A080 /* Dependencies */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000F080 /* UserDefaultsClient.swift */,
+				A0000000000000000000F081 /* KeychainClient.swift */,
+				A0000000000000000000F082 /* DeviceIDClient.swift */,
+				A0000000000000000000F083 /* APIClientDependency.swift */,
+				A0000000000000000000F084 /* MinAppVersionClient.swift */,
+				A0000000000000000000F085 /* PushNotificationsClient.swift */,
+				A0000000000000000000F086 /* ModelContainerClient.swift */,
+				A0000000000000000000F087 /* BundleInfoClient.swift */,
+			);
+			path = Dependencies;
 			sourceTree = "<group>";
 		};
 		A0000000000000000000A005 /* Features */ = {
@@ -288,6 +328,10 @@
 			name = VCA;
 			packageProductDependencies = (
 				D0000000000000000000D001 /* ComposableArchitecture */,
+				D0000000000000000000D003 /* Dependencies */,
+				D0000000000000000000D004 /* DependenciesMacros */,
+				D0000000000000000000D005 /* ConcurrencyExtras */,
+				D0000000000000000000D006 /* IssueReporting */,
 			);
 			productName = VCA;
 			productReference = A0000000000000000000A00A /* VCA.app */;
@@ -344,6 +388,9 @@
 			mainGroup = A0000000000000000000A002;
 			packageReferences = (
 				D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				D0000000000000000000C002 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
+				D0000000000000000000C003 /* XCRemoteSwiftPackageReference "swift-concurrency-extras" */,
+				D0000000000000000000C004 /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */,
 			);
 			productRefGroup = A0000000000000000000A008 /* Products */;
 			projectDirPath = "";
@@ -403,6 +450,14 @@
 				A0000000000000000000B034 /* MinAppVersionMonitor.swift in Sources */,
 				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
 				A0000000000000000000B070 /* BackendContracts.swift in Sources */,
+				A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */,
+				A0000000000000000000B081 /* KeychainClient.swift in Sources */,
+				A0000000000000000000B082 /* DeviceIDClient.swift in Sources */,
+				A0000000000000000000B083 /* APIClientDependency.swift in Sources */,
+				A0000000000000000000B084 /* MinAppVersionClient.swift in Sources */,
+				A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */,
+				A0000000000000000000B086 /* ModelContainerClient.swift in Sources */,
+				A0000000000000000000B087 /* BundleInfoClient.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -623,6 +678,30 @@
 				version = 1.25.5;
 			};
 		};
+		D0000000000000000000C002 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
+			requirement = {
+				kind = exactVersion;
+				version = 1.12.0;
+			};
+		};
+		D0000000000000000000C003 /* XCRemoteSwiftPackageReference "swift-concurrency-extras" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-concurrency-extras";
+			requirement = {
+				kind = exactVersion;
+				version = 1.3.2;
+			};
+		};
+		D0000000000000000000C004 /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/xctest-dynamic-overlay";
+			requirement = {
+				kind = exactVersion;
+				version = 1.9.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -635,6 +714,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
+		};
+		D0000000000000000000D003 /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C002 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
+		};
+		D0000000000000000000D004 /* DependenciesMacros */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C002 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = DependenciesMacros;
+		};
+		D0000000000000000000D005 /* ConcurrencyExtras */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C003 /* XCRemoteSwiftPackageReference "swift-concurrency-extras" */;
+			productName = ConcurrencyExtras;
+		};
+		D0000000000000000000D006 /* IssueReporting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C004 /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */;
+			productName = IssueReporting;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
