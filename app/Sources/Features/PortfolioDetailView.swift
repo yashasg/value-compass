@@ -312,7 +312,7 @@ private struct PortfolioDetailLegacyBridge: View {
         HoldingsEditorView(portfolio: portfolio)
       }
       .navigationDestination(isPresented: $presentedHistory) {
-        ContributionHistoryListView(portfolio: portfolio)
+        ContributionHistoryView(portfolio: portfolio)
       }
       .navigationDestination(isPresented: $presentedResult) {
         if let output = pendingResultOutput {

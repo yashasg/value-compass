@@ -251,7 +251,7 @@ private struct ContributionResultLegacyBridge: View {
     )
     ContributionResultContent(store: store)
       .navigationDestination(isPresented: $presentedHistory) {
-        ContributionHistoryListView(portfolio: portfolio)
+        ContributionHistoryView(portfolio: portfolio)
       }
       .onChange(of: store.legacyNavigation) { _, newValue in
         handle(intent: newValue, store: store)
