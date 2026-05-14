@@ -77,6 +77,24 @@ never blocked.
 
 ## OpenAPI
 
-The schema served at `/openapi.json` is exported to the repo-root
-`openapi.json` and consumed by SwiftOpenAPIGenerator in the iOS client.
-Never edit `openapi.json` manually.
+FastAPI is the source of truth for the backend/iOS contract. The schema served
+at `/openapi.json` is exported to the repo-root `openapi.json` and mirrored to
+`frontend/Sources/Networking/openapi.json` for SwiftOpenAPIGenerator.
+
+Regenerate both checked-in artifacts after changing API routes, response models,
+headers, or versioning:
+
+```bash
+PYTHONPATH=backend python3 -m api.export_openapi
+```
+
+CI verifies the artifacts with:
+
+```bash
+PYTHONPATH=backend python3 -m api.export_openapi --check
+```
+
+Never edit generated OpenAPI artifacts manually. Newly added response fields
+must remain optional unless a schema-versioned breaking change is intentional.
+The `X-Min-App-Version` response header and `/schema/version` endpoint are the
+machine-readable compatibility signals for clients.

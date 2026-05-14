@@ -213,6 +213,7 @@ class SchemaVersionResponse(BaseModel):
     """API schema-version response body."""
 
     version: int
+    min_app_version: str | None = Field(default=None)
 
 
 class PortfolioStatusResponse(BaseModel):
@@ -293,7 +294,10 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
 )
 def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
     """Return the API schema version required by the client."""
-    return SchemaVersionResponse(version=config.SCHEMA_VERSION)
+    return SchemaVersionResponse(
+        version=config.SCHEMA_VERSION,
+        min_app_version=config.MIN_APP_VERSION,
+    )
 
 
 @app.get(

@@ -628,6 +628,17 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "min_app_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min App Version"
           }
         },
         "type": "object",
