@@ -14,7 +14,7 @@ name: ios-deploy
 #   * APPLE_PROVISIONING_PROFILE     — base64-encoded App Store provisioning profile
 #   * APPLE_TEAM_ID                  — Apple Developer Team ID
 #   * APP_STORE_CONNECT_API_KEY      — base64-encoded App Store Connect API
-#                                       key (.p8) for `xcrun altool` / Transporter
+#                                       key (.p8 PKCS8 private key)
 #   * APP_STORE_CONNECT_API_KEY_ID   — Key ID for the .p8 above
 #   * APP_STORE_CONNECT_ISSUER_ID    — Issuer ID for the App Store Connect API key
 #   * API_BASE_URL                   — backend services base URL injected into the app
@@ -38,19 +38,20 @@ env:
 
 jobs:
   deploy:
-    runs-on: macos-14
+    runs-on: macos-26
     environment: production
     steps:
       - name: Checkout target ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+        # App Store Connect requires the iOS 26 SDK (Xcode 26+) for uploads.
+        run: sudo xcode-select -s /Applications/Xcode_26.app
 
       - name: Cache Xcode derived data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             build/frontend/xcode-derived-data
@@ -66,28 +67,10 @@ jobs:
         run: PLATFORM_MODE=iphone RUN_ANALYZE=true ./frontend/build.sh
 
       - name: Import signing certificate
-        env:
-          APPLE_DEV_CERTIFICATE: ${{ secrets.APPLE_DEV_CERTIFICATE }}
-          APPLE_DEV_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEV_CERTIFICATE_PASSWORD }}
-        run: |
-          set -euo pipefail
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          CERT_PATH="$RUNNER_TEMP/cert.p12"
-
-          echo "$APPLE_DEV_CERTIFICATE" | base64 --decode > "$CERT_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" \
-            -k "$KEYCHAIN_PATH" \
-            -P "$APPLE_DEV_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: \
-            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        uses: Apple-Actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEV_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_DEV_CERTIFICATE_PASSWORD }}
 
       - name: Install provisioning profile
         env:
@@ -168,27 +151,35 @@ jobs:
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export"
 
-      - name: Upload to App Store Connect
-        env:
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      - name: Locate exported IPA
         run: |
           set -euo pipefail
-          if [ -z "${ASC_KEY_ID:-}" ] || [ -z "${ASC_ISSUER_ID:-}" ]; then
-            echo "APP_STORE_CONNECT_API_KEY_ID and APP_STORE_CONNECT_ISSUER_ID secrets must be set." >&2
+          IPA="$(ls "$RUNNER_TEMP"/export/*.ipa | head -n1)"
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
+
+      - name: Decode App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_STORE_CONNECT_API_KEY:-}" ]; then
+            echo "APP_STORE_CONNECT_API_KEY secret must be set." >&2
             exit 1
           fi
-          # Decode the App Store Connect API key (.p8) into the location
-          # `xcrun altool` / `xcrun notarytool` look for keys.
-          mkdir -p ~/.appstoreconnect/private_keys
-          # Filename must match `AuthKey_<KEY_ID>.p8`.
-          echo "$APP_STORE_CONNECT_API_KEY" | base64 --decode \
-            > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          P8="$RUNNER_TEMP/AuthKey.p8"
+          echo "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$P8"
+          chmod 600 "$P8"
+          {
+            echo 'ASC_API_PRIVATE_KEY<<APPLE_KEY_EOF'
+            cat "$P8"
+            echo 'APPLE_KEY_EOF'
+          } >> "$GITHUB_ENV"
 
-          IPA="$(ls "$RUNNER_TEMP"/export/*.ipa | head -n1)"
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$IPA" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+      - name: Upload to App Store Connect
+        uses: Apple-Actions/upload-testflight-build@v5
+        with:
+          app-path: ${{ env.IPA_PATH }}
+          app-type: ios
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-private-key: ${{ env.ASC_API_PRIVATE_KEY }}
