@@ -1,5 +1,4 @@
 import ComposableArchitecture
-import SwiftData
 import SwiftUI
 
 /// Post-onboarding portfolio inventory. Renders on top of
@@ -139,17 +138,6 @@ struct PortfolioRowView: View {
     self.snapshot = snapshot
   }
 
-  init(portfolio: Portfolio) {
-    self.snapshot = PortfolioSnapshot(
-      id: portfolio.id,
-      name: portfolio.name,
-      monthlyBudget: portfolio.monthlyBudget,
-      maWindow: portfolio.maWindow,
-      createdAt: portfolio.createdAt,
-      categoryCount: portfolio.categories.count
-    )
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(snapshot.name)
@@ -166,21 +154,6 @@ struct PortfolioRowView: View {
     }
     .accessibilityElement(children: .combine)
   }
-}
-
-/// Adaptive shared alert payloads used by `PortfolioListView`,
-/// `PortfolioDetailView`, `ContributionResultView`, `ContributionHistoryView`,
-/// and `HoldingsEditorView`. Moved out of `MainView.swift` as part of the
-/// `PortfolioListView` TCA migration (issue #153) so that file shrinks
-/// alongside the view definitions it used to host.
-struct SaveError: Identifiable {
-  let id = UUID()
-  let message: String
-}
-
-struct SaveConfirmation: Identifiable {
-  let id = UUID()
-  let message: String
 }
 
 #Preview("Empty") {
