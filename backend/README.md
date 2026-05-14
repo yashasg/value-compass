@@ -60,6 +60,16 @@ This writes both `openapi.json` and
 `frontend/Sources/Networking/openapi.json`; backend CI runs the same command with
 `--check` so manual edits or stale generated artifacts fail fast.
 
+Run the service contract suite locally with:
+
+```bash
+PYTHONPATH=backend pytest backend/tests/test_service_contracts.py
+```
+
+Those tests prove the exported OpenAPI artifacts feed the Swift generator
+inputs, and that `vca-api` serves the same `stock_cache` rows written by
+`vca-poller` without relying on live Polygon, APNs, or Postgres services.
+
 ## External Dependencies
 
 | Service           | Purpose                  | Tier |
