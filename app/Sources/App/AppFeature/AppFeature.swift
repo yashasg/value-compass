@@ -42,6 +42,14 @@ struct AppFeature {
   @Dependency(\.userDefaults) var userDefaults
   @Dependency(\.minAppVersion) var minAppVersion
 
+  /// Identifies the long-lived `minAppVersion.events()` subscription so it
+  /// can be cancelled and replaced if `RootView`'s `.task` modifier fires
+  /// more than once (multiple windows, scene reactivation, hosting in
+  /// previews/tests, etc.). Without `cancelInFlight: true`, every extra
+  /// `.task` send would spawn a duplicate observer that re-handles every
+  /// `MinAppVersionEvent`.
+  enum CancelID: Hashable { case minVersionEvents }
+
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
@@ -63,6 +71,7 @@ struct AppFeature {
             await send(.minVersionEvent(event))
           }
         }
+        .cancellable(id: CancelID.minVersionEvents, cancelInFlight: true)
 
       case .minVersionEvent(let event):
         state.minimumAppVersion = event.minimumVersion
