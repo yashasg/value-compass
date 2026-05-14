@@ -2,7 +2,7 @@ import SwiftUI
 
 /// User-facing color theme stored in `UserDefaults` and surfaced through
 /// `SettingsFeature`. Replaces the `AppTheme` previously housed in
-/// `AppState.swift` (deleted in #158 when the legacy `ObservableObject`
+/// `AppState.swift` (deleted in #158 when the legacy view-model
 /// singleton was removed).
 enum AppTheme: String, CaseIterable, Identifiable {
   case system

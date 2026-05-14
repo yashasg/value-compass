@@ -17,7 +17,7 @@ enum LocalPersistence {
   /// `VCAApp` (for SwiftUI's `@Environment(\.modelContext)`) and
   /// `ModelContainerClient.liveValue` (for TCA reducer effects) call into
   /// `makeModelContainer()`; sharing a single instance keeps writes from
-  /// reducer effects immediately visible to `@Query`-backed views.
+  /// reducer effects immediately visible to SwiftData-fetch-backed views.
   /// In-memory containers (used by tests) intentionally bypass the cache.
   private static let sharedDiskContainer = LockIsolated<ModelContainer?>(nil)
 

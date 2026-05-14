@@ -212,7 +212,7 @@ extension PortfolioDetailSnapshot {
   /// snapshot used by `PortfolioDetailFeature.State`. Must be called from the
   /// actor that owns the portfolio (e.g. `BackgroundModelActor` for reducer
   /// reloads, or `@MainActor` for the legacy bridge that builds the initial
-  /// state from a `@Query`-fetched `Portfolio`).
+  /// state from a SwiftData-fetched `Portfolio`).
   init(portfolio: Portfolio) {
     let categories =
       portfolio.categories

@@ -12,7 +12,7 @@ struct MinAppVersionEvent: Equatable, Sendable {
 /// `@DependencyClient` that publishes `MinAppVersionEvent`s derived from the
 /// `X-Min-App-Version` HTTP response header.
 ///
-/// Phase 2 (#158): the `MinAppVersionMonitor.shared` `ObservableObject`
+/// Phase 2 (#158): the `MinAppVersionMonitor.shared` view-model
 /// singleton is deleted. `APIClient` now calls `MinAppVersionClient.observe`
 /// (a pure, side-effecting static helper) for every response; consumers
 /// observe the result via `events()`, which yields the latest event to each

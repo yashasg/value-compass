@@ -6,7 +6,7 @@ import SwiftUI
 /// iPad-native `NavigationSplitView` whose sidebar / content / detail columns
 /// are all scoped from the same `MainFeature` store.
 ///
-/// Phase 2 (#159) replaces the legacy `@Query` + `@State` shell with a pure
+/// Phase 2 (#159) replaces the legacy SwiftData-fetch + `@State` shell with a pure
 /// store-driven shell. The only SwiftUI-side state retained here is
 /// `@Environment(\.horizontalSizeClass)`, which is required to choose between
 /// the two shells; the choice is mirrored into `MainFeature.State.shellKind`

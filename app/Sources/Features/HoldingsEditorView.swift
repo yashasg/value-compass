@@ -452,17 +452,8 @@ struct TickerDraft: Identifiable, Equatable, Sendable {
   }
 }
 
-/// Holdings editor view, driven by `HoldingsEditorFeature`.
-///
-/// Two initializers exist while the legacy MVVM stack still wraps this view:
-///
-/// - `init(store:)` is the production entry point that Phase 2 (#159) will
-///   use once `MainFeature.path.holdingsEditor` pushes the destination from
-///   `PortfolioDetailView` / `MainView`.
-/// - `init(portfolio:)` is the legacy bridge: it owns a short-lived `Store`
-///   anchored in `@State`, seeded synchronously from the SwiftData
-///   `Portfolio` so the existing `NavigationLink` call sites in `MainView`
-///   keep compiling without a per-render reset.
+/// Holdings editor view, driven by `HoldingsEditorFeature`. Pure TCA: scope
+/// a `StoreOf<HoldingsEditorFeature>` from the parent and pass it in.
 struct HoldingsEditorView: View {
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
@@ -471,17 +462,6 @@ struct HoldingsEditorView: View {
 
   init(store: StoreOf<HoldingsEditorFeature>) {
     _store = State(initialValue: store)
-  }
-
-  init(portfolio: Portfolio) {
-    let initialState = HoldingsEditorFeature.State(
-      portfolioID: portfolio.id,
-      draft: HoldingsDraft(portfolio: portfolio)
-    )
-    _store = State(
-      initialValue: Store(initialState: initialState) {
-        HoldingsEditorFeature()
-      })
   }
 
   var body: some View {
