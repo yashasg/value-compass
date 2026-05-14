@@ -1,8 +1,8 @@
 # Design System Color Tokens
 
 Value Compass uses semantic color tokens instead of screen-specific colors. The
-Swift API lives in `frontend/Sources/App/DesignSystem.swift`; the source values
-live in `frontend/Sources/Assets/Assets.xcassets/App*.colorset`.
+Swift API lives in `app/Sources/App/DesignSystem.swift`; the source values
+live in `app/Sources/Assets/Assets.xcassets/App*.colorset`.
 
 ## Token catalog
 
@@ -29,7 +29,7 @@ live in `frontend/Sources/Assets/Assets.xcassets/App*.colorset`.
 
 ## Accessibility checks
 
-`frontend/Tests/VCATests/DesignSystemTests.swift` resolves every asset in light
+`app/Tests/VCATests/DesignSystemTests.swift` resolves every asset in light
 and dark appearances and enforces WCAG AA contrast for text tokens across
 background, surface, and elevated surface tokens. Minimum measured contrast:
 

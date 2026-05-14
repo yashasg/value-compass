@@ -2,6 +2,35 @@
 
 ## Active Decisions
 
+### 2026-05-14: Folder Rename — `frontend/` → `app/`
+**By:** Squad loop | **Status:** Adopted | **Issue:** #138
+
+The iOS/iPadOS app folder is renamed from `frontend/` to `app/`. "App" is less ambiguous (avoids collision with the generic web "frontend" classifier) and reads naturally next to `backend/`.
+
+**Scope of change:**
+1. **Folder Rename:** `frontend/` → `app/` (preserves `Sources/`, `Tests/`, `VCA.xcodeproj`, `build.sh`, `run.sh` layout — only the parent name changes).
+2. **Build artifact path:** Default Xcode DerivedData moves from `build/frontend/xcode-derived-data` to `build/app/xcode-derived-data`. `DERIVED_DATA_PATH` env override unchanged.
+3. **CI workflows:** `ios-ci.yml`, `codeql-ios.yml`, `ios-deploy.yml`, and `backend-ci.yml` updated for new path triggers, cache keys, working-directories, and script paths.
+4. **OpenAPI mirror:** `backend/api/export_openapi.py` writes the iOS copy to `app/Sources/Backend/Networking/openapi.json`.
+5. **Docs:** `README.md`, `app/README.md`, `backend/README.md`, `backend/api/README.md`, `docs/{tech-spec,app-tech-spec,services-tech-spec,design-system-colors,testflight-readiness}.md` updated. The `docs/tech-spec.md` directory table keeps a breadcrumb noting the rename history.
+6. **Scripts:** `app/build.sh`/`app/run.sh` error messages refer to "app .xcodeproj" instead of "frontend app .xcodeproj"; `loop.md` validates `app/build.sh`/`app/run.sh`.
+7. **`.gitignore`:** All `frontend/...` patterns rewritten to `app/...`.
+
+**Out of scope (intentionally unchanged):**
+- Historical entries in `.squad/decisions.md` (this file, below) and `.squad/agents/*/history.md` keep their original `frontend/` references — they record what was true at the time of the decision.
+- Generic role keywords like "frontend dev" / "frontend/UI work" in `.squad/templates/*`, `.squad/routing.json`, and `.github/agents/squad.agent.md` describe a software role classification, not the app folder, and stay as-is.
+- Xcode project `VCA.xcodeproj` paths are all relative to the project file, so no edits to `project.pbxproj` were needed.
+
+**Validation:**
+- `bash -n app/build.sh` and `bash -n app/run.sh` clean.
+- `app/build.sh --help` and `app/run.sh --help` print usage successfully.
+- `PYTHONPATH=backend python3 -m api.export_openapi --check` confirms the OpenAPI document is unchanged at the new mirror path.
+- `.github/scripts/validate-secrets.sh` passes.
+
+**Affected:** All — every developer command, CI workflow, and doc reference now uses `app/`.
+
+---
+
 ### 2026-05-12: V1 Architecture — Local-First iOS with Protocol Seams
 **Author:** Danny (Lead/Architect) | **Status:** Proposed
 

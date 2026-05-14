@@ -57,7 +57,7 @@ PYTHONPATH=backend python3 -m api.export_openapi
 ```
 
 This writes both `openapi.json` and
-`frontend/Sources/Backend/Networking/openapi.json`; backend CI runs the same command with
+`app/Sources/Backend/Networking/openapi.json`; backend CI runs the same command with
 `--check` so manual edits or stale generated artifacts fail fast.
 
 ## External Dependencies

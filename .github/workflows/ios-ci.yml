@@ -1,19 +1,19 @@
 name: ios-ci
 
-# Builds the iOS app on every PR that touches frontend sources.
+# Builds the iOS app on every PR that touches app sources.
 # Runs on macOS so xcodebuild is available.
 
 on:
   pull_request:
     paths:
-      - "frontend/**"
+      - "app/**"
       - ".swift-format"
       - "openapi.json"
       - ".github/workflows/ios-ci.yml"
   push:
     branches: [main]
     paths:
-      - "frontend/**"
+      - "app/**"
       - ".swift-format"
       - "openapi.json"
       - ".github/workflows/ios-ci.yml"
@@ -34,9 +34,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            build/frontend/xcode-derived-data
+            build/app/xcode-derived-data
             ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex
-          key: ${{ runner.os }}-xcode-ios-ci-${{ hashFiles('.swift-format', 'frontend/VCA.xcodeproj/project.pbxproj', 'frontend/VCA.xcodeproj/xcshareddata/xcschemes/*.xcscheme', 'frontend/Sources/**/*.swift', 'frontend/Tests/**/*.swift') }}
+          key: ${{ runner.os }}-xcode-ios-ci-${{ hashFiles('.swift-format', 'app/VCA.xcodeproj/project.pbxproj', 'app/VCA.xcodeproj/xcshareddata/xcschemes/*.xcscheme', 'app/Sources/**/*.swift', 'app/Tests/**/*.swift') }}
           restore-keys: |
             ${{ runner.os }}-xcode-ios-ci-
             ${{ runner.os }}-xcode-
@@ -44,4 +44,4 @@ jobs:
       - name: Analyze, build, and test (no signing)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
-        run: PLATFORM_MODE=iphone RUN_ANALYZE=true ./frontend/build.sh
+        run: PLATFORM_MODE=iphone RUN_ANALYZE=true ./app/build.sh

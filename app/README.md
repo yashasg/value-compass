@@ -1,7 +1,7 @@
-# Frontend
+# App
 
 SwiftUI client for the Investrum app. The Xcode project lives in
-`frontend/VCA.xcodeproj` and builds a universal app for iPhone and iPad.
+`app/VCA.xcodeproj` and builds a universal app for iPhone and iPad.
 
 ## Target
 
@@ -12,7 +12,7 @@ SwiftUI client for the Investrum app. The Xcode project lives in
 ## Layout
 
 ```
-frontend/
+app/
   VCA.xcodeproj
   Sources/
     App/           # Entry point, app lifecycle

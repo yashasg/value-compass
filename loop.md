@@ -12,7 +12,7 @@ description: "My squad work loop"
 
 ## What to do each cycle
 
-1. Validate the `frontend/build.sh` and `frontend/run.sh works`, if not make it a P0 and fix it.
+1. Validate the `app/build.sh` and `app/run.sh works`, if not make it a P0 and fix it.
 2. If open GitHub issues exist, pick the highest-priority unblocked issue and make code changes in this cycle.
 3. For squad work, create branches as `users/squad/<issue_name_fix>`, commit and push changes, then open/update a PR linked with a closing keyword (for example `Closes #123`).
 4. **Before creating a PR, run `.github/scripts/validate-secrets.sh` to ensure no GitHub secrets are logged in CI/CD workflows.** Fail the PR if validation fails.
