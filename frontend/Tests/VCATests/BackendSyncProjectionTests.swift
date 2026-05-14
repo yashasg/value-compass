@@ -117,6 +117,7 @@ final class BackendSyncProjectionTests: XCTestCase {
               symbol: "AAPL",
               currentPrice: Decimal(string: "1234.5678"),
               movingAverage: Decimal(string: "9876.5432"),
+              bandPosition: Decimal(string: "0.8123"),
               sortOrder: 42
             )
           ]
@@ -134,6 +135,13 @@ final class BackendSyncProjectionTests: XCTestCase {
         ContributionRecord(
           portfolioId: UUID(),
           totalAmount: Decimal(string: "321.09")!,
+          categoryBreakdown: [
+            CategoryContribution(
+              categoryName: "Category History",
+              amount: Decimal(string: "654.32")!,
+              allocatedWeight: Decimal(string: "0.2468")!
+            )
+          ],
           breakdown: [
             TickerAllocation(
               tickerSymbol: "HISTORY_ONLY",
@@ -159,6 +167,9 @@ final class BackendSyncProjectionTests: XCTestCase {
 
     let tokens = payloadTokens(payload)
     for localOnlyToken in [
+      "Category History",
+      "allocatedWeight",
+      "bandPosition",
       "categoryBreakdown",
       "categoryName",
       "contributionRecords",
@@ -168,6 +179,9 @@ final class BackendSyncProjectionTests: XCTestCase {
       "movingAverage",
       "sortOrder",
       "tickerAllocations",
+      "0.8123",
+      "654.32",
+      "0.2468",
       "1234.5678",
       "9876.5432",
       "321.09",

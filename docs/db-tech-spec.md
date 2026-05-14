@@ -64,6 +64,7 @@ flat backend holdings schema.
 | `symbol` | `String` | Yes | User-entered ticker symbol, normalized for comparisons |
 | `currentPrice` | `Decimal?` | No | Manual/local market input; not synced in v1 |
 | `movingAverage` | `Decimal?` | No | Manual/local market input for portfolio `maWindow`; not synced in v1 |
+| `bandPosition` | `Decimal?` | No | Manual/local market input; not synced in v1 |
 | `sortOrder` | `Int` | Yes | Stable display order within category |
 | `category` | `Category` | Yes | Parent relationship |
 
@@ -84,6 +85,7 @@ flat backend holdings schema.
 | `tickerSymbol` | `String` | Yes | Snapshot of ticker symbol at calculation time |
 | `categoryName` | `String` | Yes | Snapshot of category name at calculation time |
 | `amount` | `Decimal` | Yes | Rounded to cents |
+| `allocatedWeight` | `Decimal` | Yes | Snapshot of the local allocation weight |
 
 `TickerAllocation` can be modeled either as a SwiftData child model owned by
 `ContributionRecord` or as a Codable value embedded in the record, depending on
@@ -169,13 +171,60 @@ flattened backend holding maps to at most one local ticker symbol.
 | Category identity, name, order, grouping | Do not sync; categories are local-only |
 | Ticker symbol | Sync only as flattened `holdings.ticker` |
 | Category/ticker weight | Sync as flattened `holdings.weight = category.weight / ticker_count` |
-| Manual `currentPrice` / `movingAverage` | Do not sync; local/manual v1 inputs only |
-| Contribution history and `TickerAllocation` snapshots | Never sync; local-only ledger |
+| Manual `currentPrice` / `movingAverage` / `bandPosition` | Do not sync; local/manual v1 inputs only |
+| Contribution history, `CategoryContribution`, and `TickerAllocation` snapshots | Never sync; local-only ledger |
 
 The sync layer must validate portfolio-wide ticker uniqueness before writing
 backend holdings. If local category grouping cannot be represented by the flat
 backend model, local SwiftData remains authoritative and backend data must not
 destructively overwrite local categories.
+
+### 2.7 Field-by-Field Backend Boundary
+
+This table is the v1 contract for local-to-backend projection. The backend tables
+that participate are the existing flat `portfolios` and `holdings` tables only;
+`stock_cache` is shared market-data cache state and is not a destination for
+local manual ticker inputs.
+
+| Local model field/category | Backend destination | Behavior |
+|---|---|---|
+| `Portfolio.id` | `portfolios.id` | Syncs as the backend portfolio identity for mirrored portfolios. |
+| `Portfolio.name` | `portfolios.name` | Syncs when backend sync is available. |
+| `Portfolio.monthlyBudget` | `portfolios.monthly_budget` | Syncs when positive and representable by the backend numeric column. |
+| `Portfolio.maWindow` | `portfolios.ma_window` | Syncs only for supported values `50` or `200`. |
+| `Portfolio.createdAt` | `portfolios.created_at` | Syncs as portfolio metadata. |
+| `Portfolio.categories` relationship | None | Local-only grouping; backend holdings cannot reconstruct category membership. |
+| `Category.id` | None | Local-only identity. |
+| `Category.name` | None | Local-only label; not recoverable from backend holdings. |
+| `Category.weight` | `holdings.weight` | Flattens to each child ticker as `category.weight / category.tickers.count`. |
+| `Category.sortOrder` | None | Local-only ordering; not recoverable from backend holdings. |
+| `Category.portfolio` relationship | `holdings.portfolio_id` via portfolio | Parentage is represented only after flattening to holdings. |
+| `Category.tickers` relationship | `holdings` rows | Flattens one row per ticker; grouping is intentionally lost. |
+| `Ticker.id` | None | Local-only identity. |
+| `Ticker.symbol` | `holdings.ticker` | Syncs as a normalized ticker symbol after portfolio-wide duplicate validation. |
+| `Ticker.currentPrice` | None | Local-only manual market input; never uploaded in v1. |
+| `Ticker.movingAverage` | None | Local-only manual market input; never uploaded in v1. |
+| `Ticker.bandPosition` | None | Local-only manual market input; never uploaded in v1. |
+| `Ticker.sortOrder` | None | Local-only ordering; not recoverable from backend holdings. |
+| `Ticker.category` relationship | None | Local-only grouping; backend stores only flat `portfolio_id` holdings. |
+| `ContributionRecord.id` | None | Local-only history identity. |
+| `ContributionRecord.portfolioId` | None | Local-only history owner reference; not a sync key. |
+| `ContributionRecord.date` | None | Local-only history timestamp. |
+| `ContributionRecord.totalAmount` | None | Local-only saved calculation total. |
+| `ContributionRecord.categoryBreakdown` | None | Local-only saved allocation snapshot. |
+| `ContributionRecord.tickerAllocations` / `breakdown` | None | Local-only saved allocation snapshot. |
+| `CategoryContribution.categoryName` | None | Local-only snapshot text. |
+| `CategoryContribution.amount` | None | Local-only snapshot amount. |
+| `CategoryContribution.allocatedWeight` | None | Local-only snapshot weight. |
+| `TickerAllocation.tickerSymbol` | None | Local-only snapshot symbol. |
+| `TickerAllocation.categoryName` | None | Local-only snapshot category text. |
+| `TickerAllocation.amount` | None | Local-only snapshot amount. |
+| `TickerAllocation.allocatedWeight` | None | Local-only snapshot weight. |
+
+Backend holdings are therefore a lossy projection of local category/ticker state.
+They must not be used to silently rebuild or overwrite richer SwiftData category
+grouping, category order, ticker order, manual market inputs, contribution
+history, or saved allocation snapshots.
 
 ---
 
@@ -216,6 +265,11 @@ backend is reachable; it is not required for offline app execution.
 | `current_price` | Numeric | Yes | Latest cached price |
 | `sma_50` | Numeric | Yes | 50-day simple moving average |
 | `sma_200` | Numeric | Yes | 200-day simple moving average |
+| `midline` | Numeric | No | Cached backend band midline |
+| `atr` | Numeric | No | Cached backend average true range |
+| `upper_band` | Numeric | No | Cached backend upper band |
+| `lower_band` | Numeric | No | Cached backend lower band |
+| `band_position` | Numeric | No | Cached backend normalized band position |
 | `last_modified` | Timestamptz | Yes | Last successful/attempted refresh timestamp |
 | `next_modified` | Timestamptz | No | Only set after successful refresh |
 | `job_status` | Text | Yes | Check constrained to `success` or `failed` |
@@ -242,8 +296,9 @@ stock_cache is keyed independently by ticker
 | `Category` | Not represented | Local-only; flatten to holdings for sync |
 | Category `sortOrder` | Not represented | Local-only; not recoverable from backend |
 | Ticker `sortOrder` | Not represented | Local-only; not recoverable from backend |
-| Manual `currentPrice` / `movingAverage` per ticker | Backend has shared `stock_cache`, not per-portfolio manual inputs | Local-only; never sync v1 manual inputs |
+| Manual `currentPrice` / `movingAverage` / `bandPosition` per ticker | Backend has shared `stock_cache`, not per-portfolio manual inputs | Local-only; never sync v1 manual inputs |
 | `ContributionRecord` / history | Not represented | Local-only; never sync to backend |
+| `CategoryContribution` snapshot | Not represented | Local-only; never sync to backend |
 | `TickerAllocation` snapshot | Not represented | Local-only; never sync to backend |
 | Device-local SwiftData IDs | Backend uses UUID primary keys | V1 sync mapping needed for synced portfolios/holdings |
 
