@@ -24,6 +24,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from api.export_openapi import CONTRACT_PATHS, render_openapi_contract  # noqa: E402
 from api.main import app, get_db  # noqa: E402
+from common import config  # noqa: E402
 from db.models import Base, Holding, Portfolio, StockCache  # noqa: E402
 
 
@@ -84,7 +85,7 @@ def test_schema_version_requires_attest(client: TestClient) -> None:
     resp = client.get("/schema/version", headers=ATTEST)
     assert resp.status_code == 200
     assert resp.json()["version"] >= 1
-    assert resp.json()["min_app_version"] == "1.0.0"
+    assert resp.json()["min_app_version"] == config.MIN_APP_VERSION
 
 
 def test_openapi_describes_error_envelope(client: TestClient) -> None:
@@ -109,6 +110,8 @@ def test_openapi_describes_error_envelope(client: TestClient) -> None:
     schema_version = components["SchemaVersionResponse"]
     assert "min_app_version" in schema_version["properties"]
     assert "min_app_version" not in schema_version["required"]
+    schema_version_200 = schema["paths"]["/schema/version"]["get"]["responses"]["200"]
+    assert "X-Min-App-Version" in schema_version_200["headers"]
 
 
 def test_checked_in_openapi_artifacts_match_fastapi() -> None:

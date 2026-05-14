@@ -49,8 +49,8 @@ backend/
 ## OpenAPI contract
 
 FastAPI owns the API contract exposed at `/openapi.json`. After changing API
-routes, response models, headers, or schema-version behavior, regenerate the
-checked-in contract artifacts:
+routes, response models, documented response headers, or schema-version behavior,
+regenerate the checked-in contract artifacts:
 
 ```bash
 PYTHONPATH=backend python3 -m api.export_openapi

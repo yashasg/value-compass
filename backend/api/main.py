@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
 from fastapi import (
@@ -33,6 +34,7 @@ from fastapi import (
     status,
 )
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
@@ -121,6 +123,49 @@ app = FastAPI(
         "background task for brand-new tickers."
     ),
 )
+
+STANDARD_RESPONSE_HEADERS = {
+    "Cache-Control": {
+        "description": "Cloudflare-cacheable max-age in seconds.",
+        "schema": {"type": "string"},
+    },
+    "Last-Modified": {
+        "description": "UTC RFC 7231 timestamp for the response.",
+        "schema": {"type": "string"},
+    },
+    "X-Min-App-Version": {
+        "description": "Minimum supported iOS app version.",
+        "schema": {"type": "string"},
+    },
+}
+
+
+def custom_openapi() -> dict[str, Any]:
+    """Generate OpenAPI with middleware-provided standard response headers."""
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    for path_item in openapi_schema.get("paths", {}).values():
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            responses = operation.get("responses", {})
+            for response in responses.values():
+                if not isinstance(response, dict):
+                    continue
+                response.setdefault("headers", {}).update(STANDARD_RESPONSE_HEADERS)
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.exception_handler(ApiError)

@@ -82,7 +82,7 @@ at `/openapi.json` is exported to the repo-root `openapi.json` and mirrored to
 `frontend/Sources/Networking/openapi.json` for SwiftOpenAPIGenerator.
 
 Regenerate both checked-in artifacts after changing API routes, response models,
-headers, or versioning:
+documented response headers, or versioning:
 
 ```bash
 PYTHONPATH=backend python3 -m api.export_openapi

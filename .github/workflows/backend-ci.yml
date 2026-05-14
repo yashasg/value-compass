@@ -1,6 +1,6 @@
 name: backend-ci
 
-# Lints and tests the Python backend on every PR that touches backend code.
+# Lints/tests backend code and verifies generated OpenAPI contract artifacts.
 # No deployment side effects — see backend-deploy.yml for that.
 
 on:
