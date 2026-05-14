@@ -58,6 +58,7 @@ struct ForcedUpdateView: View {
       }
       .buttonStyle(.borderedProminent)
       .controlSize(.large)
+      .appMinimumTouchTarget()
     }
     .padding(32)
     .frame(maxWidth: 640)
