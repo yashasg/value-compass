@@ -67,9 +67,16 @@ validate_project() {
 }
 
 runtime_id() {
+  # Look up the SimRuntime identifier for the iOS marketing version (e.g. "26.4").
+  # The build version embedded in the identifier may include an extra component
+  # (e.g. iOS-26-4-1), so we resolve it from the runtime listing rather than
+  # constructing the ID from the marketing version.
   local version="$1"
-  local id="com.apple.CoreSimulator.SimRuntime.iOS-${version//./-}"
-  xcrun simctl list runtimes available | grep -F "$id" >/dev/null 2>&1 || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
+  local id
+  id="$(xcrun simctl list runtimes available 2>/dev/null \
+    | sed -n "s/^iOS ${version//./\\.} .*[[:space:]]\\(com\\.apple\\.CoreSimulator\\.SimRuntime\\.iOS-[0-9-]*\\)[[:space:]]*$/\\1/p" \
+    | head -n 1)"
+  [ -n "$id" ] || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
   printf '%s\n' "$id"
 }
 
@@ -138,6 +145,9 @@ boot_simulator() {
 }
 
 ensure_simulator() {
+  # Returns the UDID of an available simulator for the given device/version,
+  # creating one if necessary, then boots it. Status messages are written to
+  # stderr so the UDID can be captured from stdout by the caller.
   local device="$1"
   local version="$2"
   local runtime
@@ -147,10 +157,12 @@ ensure_simulator() {
   udid="$(simulator_udid "$device" "$version")"
 
   if [ -z "$udid" ]; then
-    printf '==> Creating simulator %s on iOS %s\n' "$device" "$version"
+    printf '==> Creating simulator %s on iOS %s\n' "$device" "$version" >&2
     udid="$(xcrun simctl create "$device" "$device" "$runtime")" || fail "Could not create simulator '$device' for runtime '$runtime'. Override IPHONE_DEVICE/IPAD_DEVICE with an installed simulator device type."
   fi
-  printf '==> Booting simulator %s (%s)\n' "$device" "$udid"
+
+  [ -n "$udid" ] || fail "Could not resolve UDID for simulator '$device' on iOS $version."
+  printf '==> Booting simulator %s (%s)\n' "$device" "$udid" >&2
   boot_simulator "$udid"
   printf '%s\n' "$udid"
 }
@@ -166,7 +178,11 @@ xcode_container_args() {
 build_app() {
   local device="$1"
   local version="$2"
-  local destination="platform=iOS Simulator,name=$device,OS=$version"
+  local udid="$3"
+  # Use the simulator UDID rather than name+OS to avoid mismatches between the
+  # marketing version reported by simctl (e.g. "26.4") and the build version
+  # used by xcodebuild's destination matcher (e.g. "26.4.1").
+  local destination="platform=iOS Simulator,id=$udid"
 
   printf '==> Building %s for %s %s\n' "$SCHEME" "$device" "$version"
   xcodebuild \
@@ -225,8 +241,8 @@ validate_project
 validate_positive_integer SIMCTL_RETRY_ATTEMPTS "$SIMCTL_RETRY_ATTEMPTS"
 validate_positive_integer SIMCTL_RETRY_DELAY_SECONDS "$SIMCTL_RETRY_DELAY_SECONDS"
 select_values
-SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION" | tail -n 1)"
-build_app "$DEVICE_NAME" "$OS_VERSION"
+SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION")"
+build_app "$DEVICE_NAME" "$OS_VERSION" "$SIM_UDID"
 APP_PATH="$(built_app_path)"
 [ -n "$APP_PATH" ] || fail "No built .app found under '$DERIVED_DATA_PATH'. Check SCHEME/CONFIGURATION or set DERIVED_DATA_PATH."
 BUNDLE_ID="$(bundle_id_for_app "$APP_PATH")"
