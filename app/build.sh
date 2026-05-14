@@ -61,9 +61,27 @@ latest_ios_version() {
 }
 
 resolve_ios_version() {
+  # Normalize any caller-supplied version (latest, marketing, or runtime
+  # build version) to the marketing version reported by simctl. Downstream
+  # callers (simulator_udid, runtime_id) expect the marketing version
+  # because `simctl list devices "iOS X.Y"` only matches on it.
   local version="$1"
   if [ "$version" = "latest" ]; then
     latest_ios_version
+    return
+  fi
+
+  # If `version` matches the build version inside parentheses on a
+  # runtime line (e.g. "iOS 26.4 (26.4.1 - 24E5208a) - ..."), translate
+  # it back to the marketing version ("26.4") so all downstream lookups
+  # keep working when callers override IOS_VERSION/IPADOS_VERSION with
+  # the build version reported by `simctl list runtimes`.
+  local marketing
+  marketing="$(xcrun simctl list runtimes available 2>/dev/null \
+    | sed -n "s/^iOS \\([0-9][0-9.]*\\) (${version//./\\.} -.*/\\1/p" \
+    | head -n 1)"
+  if [ -n "$marketing" ]; then
+    printf '%s\n' "$marketing"
   else
     printf '%s\n' "$version"
   fi
