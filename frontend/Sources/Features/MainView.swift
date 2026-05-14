@@ -97,9 +97,9 @@ struct MainView: View {
 
   private var emptyPortfolioSelectionView: some View {
     ContentUnavailableView {
-      Label("Select a Portfolio", systemImage: "sidebar.leading")
+      Label("Create Your First Portfolio", systemImage: "folder.badge.plus")
     } description: {
-      Text("Choose or create a portfolio from the list.")
+      Text("Use the portfolio list to create a local portfolio, then add categories and tickers.")
     }
     .navigationTitle("Portfolio")
   }
@@ -250,12 +250,15 @@ struct PortfolioListView: View {
         ContentUnavailableView {
           Label("No Portfolios Yet", systemImage: "folder.badge.plus")
         } description: {
-          Text("Create a local portfolio to start planning offline.")
+          Text(
+            "Create a local portfolio to start planning offline with your own budget and holdings."
+          )
         } actions: {
-          Button("Create Portfolio") {
+          Button("Create Your First Portfolio") {
             editorMode = .create
           }
           .buttonStyle(.borderedProminent)
+          .appMinimumTouchTarget()
           .accessibilityIdentifier("portfolio.empty.create")
         }
       } else {
@@ -592,8 +595,12 @@ struct PortfolioDetailView: View {
 
       let draft = HoldingsDraft(portfolio: portfolio)
       if draft.categories.isEmpty {
-        Text("No categories yet. Add categories and tickers before calculating.")
-          .foregroundStyle(Color.appContentSecondary)
+        ContentUnavailableView {
+          Label("No Categories or Tickers", systemImage: "folder.badge.plus")
+        } description: {
+          Text("Use Edit Holdings to add your first category and ticker before calculating.")
+        }
+        .accessibilityIdentifier("portfolio.detail.holdings.empty")
       } else {
         ForEach(draft.categories, id: \.id) { (category: CategoryDraft) in
           VStack(alignment: .leading, spacing: 6) {
@@ -957,7 +964,7 @@ struct ContributionHistoryListView: View {
         ContentUnavailableView {
           Label("No Saved Results", systemImage: "clock")
         } description: {
-          Text("Save a contribution result to build local history.")
+          Text("Run Calculate and save the result to build local contribution history.")
         } actions: {
           NavigationLink {
             PortfolioDetailView(portfolio: portfolio)
