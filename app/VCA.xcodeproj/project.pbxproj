@@ -34,6 +34,8 @@
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
 		A0000000000000000000B051 /* icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F051 /* icon.svg */; };
+		D0000000000000000000B001 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D001 /* ComposableArchitecture */; };
+		D0000000000000000000B002 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D002 /* ComposableArchitecture */; };
 		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
@@ -103,6 +105,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0000000000000000000B001 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +113,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0000000000000000000B002 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,6 +286,9 @@
 			dependencies = (
 			);
 			name = VCA;
+			packageProductDependencies = (
+				D0000000000000000000D001 /* ComposableArchitecture */,
+			);
 			productName = VCA;
 			productReference = A0000000000000000000A00A /* VCA.app */;
 			productType = "com.apple.product-type.application";
@@ -300,6 +307,9 @@
 				C0000000000000000000E002 /* PBXTargetDependency */,
 			);
 			name = VCATests;
+			packageProductDependencies = (
+				D0000000000000000000D002 /* ComposableArchitecture */,
+			);
 			productName = VCATests;
 			productReference = C0000000000000000000A00A /* VCATests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -332,6 +342,9 @@
 				Base,
 			);
 			mainGroup = A0000000000000000000A002;
+			packageReferences = (
+				D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+			);
 			productRefGroup = A0000000000000000000A008 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -600,6 +613,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
+			requirement = {
+				kind = exactVersion;
+				version = 1.25.5;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D0000000000000000000D001 /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+		D0000000000000000000D002 /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C001 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A0000000000000000000A001 /* Project object */;
 }

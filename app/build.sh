@@ -217,6 +217,7 @@ run_xcodebuild() {
     -sdk "$SDK" \
     -destination "$destination" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED=NO \
     VCA_API_BASE_URL="$VCA_API_BASE_URL" \
     "$action"
