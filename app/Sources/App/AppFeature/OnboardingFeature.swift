@@ -1,21 +1,58 @@
 import ComposableArchitecture
+import Foundation
 
-/// Phase 0 placeholder for the onboarding reducer.
+/// Reducer that drives the first-launch onboarding flow shown by
+/// `OnboardingView`.
 ///
-/// Issue #151 replaces this with the real reducer that owns the
-/// disclaimer-acceptance UI currently in `OnboardingView`. Until then the
-/// type exists only so `AppFeature.Destination.onboarding` has a real
-/// `State` to embed and so Phase 0 compiles in isolation.
+/// The flow has two on-screen steps:
+///
+/// 1. Disclaimer acknowledgement — toggled by `acknowledgeDisclaimerTapped`.
+/// 2. Portfolio setup intro — completed by `startSetupTapped`, which requests
+///    push authorization and then signals the parent reducer to transition.
+///
+/// Persistence of `hasSeenDisclaimer` and the actual transition to the main
+/// route are owned by `AppFeature` (Phase 2, #158) — this reducer only emits
+/// `.delegate(.completed)` so the side-effect ordering matches the legacy
+/// `OnboardingView`.
 @Reducer
 struct OnboardingFeature {
   @ObservableState
-  struct State: Equatable {}
-
-  enum Action: Equatable {
-    case _placeholder
+  struct State: Equatable {
+    var hasAcknowledgedDisclaimer: Bool = false
   }
 
+  enum Action: Equatable {
+    case acknowledgeDisclaimerTapped
+    case startSetupTapped
+    case delegate(Delegate)
+
+    @CasePathable
+    enum Delegate: Equatable {
+      /// Onboarding finished — parent persists `hasSeenDisclaimer` and
+      /// transitions to `.main(...)`.
+      case completed
+    }
+  }
+
+  @Dependency(\.userDefaults) var userDefaults
+  @Dependency(\.pushNotifications) var pushNotifications
+
   var body: some ReducerOf<Self> {
-    EmptyReducer()
+    Reduce { state, action in
+      switch action {
+      case .acknowledgeDisclaimerTapped:
+        state.hasAcknowledgedDisclaimer = true
+        return .none
+
+      case .startSetupTapped:
+        return .run { [pushNotifications] send in
+          await pushNotifications.requestAuthorizationAndRegister()
+          await send(.delegate(.completed))
+        }
+
+      case .delegate:
+        return .none
+      }
+    }
   }
 }
