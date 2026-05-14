@@ -72,10 +72,53 @@ def test_health_ok(client: TestClient) -> None:
 
 
 def test_schema_version_requires_attest(client: TestClient) -> None:
-    assert client.get("/schema/version").status_code == 401
+    unauthorized = client.get("/schema/version")
+    assert unauthorized.status_code == 401
+    assert unauthorized.json() == {
+        "code": "appAttestMissing",
+        "message": "Missing X-App-Attest header.",
+        "retry_after_seconds": None,
+    }
+
     resp = client.get("/schema/version", headers=ATTEST)
     assert resp.status_code == 200
     assert resp.json()["version"] >= 1
+
+
+def test_openapi_describes_error_envelope(client: TestClient) -> None:
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+    error_schema = components["ErrorEnvelope"]
+
+    assert error_schema["properties"]["code"]["$ref"].endswith("/ErrorCode")
+    assert "syncUnavailable" in components["ErrorCode"]["enum"]
+    assert (
+        schema["paths"]["/portfolio/data"]["get"]["responses"]["404"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        == "#/components/schemas/ErrorEnvelope"
+    )
+    assert (
+        schema["paths"]["/portfolio/data"]["get"]["responses"]["422"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        == "#/components/schemas/ErrorEnvelope"
+    )
+
+
+def test_validation_errors_use_error_envelope(client: TestClient) -> None:
+    resp = client.get(
+        "/portfolio/data",
+        params={"device_uuid": "not-a-uuid"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json() == {
+        "code": "schemaUnsupported",
+        "message": "Request validation failed.",
+        "retry_after_seconds": None,
+    }
 
 
 def test_portfolio_status_empty(client: TestClient) -> None:
@@ -114,6 +157,11 @@ def test_portfolio_data_404_for_unknown_device(client: TestClient) -> None:
         headers=ATTEST,
     )
     assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "portfolioNotFound",
+        "message": "Portfolio not found for device.",
+        "retry_after_seconds": None,
+    }
 
 
 def test_portfolio_data_returns_holdings(
@@ -214,6 +262,38 @@ def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(
     assert called["polygon"] == 0
 
 
+def test_add_holding_rejects_duplicate_ticker(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid = uuid.uuid4()
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="P",
+        monthly_budget=Decimal("100"),
+        ma_window=200,
+        created_at=datetime.now(UTC),
+    )
+    portfolio.holdings.append(
+        Holding(id=uuid.uuid4(), ticker="MSFT", weight=Decimal("0.25"))
+    )
+    db_session.add(portfolio)
+    db_session.commit()
+
+    resp = client.post(
+        "/portfolio/holdings",
+        json={"device_uuid": str(device_uuid), "ticker": "MSFT", "weight": 0.25},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 409
+    assert resp.json() == {
+        "code": "conflictDetected",
+        "message": "Holding already exists for portfolio.",
+        "retry_after_seconds": None,
+    }
+
+
 def test_add_holding_404_for_unknown_device(client: TestClient) -> None:
     resp = client.post(
         "/portfolio/holdings",
@@ -221,3 +301,4 @@ def test_add_holding_404_for_unknown_device(client: TestClient) -> None:
         headers=ATTEST,
     )
     assert resp.status_code == 404
+    assert resp.json()["code"] == "portfolioNotFound"

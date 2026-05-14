@@ -21,6 +21,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       }
@@ -55,6 +65,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SchemaVersionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -102,6 +122,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -163,12 +193,42 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -218,12 +278,52 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Client data could not be represented without conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -262,6 +362,53 @@
         ],
         "title": "AddHoldingRequest",
         "description": "Request body for adding a holding to a device portfolio."
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "appAttestMissing",
+          "conflictDetected",
+          "lossyMappingRejected",
+          "portfolioNotFound",
+          "schemaUnsupported",
+          "stockDataMissing",
+          "stockDataPending",
+          "stockDataStale",
+          "syncUnavailable",
+          "unsupportedMovingAverageWindow"
+        ],
+        "title": "ErrorCode",
+        "description": "Stable machine-readable error codes for clients."
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "retry_after_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorEnvelope",
+        "description": "Structured HTTP error body decoded by iOS clients."
       },
       "HTTPValidationError": {
         "properties": {
