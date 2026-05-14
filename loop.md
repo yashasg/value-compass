@@ -20,7 +20,8 @@ description: "My squad work loop"
 6. If no open GitHub issues remain, run a parallel sweep, open validated issues, and start the highest-impact issue immediately.
 7. Use the MVP milestone tag on new issues
 8. Maintain clean code, use docs/python/coding_standards.md and docs/swift/coding_standards.md. Always look to remove/delete stale code and files.
-9. After completing work, output:
+9. Work on multiple issues in parallel when agents are unlikely to overwrite each other's changes (e.g. issues that touch disjoint files, or independent docs/CI/feature scopes). Use one branch + PR per issue so reviews and merges stay isolated.
+10. After completing work, output:
 	- blockers
 	- risky changes
 	- top 3 next actions
@@ -43,38 +44,5 @@ facts from recommendations.
 
 - Keep reports under 12 lines.
 - Prefer root-cause fixes over local patches.
-- Don’t propose architecture changes unless drift is proven.
-h cycle
-
-Describe what your squad should do every time the loop wakes up. Be specific —
-the more context you give, the better your squad performs.
-
-Examples:
-- Check for new messages in a Teams channel and summarize action items
-- Review recent pull requests and flag anything needing attention
-- Run a health check on staging and report anomalies
-- Scan the inbox for anything that needs a response today
-
-<!-- Replace this section with your actual loop instructions. -->
-
-## Monitoring (optional)
-
-If you want your squad to watch external channels, enable monitor capabilities:
-
-```bash
-squad loop --monitor-email --monitor-teams
-```
-
-## Personality (optional)
-
-If your squad has a specific voice or style, describe it here so each cycle
-stays consistent.
-
-Example: "Be concise. Use bullet points. Flag blockers clearly."
-
-## Tips
-
-- **Be specific.** Vague prompts produce vague results.
-- **Set boundaries.** Tell the squad what NOT to do (e.g., "Don't send messages to anyone but me").
-- **Start small.** Begin with one task per cycle, then expand.
-- **Use frontmatter.** `interval` controls how often the loop runs. `timeout` caps each cycle.
+- Don't propose architecture changes unless drift is proven.
+- Parallelize only when changes don't conflict; serialize anything that touches the same file or migration.
