@@ -114,25 +114,24 @@ struct MainFeature {
           state.path = StackState()
         case .portfolios:
           if let id = state.portfolios.selectedPortfolioID {
-            state.detail = .portfolio(id)
-            state.detailPortfolio = MainFeature.makeDetailState(id: id)
+            MainFeature.selectPortfolioDetail(id: id, in: &state)
           } else {
             state.detail = .emptyPortfolioSelection
             state.detailPortfolio = nil
+            state.path = StackState()
           }
-          state.path = StackState()
         }
         return .none
 
       case .detailSelected(let detail):
-        state.detail = detail
         switch detail {
         case .portfolio(let id):
-          state.detailPortfolio = MainFeature.makeDetailState(id: id)
+          MainFeature.selectPortfolioDetail(id: id, in: &state)
         case .settings, .emptyPortfolioSelection:
+          state.detail = detail
           state.detailPortfolio = nil
+          state.path = StackState()
         }
-        state.path = StackState()
         return .none
 
       case .shellKindChanged(let kind):
@@ -151,9 +150,7 @@ struct MainFeature {
           state.path.append(.portfolioDetail(MainFeature.makeDetailState(id: id)))
         case .splitView:
           state.sidebar = .portfolios
-          state.detail = .portfolio(id)
-          state.detailPortfolio = MainFeature.makeDetailState(id: id)
-          state.path = StackState()
+          MainFeature.selectPortfolioDetail(id: id, in: &state)
         }
         return .none
 
@@ -256,6 +253,23 @@ struct MainFeature {
         canCalculate: false
       )
     )
+  }
+
+  /// Routes the iPad detail column to `id`, reusing the existing
+  /// `detailPortfolio` reducer state (and any path push on top of it) when
+  /// the same portfolio is re-selected. Without this guard, every sidebar /
+  /// list re-selection would replace `detailPortfolio` with a freshly built
+  /// empty stub — `PortfolioDetailFeature` would then have to reload the
+  /// snapshot asynchronously, the user would see a flash of empty content,
+  /// and any in-flight reducer state (e.g. an open holdings editor on top of
+  /// the detail root) would be discarded.
+  static func selectPortfolioDetail(id: UUID, in state: inout State) {
+    if state.detailPortfolio?.portfolioID == id, state.detail == .portfolio(id) {
+      return
+    }
+    state.detail = .portfolio(id)
+    state.detailPortfolio = MainFeature.makeDetailState(id: id)
+    state.path = StackState()
   }
 }
 

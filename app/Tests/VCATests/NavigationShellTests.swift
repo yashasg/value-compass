@@ -40,6 +40,54 @@ final class NavigationShellTests: XCTestCase {
     XCTAssertNil(state.detailPortfolio)
   }
 
+  func testReselectingSamePortfolioPreservesDetailAndPathState() {
+    let id = UUID()
+    var state = MainFeature.State()
+    state.shellKind = .splitView
+
+    MainFeature.selectPortfolioDetail(id: id, in: &state)
+
+    XCTAssertEqual(state.detail, .portfolio(id))
+    XCTAssertEqual(state.detailPortfolio?.portfolioID, id)
+    XCTAssertTrue(state.path.isEmpty)
+
+    // Simulate an in-flight push on top of the detail root and a snapshot
+    // load that filled the detail state — both must survive a re-selection
+    // of the same portfolio without being recreated. We capture the snapshot
+    // by mutating it in place; reducer code does the same via `.task`.
+    var loaded = state.detailPortfolio!
+    loaded.snapshot = PortfolioDetailSnapshot(
+      id: id,
+      name: "Loaded",
+      monthlyBudget: 100,
+      maWindow: 50,
+      categories: [],
+      marketDataCompleteCount: 0,
+      marketDataIncompleteCount: 0,
+      canCalculate: false
+    )
+    state.detailPortfolio = loaded
+    state.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: id)))
+    let snapshotBefore = state.detailPortfolio
+    let pathBefore = state.path
+
+    MainFeature.selectPortfolioDetail(id: id, in: &state)
+
+    XCTAssertEqual(state.detailPortfolio, snapshotBefore)
+    XCTAssertEqual(state.detailPortfolio?.snapshot.name, "Loaded")
+    XCTAssertEqual(state.path, pathBefore)
+
+    // Selecting a different portfolio rebuilds the detail state and clears
+    // the path, since stack pushes belonged to the previous detail root.
+    let other = UUID()
+    MainFeature.selectPortfolioDetail(id: other, in: &state)
+
+    XCTAssertEqual(state.detail, .portfolio(other))
+    XCTAssertEqual(state.detailPortfolio?.portfolioID, other)
+    XCTAssertEqual(state.detailPortfolio?.snapshot.name, "")
+    XCTAssertTrue(state.path.isEmpty)
+  }
+
   func testPortfolioDraftTrimsAndValidatesPortfolioValues() throws {
     let draft = PortfolioFormDraft(
       name: "  Long Term  ", monthlyBudgetText: "250.75", maWindow: 200)
