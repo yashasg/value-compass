@@ -165,6 +165,97 @@ def test_portfolio_status_returns_latest(
     assert body["next_modified"] is not None
 
 
+def test_market_data_returns_fresh_cache_hit(
+    client: TestClient, db_session: Session
+) -> None:
+    last_modified = datetime.now(UTC).replace(microsecond=0)
+    next_modified = last_modified + timedelta(hours=24)
+    db_session.add(
+        StockCache(
+            ticker="AAPL",
+            current_price=Decimal("150.25"),
+            sma_50=Decimal("149.50"),
+            sma_200=Decimal("140.75"),
+            last_modified=last_modified,
+            next_modified=next_modified,
+            job_status="success",
+        )
+    )
+    db_session.commit()
+
+    resp = client.get("/market-data/aapl", headers=ATTEST)
+
+    assert resp.status_code == 200
+    assert resp.headers["Last-Modified"] == last_modified.strftime(
+        "%a, %d %b %Y %H:%M:%S GMT"
+    )
+    assert resp.json() == {
+        "ticker": "AAPL",
+        "current_price": 150.25,
+        "sma_50": 149.5,
+        "sma_200": 140.75,
+        "moving_averages": {"50": 149.5, "200": 140.75},
+        "last_modified": last_modified.isoformat().replace("+00:00", "Z"),
+        "next_modified": next_modified.isoformat().replace("+00:00", "Z"),
+        "cache_status": "fresh",
+        "is_stale": False,
+        "stale_after_hours": config.STALE_ALERT_HOURS,
+    }
+
+
+def test_market_data_returns_structured_missing_error(
+    client: TestClient,
+) -> None:
+    resp = client.get("/market-data/MSFT", headers=ATTEST)
+
+    assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "stockDataMissing",
+        "message": "Market data is not cached for ticker.",
+        "retry_after_seconds": None,
+    }
+
+
+def test_market_data_marks_stale_and_failed_rows(
+    client: TestClient, db_session: Session
+) -> None:
+    stale_time = datetime.now(UTC) - timedelta(hours=config.STALE_ALERT_HOURS + 1)
+    failed_time = datetime.now(UTC)
+    db_session.add_all(
+        [
+            StockCache(
+                ticker="STALE",
+                current_price=Decimal("10"),
+                sma_50=Decimal("9"),
+                sma_200=Decimal("8"),
+                last_modified=stale_time,
+                next_modified=None,
+                job_status="success",
+            ),
+            StockCache(
+                ticker="FAILED",
+                current_price=Decimal("20"),
+                sma_50=Decimal("19"),
+                sma_200=Decimal("18"),
+                last_modified=failed_time,
+                next_modified=None,
+                job_status="failed",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    stale = client.get("/market-data/STALE", headers=ATTEST)
+    failed = client.get("/market-data/FAILED", headers=ATTEST)
+
+    assert stale.status_code == 200
+    assert stale.json()["cache_status"] == "stale"
+    assert stale.json()["is_stale"] is True
+    assert failed.status_code == 200
+    assert failed.json()["cache_status"] == "failed"
+    assert failed.json()["is_stale"] is True
+
+
 def test_portfolio_data_404_for_unknown_device(client: TestClient) -> None:
     resp = client.get(
         "/portfolio/data",

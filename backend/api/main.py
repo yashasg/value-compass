@@ -29,6 +29,7 @@ from fastapi import (
     FastAPI,
     Header,
     HTTPException,
+    Path,
     Request,
     Response,
     status,
@@ -61,6 +62,14 @@ class ErrorCode(StrEnum):
     STOCK_DATA_STALE = "stockDataStale"
     SYNC_UNAVAILABLE = "syncUnavailable"
     UNSUPPORTED_MA_WINDOW = "unsupportedMovingAverageWindow"
+
+
+class MarketDataCacheStatus(StrEnum):
+    """Public freshness states for cached market data."""
+
+    FRESH = "fresh"
+    STALE = "stale"
+    FAILED = "failed"
 
 
 class ErrorEnvelope(BaseModel):
@@ -268,6 +277,21 @@ class PortfolioStatusResponse(BaseModel):
     next_modified: datetime | None
 
 
+class MarketDataResponse(BaseModel):
+    """Cached market data for one ticker."""
+
+    ticker: str
+    current_price: float
+    sma_50: float
+    sma_200: float
+    moving_averages: dict[str, float]
+    last_modified: datetime
+    next_modified: datetime | None
+    cache_status: MarketDataCacheStatus
+    is_stale: bool
+    stale_after_hours: int
+
+
 class HoldingOut(BaseModel):
     """Holding data returned to the iOS client."""
 
@@ -299,6 +323,48 @@ class AddHoldingRequest(BaseModel):
     device_uuid: UUID
     ticker: str = Field(min_length=1, max_length=10)
     weight: float = Field(gt=0, le=1)
+
+
+def _normalize_ticker(ticker: str) -> str:
+    """Return the canonical ticker key used in ``stock_cache``."""
+    return ticker.strip().upper()
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Return a timezone-aware UTC datetime from DB driver output."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _cache_status(row: StockCache, now: datetime) -> MarketDataCacheStatus:
+    """Classify a stock-cache row for client-visible freshness metadata."""
+    last_modified = _as_utc(row.last_modified)
+    if row.job_status == "failed":
+        return MarketDataCacheStatus.FAILED
+    if (now - last_modified).total_seconds() > config.STALE_ALERT_HOURS * 3600:
+        return MarketDataCacheStatus.STALE
+    return MarketDataCacheStatus.FRESH
+
+
+def _market_data_response(row: StockCache, now: datetime) -> MarketDataResponse:
+    """Build the public market-data response from a stock-cache row."""
+    cache_status = _cache_status(row, now)
+    return MarketDataResponse(
+        ticker=row.ticker,
+        current_price=float(row.current_price),
+        sma_50=float(row.sma_50),
+        sma_200=float(row.sma_200),
+        moving_averages={
+            "50": float(row.sma_50),
+            "200": float(row.sma_200),
+        },
+        last_modified=_as_utc(row.last_modified),
+        next_modified=_as_utc(row.next_modified) if row.next_modified else None,
+        cache_status=cache_status,
+        is_stale=cache_status is not MarketDataCacheStatus.FRESH,
+        stale_after_hours=config.STALE_ALERT_HOURS,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +436,55 @@ def portfolio_status(
     if row is None:
         return PortfolioStatusResponse(last_modified=None, next_modified=None)
     return PortfolioStatusResponse(last_modified=row[0], next_modified=row[1])
+
+
+@app.get(
+    "/market-data/{ticker}",
+    response_model=MarketDataResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorEnvelope,
+            "description": "Ticker has not been populated in stock_cache yet.",
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def market_data(
+    response: Response,
+    ticker: str = Path(min_length=1, max_length=10),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> MarketDataResponse:
+    """Return cached market data for one ticker from ``stock_cache`` only."""
+    ticker_key = _normalize_ticker(ticker)
+    try:
+        row = db.get(StockCache, ticker_key)
+    except SQLAlchemyError as exc:
+        log.warning("market data lookup failed for %s: %s", ticker_key, exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+    if row is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.STOCK_DATA_MISSING,
+            message="Market data is not cached for ticker.",
+        )
+
+    body = _market_data_response(row, datetime.now(UTC))
+    response.headers["Last-Modified"] = body.last_modified.strftime(
+        "%a, %d %b %Y %H:%M:%S GMT"
+    )
+    return body
 
 
 @app.get(

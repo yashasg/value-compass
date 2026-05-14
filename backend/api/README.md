@@ -11,6 +11,7 @@ Runs as systemd service: **`vca-api.service`** (see `backend/infra/systemd/`).
 | Method | Path                  | Response                                          | Notes                                              |
 |--------|-----------------------|---------------------------------------------------|----------------------------------------------------|
 | GET    | `/health`             | `200` if API and Postgres are reachable           | Liveness + DB reachability check.                  |
+| GET    | `/market-data/{ticker}` | Cached price, SMA 50/200, and freshness metadata | Reads only from `stock_cache`; never calls Polygon. |
 | GET    | `/portfolio/status`   | `last_modified`, `next_modified`                  | Lightweight, Cloudflare-cacheable.                 |
 | GET    | `/portfolio/data`     | Full portfolio allocation + band metrics          | Only called on client cache miss.                  |
 | GET    | `/schema/version`     | Current API schema version number                 |                                                    |
@@ -43,6 +44,13 @@ Common codes include `appAttestMissing`, `portfolioNotFound`,
 `syncUnavailable`, `schemaUnsupported`, `conflictDetected`,
 `lossyMappingRejected`, `stockDataPending`, `stockDataMissing`,
 `stockDataStale`, and `unsupportedMovingAverageWindow`.
+
+`GET /market-data/{ticker}` returns `404 stockDataMissing` until the poller or
+new-ticker background task has written the ticker to `stock_cache`. Cached rows
+always return their latest price/SMA payload with `cache_status` set to `fresh`,
+`stale`, or `failed`, plus `is_stale` and `stale_after_hours` metadata so
+clients can render degraded cache states without triggering direct Polygon
+reads from the API.
 
 ## Security
 

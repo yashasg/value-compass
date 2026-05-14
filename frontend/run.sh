@@ -195,24 +195,37 @@ bundle_id_for_app() {
   /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist" 2>/dev/null || fail "Could not read CFBundleIdentifier from '$app_path/Info.plist'. Set APP_BUNDLE_ID explicitly."
 }
 
-retry_command() {
+retry_simctl_command() {
   local description="$1"
-  shift
+  local udid="$2"
+  shift 2
   local attempt=1
+  local command_error
+  command_error="$(mktemp "${TMPDIR:-/tmp}/vca-simctl.XXXXXX")"
 
   while [ "$attempt" -le "$SIMCTL_RETRY_ATTEMPTS" ]; do
-    if "$@"; then
+    if "$@" 2>"$command_error"; then
+      rm -f "$command_error"
       return
     fi
 
+    cat "$command_error" >&2
     if [ "$attempt" -eq "$SIMCTL_RETRY_ATTEMPTS" ]; then
+      rm -f "$command_error"
       fail "$description failed after $SIMCTL_RETRY_ATTEMPTS attempt(s)."
+    fi
+
+    if grep -E "current state: (Shutting Down|Shutdown)|Unable to lookup in current state|server died" "$command_error" >/dev/null 2>&1; then
+      boot_simulator "$udid"
     fi
 
     printf '==> %s failed on attempt %s/%s; retrying in %ss\n' "$description" "$attempt" "$SIMCTL_RETRY_ATTEMPTS" "$SIMCTL_RETRY_DELAY_SECONDS"
     sleep "$SIMCTL_RETRY_DELAY_SECONDS"
     attempt=$((attempt + 1))
+    : >"$command_error"
   done
+
+  rm -f "$command_error"
 }
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
@@ -232,6 +245,6 @@ APP_PATH="$(built_app_path)"
 BUNDLE_ID="$(bundle_id_for_app "$APP_PATH")"
 
 printf '==> Installing %s on %s\n' "$APP_PATH" "$SIM_UDID"
-retry_command "simctl install" xcrun simctl install "$SIM_UDID" "$APP_PATH"
+retry_simctl_command "simctl install" "$SIM_UDID" xcrun simctl install "$SIM_UDID" "$APP_PATH"
 printf '==> Launching %s\n' "$BUNDLE_ID"
-retry_command "simctl launch" xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
+retry_simctl_command "simctl launch" "$SIM_UDID" xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"

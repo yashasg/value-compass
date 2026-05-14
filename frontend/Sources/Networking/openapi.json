@@ -309,6 +309,194 @@
         }
       }
     },
+    "/market-data/{ticker}": {
+      "get": {
+        "summary": "Market Data",
+        "description": "Return cached market data for one ticker from ``stock_cache`` only.",
+        "operationId": "market_data_market_data__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10,
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-App-Attest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDataResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticker has not been populated in stock_cache yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portfolio/data": {
       "get": {
         "summary": "Portfolio Data",
@@ -929,6 +1117,86 @@
         ],
         "title": "HoldingOut",
         "description": "Holding data returned to the iOS client."
+      },
+      "MarketDataCacheStatus": {
+        "type": "string",
+        "enum": [
+          "fresh",
+          "stale",
+          "failed"
+        ],
+        "title": "MarketDataCacheStatus",
+        "description": "Public freshness states for cached market data."
+      },
+      "MarketDataResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "current_price": {
+            "type": "number",
+            "title": "Current Price"
+          },
+          "sma_50": {
+            "type": "number",
+            "title": "Sma 50"
+          },
+          "sma_200": {
+            "type": "number",
+            "title": "Sma 200"
+          },
+          "moving_averages": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Moving Averages"
+          },
+          "last_modified": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Modified"
+          },
+          "next_modified": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Modified"
+          },
+          "cache_status": {
+            "$ref": "#/components/schemas/MarketDataCacheStatus"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_after_hours": {
+            "type": "integer",
+            "title": "Stale After Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "current_price",
+          "sma_50",
+          "sma_200",
+          "moving_averages",
+          "last_modified",
+          "next_modified",
+          "cache_status",
+          "is_stale",
+          "stale_after_hours"
+        ],
+        "title": "MarketDataResponse",
+        "description": "Cached market data for one ticker."
       },
       "PortfolioDataResponse": {
         "properties": {
