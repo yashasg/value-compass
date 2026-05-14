@@ -12,7 +12,7 @@ import Foundation
 /// Phase 1 (#150–#157) replaced the placeholder child reducers with real
 /// implementations. Phase 2 (#159) — this revision — wires Phase 1 child
 /// delegates into `path` / `detailPortfolio` / `detail` so `MainView` is
-/// driven entirely by the reducer (no `@Query` / navigation-`@State` needed)
+/// driven entirely by the reducer (no SwiftData-fetch / navigation-`@State` needed)
 /// and the iPhone stack and iPad split view share a single source of truth.
 @Reducer
 struct MainFeature {

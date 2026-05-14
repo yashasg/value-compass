@@ -13,12 +13,14 @@ enum LocalPersistence {
     ])
   }
 
-  /// Process-wide cache for the disk-backed `ModelContainer`. Both
-  /// `VCAApp` (for SwiftUI's `@Environment(\.modelContext)`) and
-  /// `ModelContainerClient.liveValue` (for TCA reducer effects) call into
-  /// `makeModelContainer()`; sharing a single instance keeps writes from
-  /// reducer effects immediately visible to `@Query`-backed views.
-  /// In-memory containers (used by tests) intentionally bypass the cache.
+  /// Process-wide cache for the disk-backed `ModelContainer`. `VCAApp`
+  /// installs the container into the SwiftUI environment so reducer-driven
+  /// views can resolve `@Environment(\.modelContext)` if they ever need to,
+  /// and `ModelContainerClient.liveValue` (used by TCA reducer effects on
+  /// `BackgroundModelActor`) hands the same container to every actor.
+  /// Sharing one instance keeps writes from any background actor immediately
+  /// visible to subsequent fetches on the main context. In-memory containers
+  /// (used by tests) intentionally bypass the cache.
   private static let sharedDiskContainer = LockIsolated<ModelContainer?>(nil)
 
   static func makeModelContainer(isStoredInMemoryOnly: Bool = false) throws -> ModelContainer {

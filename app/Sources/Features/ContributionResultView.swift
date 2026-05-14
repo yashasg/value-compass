@@ -1,76 +1,25 @@
 import ComposableArchitecture
 import Foundation
-import SwiftData
 import SwiftUI
 
 /// Per-portfolio contribution-result surface. Renders on top of
-/// `ContributionResultFeature` and (in Phase 1) keeps the existing
-/// "push History" navigation working through a legacy bridge. Replaces
-/// the MVVM definition that previously lived in `MainView.swift`.
-///
-/// Two entry points exist during the Phase 1 → Phase 2 migration:
-///
-/// 1. `init(store:)` — the production TCA path used by Phase 2 (#159) once
-///    `MainFeature.path` pushes the feature.
-/// 2. `init(portfolio:initialOutput:recalculate:)` — a legacy bridge that
-///    `MainView` and `PortfolioDetailView` still use today. The bridge owns
-///    a short-lived `Store` (seeded from the supplied `Portfolio` and
-///    `ContributionOutput`) and observes the reducer's `legacyNavigation`
-///    latch to mirror delegate-driven navigation onto the surrounding
-///    `NavigationStack`. The `recalculate` closure is wired into the store's
-///    `\.contributionCalculator` dependency so Retry exercises the same
-///    calculator the caller passed in (matches the legacy MVVM behaviour).
-///
-/// The bridge is removed in #159 once `MainFeature.path` owns navigation
-/// directly.
+/// `ContributionResultFeature`. Replaces the MVVM definition that
+/// previously lived in `MainView.swift`. Pure TCA: scope a
+/// `StoreOf<ContributionResultFeature>` from the parent and pass it in.
 struct ContributionResultView: View {
-  private let mode: Mode
+  let store: StoreOf<ContributionResultFeature>
 
   init(store: StoreOf<ContributionResultFeature>) {
-    self.mode = .store(store)
-  }
-
-  init(
-    portfolio: Portfolio,
-    initialOutput: ContributionOutput,
-    recalculate: @escaping @MainActor () -> ContributionOutput = {
-      ContributionOutput(totalAmount: 0)
-    }
-  ) {
-    self.mode = .legacy(
-      portfolio: portfolio,
-      initialOutput: initialOutput,
-      recalculate: recalculate
-    )
+    self.store = store
   }
 
   var body: some View {
-    switch mode {
-    case .store(let store):
-      ContributionResultContent(store: store)
-    case .legacy(let portfolio, let initialOutput, let recalculate):
-      ContributionResultLegacyBridge(
-        portfolio: portfolio,
-        initialOutput: initialOutput,
-        recalculate: recalculate
-      )
-    }
-  }
-
-  private enum Mode {
-    case store(StoreOf<ContributionResultFeature>)
-    case legacy(
-      portfolio: Portfolio,
-      initialOutput: ContributionOutput,
-      recalculate: @MainActor () -> ContributionOutput
-    )
+    ContributionResultContent(store: store)
   }
 }
 
-/// Pure TCA renderer for `ContributionResultFeature`. Used by the production
-/// app once Phase 2 (#159) wires `MainFeature.path`. Until then it is also
-/// hosted by `ContributionResultLegacyBridge` so the existing
-/// `NavigationStack` keeps presenting it.
+/// TCA renderer for `ContributionResultFeature`. Used by the production app
+/// via `MainFeature.path` (wired in #159) and by previews / tests.
 struct ContributionResultContent: View {
   @Bindable var store: StoreOf<ContributionResultFeature>
 
@@ -225,87 +174,5 @@ struct ContributionResultContent: View {
 
   private func percentText(_ value: Decimal) -> String {
     decimalText(value * 100)
-  }
-}
-
-/// Phase-1 bridge that owns a short-lived `Store` for non-TCA call sites
-/// (`MainView`, `PortfolioDetailView`). Observes the reducer's
-/// `legacyNavigation` latch to push `ContributionHistoryListView` onto the
-/// surrounding `NavigationStack`. Removed in #159 once `MainFeature.path`
-/// owns navigation.
-private struct ContributionResultLegacyBridge: View {
-  let portfolio: Portfolio
-  let initialOutput: ContributionOutput
-  let recalculate: @MainActor () -> ContributionOutput
-
-  @Environment(\.modelContext) private var modelContext
-  @StateObject private var holder = ContributionResultLegacyStoreHolder()
-  @State private var presentedHistory = false
-
-  var body: some View {
-    let store = holder.store(
-      portfolioID: portfolio.id,
-      initialOutput: initialOutput,
-      modelContainer: modelContext.container,
-      recalculate: recalculate
-    )
-    ContributionResultContent(store: store)
-      .navigationDestination(isPresented: $presentedHistory) {
-        ContributionHistoryView(portfolio: portfolio)
-      }
-      .onChange(of: store.legacyNavigation) { _, newValue in
-        handle(intent: newValue, store: store)
-      }
-  }
-
-  private func handle(
-    intent: ContributionResultFeature.LegacyNavigation?,
-    store: StoreOf<ContributionResultFeature>
-  ) {
-    guard let intent else { return }
-    switch intent {
-    case .history:
-      presentedHistory = true
-    }
-    store.send(.legacyNavigationConsumed)
-  }
-}
-
-/// Holds a single `Store` for the lifetime of a
-/// `ContributionResultLegacyBridge` so SwiftUI re-renders do not rebuild
-/// the reducer state. The store is built with the surrounding SwiftData
-/// `ModelContainer` and the caller-supplied `recalculate` closure overridden
-/// onto the reducer's dependencies so Save/Retry hit the same persistence
-/// + calculator the legacy MVVM view used.
-@MainActor
-private final class ContributionResultLegacyStoreHolder: ObservableObject {
-  private var cachedStore: StoreOf<ContributionResultFeature>?
-
-  func store(
-    portfolioID: UUID,
-    initialOutput: ContributionOutput,
-    modelContainer: ModelContainer,
-    recalculate: @escaping @MainActor () -> ContributionOutput
-  ) -> StoreOf<ContributionResultFeature> {
-    if let cachedStore { return cachedStore }
-    let containerClient = ModelContainerClient(container: { modelContainer })
-    let calculatorClient = ContributionCalculatorClient(
-      calculate: { _ in recalculate() }
-    )
-    let made = withDependencies {
-      $0.modelContainer = containerClient
-      $0.contributionCalculator = calculatorClient
-    } operation: {
-      Store(
-        initialState: ContributionResultFeature.State(
-          portfolioID: portfolioID,
-          output: initialOutput
-        )
-      ) {
-        ContributionResultFeature()
-      }
-    }
-    cachedStore = made
-    return made
   }
 }

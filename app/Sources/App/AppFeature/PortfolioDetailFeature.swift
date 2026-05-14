@@ -210,9 +210,9 @@ struct TickerSnapshot: Equatable, Identifiable, Sendable {
 extension PortfolioDetailSnapshot {
   /// Projects a `Portfolio` (and its categories/tickers) into the value-typed
   /// snapshot used by `PortfolioDetailFeature.State`. Must be called from the
-  /// actor that owns the portfolio (e.g. `BackgroundModelActor` for reducer
-  /// reloads, or `@MainActor` for the legacy bridge that builds the initial
-  /// state from a `@Query`-fetched `Portfolio`).
+  /// actor that owns the portfolio: `BackgroundModelActor` for the reducer's
+  /// reload effect (see `loadPortfolioDetailSnapshot(id:)` below), which is
+  /// the only call site after the MVVM legacy bridge was removed in #162.
   init(portfolio: Portfolio) {
     let categories =
       portfolio.categories

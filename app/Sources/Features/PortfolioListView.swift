@@ -1,60 +1,25 @@
 import ComposableArchitecture
-import SwiftData
 import SwiftUI
 
 /// Post-onboarding portfolio inventory. Renders on top of
 /// `PortfolioListFeature` (and the sibling `PortfolioEditorFeature` for the
 /// create/edit sheet). Replaces the MVVM definition that previously lived
-/// in `MainView.swift`.
-///
-/// Two entry points exist during the Phase 1 → Phase 2 migration:
-///
-/// 1. `init(store:)` — the production TCA path used by Phase 2 (#159).
-/// 2. `init(selectedPortfolioID:showsSettingsLink:)` — a legacy bridge that
-///    `MainView` still uses today. The bridge owns a short-lived `Store`
-///    and mirrors `selected(id:)` and `delegate(.portfolioOpened(id))` back
-///    into the existing `MainView` selection binding (iPad split view) or
-///    pushes `PortfolioDetailView` via `navigationDestination(item:)`
-///    (compact stack), so the surrounding `NavigationStack` /
-///    `NavigationSplitView` keeps behaving exactly as it does today.
-///
-/// The bridge is removed in #158 once the real `Store` is wired at app
-/// entry, and #159 wires `MainFeature.path` to handle navigation directly.
+/// in `MainView.swift`. Pure TCA: scope a `StoreOf<PortfolioListFeature>`
+/// from the parent (`MainFeature.portfolios`) and pass it in.
 struct PortfolioListView: View {
-  private let mode: Mode
+  let store: StoreOf<PortfolioListFeature>
 
   init(store: StoreOf<PortfolioListFeature>) {
-    self.mode = .store(store)
-  }
-
-  init(selectedPortfolioID: Binding<UUID?>? = nil, showsSettingsLink: Bool = true) {
-    self.mode = .legacy(
-      selectedPortfolioID: selectedPortfolioID,
-      showsSettingsLink: showsSettingsLink
-    )
+    self.store = store
   }
 
   var body: some View {
-    switch mode {
-    case .store(let store):
-      PortfolioListContent(store: store)
-    case .legacy(let selection, let showsSettings):
-      PortfolioListLegacyBridge(
-        selectedPortfolioID: selection,
-        showsSettingsLink: showsSettings
-      )
-    }
-  }
-
-  private enum Mode {
-    case store(StoreOf<PortfolioListFeature>)
-    case legacy(selectedPortfolioID: Binding<UUID?>?, showsSettingsLink: Bool)
+    PortfolioListContent(store: store)
   }
 }
 
-/// Pure TCA renderer for `PortfolioListFeature`. Used by the production
-/// app once Phase 2 (#159) wires `MainFeature.path`. Until then it is
-/// reachable only through the legacy bridge / previews / tests.
+/// TCA renderer for `PortfolioListFeature`. Used by the production app via
+/// `MainFeature.path` (wired in #159) and by previews / tests.
 private struct PortfolioListContent: View {
   @Bindable var store: StoreOf<PortfolioListFeature>
 
@@ -164,82 +129,6 @@ private struct PortfolioListContent: View {
   }
 }
 
-/// Phase 1 bridge between the legacy `MainView` (which still passes a
-/// `selectedPortfolioID` binding for the iPad split view and renders the
-/// list inside its own `NavigationStack` for compact widths) and the new
-/// `PortfolioListFeature`. Owns a short-lived `Store` and translates the
-/// reducer's selection / delegate output back into the surrounding
-/// SwiftUI navigation.
-///
-/// Removed in #159 once `MainFeature.path` owns navigation directly.
-private struct PortfolioListLegacyBridge: View {
-  let selectedPortfolioID: Binding<UUID?>?
-  let showsSettingsLink: Bool
-
-  @Environment(\.modelContext) private var modelContext
-  @StateObject private var holder = PortfolioListLegacyStoreHolder()
-  @State private var pushedPortfolio: Portfolio?
-
-  var body: some View {
-    let store = holder.store(showsSettingsLink: showsSettingsLink)
-    PortfolioListContent(store: store)
-      .navigationDestination(
-        isPresented: Binding(
-          get: { pushedPortfolio != nil },
-          set: { newValue in
-            if !newValue { pushedPortfolio = nil }
-          }
-        )
-      ) {
-        if let pushedPortfolio {
-          PortfolioDetailView(portfolio: pushedPortfolio)
-        }
-      }
-      .onChange(of: store.selectedPortfolioID) { _, newID in
-        handleSelection(newID, store: store)
-      }
-  }
-
-  private func handleSelection(_ newID: UUID?, store: StoreOf<PortfolioListFeature>) {
-    if let binding = selectedPortfolioID {
-      binding.wrappedValue = newID
-      return
-    }
-
-    guard let newID else {
-      pushedPortfolio = nil
-      return
-    }
-
-    let descriptor = FetchDescriptor<Portfolio>(
-      predicate: #Predicate { $0.id == newID }
-    )
-    if let portfolio = try? modelContext.fetch(descriptor).first {
-      pushedPortfolio = portfolio
-    }
-    store.send(.selected(id: nil))
-  }
-}
-
-/// Holds the short-lived `Store` used by `PortfolioListLegacyBridge` so the
-/// store survives view re-creations triggered by SwiftUI re-renders.
-@MainActor
-private final class PortfolioListLegacyStoreHolder: ObservableObject {
-  private var cachedStore: StoreOf<PortfolioListFeature>?
-
-  func store(showsSettingsLink: Bool) -> StoreOf<PortfolioListFeature> {
-    if let cachedStore {
-      return cachedStore
-    }
-    let initial = PortfolioListFeature.State(showsSettingsLink: showsSettingsLink)
-    let store = Store(initialState: initial) {
-      PortfolioListFeature()
-    }
-    cachedStore = store
-    return store
-  }
-}
-
 /// Static row label rendered for every entry in the portfolio list. Reads
 /// from `PortfolioSnapshot` so the row stays decoupled from SwiftData.
 struct PortfolioRowView: View {
@@ -247,17 +136,6 @@ struct PortfolioRowView: View {
 
   init(snapshot: PortfolioSnapshot) {
     self.snapshot = snapshot
-  }
-
-  init(portfolio: Portfolio) {
-    self.snapshot = PortfolioSnapshot(
-      id: portfolio.id,
-      name: portfolio.name,
-      monthlyBudget: portfolio.monthlyBudget,
-      maWindow: portfolio.maWindow,
-      createdAt: portfolio.createdAt,
-      categoryCount: portfolio.categories.count
-    )
   }
 
   var body: some View {
@@ -276,22 +154,6 @@ struct PortfolioRowView: View {
     }
     .accessibilityElement(children: .combine)
   }
-}
-
-/// Adaptive shared alert payloads used by `PortfolioListView`,
-/// `PortfolioDetailView`, `ContributionResultView`, `ContributionHistoryListView`,
-/// and `HoldingsEditorView`. Moved out of `MainView.swift` as part of the
-/// `PortfolioListView` TCA migration (issue #153) so that file shrinks
-/// alongside the view definitions it used to host. The remaining MVVM views
-/// keep using these helpers verbatim until their own Phase 1 issues land.
-struct SaveError: Identifiable {
-  let id = UUID()
-  let message: String
-}
-
-struct SaveConfirmation: Identifiable {
-  let id = UUID()
-  let message: String
 }
 
 #Preview("Empty") {

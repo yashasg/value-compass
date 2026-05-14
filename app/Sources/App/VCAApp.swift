@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// Phase 2 (#158): a single `Store` rooted at `AppFeature` drives every
 /// subsequent reduction. The legacy `AppState`, `MinAppVersionMonitor.shared`,
-/// and `PushNotificationManager.shared` `@StateObject`s are gone — the
+/// and `PushNotificationManager.shared` SwiftUI state objects are gone — the
 /// equivalent state lives in `AppFeature.State` and the cross-process bridges
 /// in `MinAppVersionClient` / `PushNotificationsClient`.
 ///
