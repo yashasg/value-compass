@@ -336,14 +336,14 @@ sums to budget, no negative amounts, etc.).
 
 | Directory | Purpose |
 |-----------|---------|
-| `frontend/` | iOS/iPadOS universal app (moved from `ios/`) |
-| `frontend/Sources/Backend/Models/` | SwiftData `@Model` classes |
-| `frontend/Sources/Features/` | One subfolder per screen (PortfolioList, PortfolioDetail, etc.) |
-| `frontend/Sources/App/` | App entry point, `ModelContainer` setup |
-| `frontend/Sources/Backend/Networking/` | **Unused in v1** — no backend calls; later: generated OpenAPI client |
-| `frontend/VCA.xcodeproj` | Build target for the universal iOS/iPadOS app |
-| `frontend/build.sh` | Builds and tests on iPhone/iPad Simulator; env-configurable iOS/iPadOS version, device types, and platform mode |
-| `frontend/run.sh` | Boots/creates simulator, builds, installs, and launches the app; env-configurable device and version |
+| `app/` | iOS/iPadOS universal app (renamed from `frontend/`, originally `ios/`) |
+| `app/Sources/Backend/Models/` | SwiftData `@Model` classes |
+| `app/Sources/Features/` | One subfolder per screen (PortfolioList, PortfolioDetail, etc.) |
+| `app/Sources/App/` | App entry point, `ModelContainer` setup |
+| `app/Sources/Backend/Networking/` | **Unused in v1** — no backend calls; later: generated OpenAPI client |
+| `app/VCA.xcodeproj` | Build target for the universal iOS/iPadOS app |
+| `app/build.sh` | Builds and tests on iPhone/iPad Simulator; env-configurable iOS/iPadOS version, device types, and platform mode |
+| `app/run.sh` | Boots/creates simulator, builds, installs, and launches the app; env-configurable device and version |
 | `backend/api` | FastAPI v1 API (vc-services); optional sync endpoint for eligible portfolio/holding state |
 | `backend/poller` | Background market-data poller; writes to `stock_cache`; scheduled fetches only |
 | `backend/db` | Supabase/Postgres schema and Alembic migrations; SQLAlchemy models for `portfolios`, `holdings`, `stock_cache` |

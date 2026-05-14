@@ -14,7 +14,7 @@ IPADOS_VERSION="${IPADOS_VERSION:-$IOS_VERSION}"
 IPHONE_DEVICE="${IPHONE_DEVICE:-iPhone 15}"
 IPAD_DEVICE="${IPAD_DEVICE:-iPad (10th generation)}"
 PLATFORM_MODE="${PLATFORM_MODE:-both}" # iphone, ipad, both
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/frontend/xcode-derived-data}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$REPO_ROOT/build/app/xcode-derived-data}"
 SDK="${SDK:-iphonesimulator}"
 RUN_TESTS="${RUN_TESTS:-auto}" # auto, true, false
 RUN_ANALYZE="${RUN_ANALYZE:-true}" # true, false
@@ -52,8 +52,8 @@ validate_project() {
     return
   fi
 
-  [ -d "$PROJECT_PATH" ] || fail "PROJECT_PATH '$PROJECT_PATH' does not exist. Set PROJECT_PATH to the frontend app .xcodeproj."
-  [ -f "$PROJECT_PATH/project.pbxproj" ] || fail "PROJECT_PATH '$PROJECT_PATH' is missing project.pbxproj. Create/open the Xcode project, or set PROJECT_PATH/WORKSPACE_PATH to a valid frontend app project."
+  [ -d "$PROJECT_PATH" ] || fail "PROJECT_PATH '$PROJECT_PATH' does not exist. Set PROJECT_PATH to the app .xcodeproj."
+  [ -f "$PROJECT_PATH/project.pbxproj" ] || fail "PROJECT_PATH '$PROJECT_PATH' is missing project.pbxproj. Create/open the Xcode project, or set PROJECT_PATH/WORKSPACE_PATH to a valid app project."
 }
 
 validate_runtime() {

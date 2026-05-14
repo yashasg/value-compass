@@ -47,7 +47,7 @@ V1 is a hybrid/offline-first app: local SwiftData remains the primary runtime so
 
 ### Build and Run Scripts
 
-**`frontend/build.sh`** — Builds and tests the app on explicit simulator destinations.
+**`app/build.sh`** — Builds and tests the app on explicit simulator destinations.
 
 Defaults:
 - iOS/iPadOS Simulator version: `26.4`
@@ -57,7 +57,7 @@ Defaults:
 
 Env overrides: `IOS_VERSION`, `IPADOS_VERSION`, `IPHONE_DEVICE`, `IPAD_DEVICE`, `PLATFORM_MODE` (iphone|ipad|both), `SCHEME`, `PROJECT_PATH`, `WORKSPACE_PATH`.
 
-**`frontend/run.sh`** — Boots or creates the selected simulator, builds, installs, and launches the app.
+**`app/run.sh`** — Boots or creates the selected simulator, builds, installs, and launches the app.
 
 Env overrides: `DEVICE_KIND` (iphone|ipad), `IOS_VERSION`, `IPADOS_VERSION`, `IPHONE_DEVICE`, `IPAD_DEVICE`, `SCHEME`, `PROJECT_PATH`, `WORKSPACE_PATH`.
 
@@ -249,7 +249,7 @@ History should feel like a record of what the user saw at save time, not a live 
 
 ## 10. Disclaimer UX
 
-The disclaimer from `frontend/README.md` is required in the app:
+The disclaimer from `app/README.md` is required in the app:
 
 > This tool is for informational and educational purposes only. It does not constitute investment advice. Past price trends do not guarantee future performance. Consult a licensed financial advisor before making investment decisions.
 

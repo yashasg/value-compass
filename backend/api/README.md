@@ -79,7 +79,7 @@ never blocked.
 
 FastAPI is the source of truth for the backend/iOS contract. The schema served
 at `/openapi.json` is exported to the repo-root `openapi.json` and mirrored to
-`frontend/Sources/Backend/Networking/openapi.json` for SwiftOpenAPIGenerator.
+`app/Sources/Backend/Networking/openapi.json` for SwiftOpenAPIGenerator.
 
 Regenerate both checked-in artifacts after changing API routes, response models,
 documented response headers, or versioning:

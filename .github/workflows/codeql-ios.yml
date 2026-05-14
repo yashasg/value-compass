@@ -1,18 +1,18 @@
 name: codeql-ios
 
-# CodeQL for iOS/frontend sources only. Keep this separate from backend
+# CodeQL for iOS/app sources only. Keep this separate from backend
 # analysis so documentation/backend-only pull requests do not run Swift gates.
 
 on:
   pull_request:
     paths:
-      - "frontend/**"
+      - "app/**"
       - "openapi.json"
       - ".github/workflows/codeql-ios.yml"
   push:
     branches: [main]
     paths:
-      - "frontend/**"
+      - "app/**"
       - "openapi.json"
       - ".github/workflows/codeql-ios.yml"
   workflow_dispatch:
@@ -36,9 +36,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            build/frontend/xcode-derived-data
+            build/app/xcode-derived-data
             ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex
-          key: ${{ runner.os }}-xcode-codeql-ios-${{ hashFiles('frontend/VCA.xcodeproj/project.pbxproj', 'frontend/VCA.xcodeproj/xcshareddata/xcschemes/*.xcscheme', 'frontend/Sources/**/*.swift', 'frontend/Tests/**/*.swift') }}
+          key: ${{ runner.os }}-xcode-codeql-ios-${{ hashFiles('app/VCA.xcodeproj/project.pbxproj', 'app/VCA.xcodeproj/xcshareddata/xcschemes/*.xcscheme', 'app/Sources/**/*.swift', 'app/Tests/**/*.swift') }}
           restore-keys: |
             ${{ runner.os }}-xcode-codeql-ios-
             ${{ runner.os }}-xcode-
@@ -52,7 +52,7 @@ jobs:
       - name: Build for analysis
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
-        run: PLATFORM_MODE=iphone RUN_ANALYZE=false RUN_TESTS=false ./frontend/build.sh
+        run: PLATFORM_MODE=iphone RUN_ANALYZE=false RUN_TESTS=false ./app/build.sh
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
