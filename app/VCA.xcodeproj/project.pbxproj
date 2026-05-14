@@ -38,6 +38,10 @@
 		A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F085 /* PushNotificationsClient.swift */; };
 		A0000000000000000000B086 /* ModelContainerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F086 /* ModelContainerClient.swift */; };
 		A0000000000000000000B087 /* BundleInfoClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F087 /* BundleInfoClient.swift */; };
+		A0000000000000000000B090 /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F090 /* AppFeature.swift */; };
+		A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F091 /* ForcedUpdateFeature.swift */; };
+		A0000000000000000000B092 /* OnboardingFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F092 /* OnboardingFeature.swift */; };
+		A0000000000000000000B093 /* MainFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F093 /* MainFeature.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
@@ -48,6 +52,9 @@
 		D0000000000000000000B004 /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D004 /* DependenciesMacros */; };
 		D0000000000000000000B005 /* ConcurrencyExtras in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D005 /* ConcurrencyExtras */; };
 		D0000000000000000000B006 /* IssueReporting in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D006 /* IssueReporting */; };
+		D0000000000000000000B007 /* CasePaths in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D007 /* CasePaths */; };
+		D0000000000000000000B008 /* Perception in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D008 /* Perception */; };
+		D0000000000000000000B009 /* PerceptionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D009 /* PerceptionCore */; };
 		C0000000000000000000B001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F001 /* AppStateTests.swift */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
@@ -104,6 +111,10 @@
 		A0000000000000000000F085 /* PushNotificationsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationsClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F086 /* ModelContainerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelContainerClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F087 /* BundleInfoClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleInfoClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F090 /* AppFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F091 /* ForcedUpdateFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F092 /* OnboardingFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F093 /* MainFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
 		A0000000000000000000F036 /* openapi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = openapi.json; sourceTree = "<group>"; };
 		A0000000000000000000F040 /* ContributionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculator.swift; sourceTree = "<group>"; };
@@ -130,6 +141,9 @@
 				D0000000000000000000B004 /* DependenciesMacros in Frameworks */,
 				D0000000000000000000B005 /* ConcurrencyExtras in Frameworks */,
 				D0000000000000000000B006 /* IssueReporting in Frameworks */,
+				D0000000000000000000B007 /* CasePaths in Frameworks */,
+				D0000000000000000000B008 /* Perception in Frameworks */,
+				D0000000000000000000B009 /* PerceptionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,8 +210,20 @@
 				A0000000000000000000F006 /* AppBrand.swift */,
 				A0000000000000000000F007 /* DesignSystem.swift */,
 				A0000000000000000000A080 /* Dependencies */,
+				A0000000000000000000A090 /* AppFeature */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000A090 /* AppFeature */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000F090 /* AppFeature.swift */,
+				A0000000000000000000F091 /* ForcedUpdateFeature.swift */,
+				A0000000000000000000F092 /* OnboardingFeature.swift */,
+				A0000000000000000000F093 /* MainFeature.swift */,
+			);
+			path = AppFeature;
 			sourceTree = "<group>";
 		};
 		A0000000000000000000A080 /* Dependencies */ = {
@@ -332,6 +358,9 @@
 				D0000000000000000000D004 /* DependenciesMacros */,
 				D0000000000000000000D005 /* ConcurrencyExtras */,
 				D0000000000000000000D006 /* IssueReporting */,
+				D0000000000000000000D007 /* CasePaths */,
+				D0000000000000000000D008 /* Perception */,
+				D0000000000000000000D009 /* PerceptionCore */,
 			);
 			productName = VCA;
 			productReference = A0000000000000000000A00A /* VCA.app */;
@@ -391,6 +420,8 @@
 				D0000000000000000000C002 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				D0000000000000000000C003 /* XCRemoteSwiftPackageReference "swift-concurrency-extras" */,
 				D0000000000000000000C004 /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */,
+				D0000000000000000000C005 /* XCRemoteSwiftPackageReference "swift-case-paths" */,
+				D0000000000000000000C006 /* XCRemoteSwiftPackageReference "swift-perception" */,
 			);
 			productRefGroup = A0000000000000000000A008 /* Products */;
 			projectDirPath = "";
@@ -458,6 +489,10 @@
 				A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */,
 				A0000000000000000000B086 /* ModelContainerClient.swift in Sources */,
 				A0000000000000000000B087 /* BundleInfoClient.swift in Sources */,
+				A0000000000000000000B090 /* AppFeature.swift in Sources */,
+				A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */,
+				A0000000000000000000B092 /* OnboardingFeature.swift in Sources */,
+				A0000000000000000000B093 /* MainFeature.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -702,6 +737,22 @@
 				version = 1.9.0;
 			};
 		};
+		D0000000000000000000C005 /* XCRemoteSwiftPackageReference "swift-case-paths" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-case-paths";
+			requirement = {
+				kind = exactVersion;
+				version = 1.7.3;
+			};
+		};
+		D0000000000000000000C006 /* XCRemoteSwiftPackageReference "swift-perception" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-perception";
+			requirement = {
+				kind = exactVersion;
+				version = 2.0.10;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -734,6 +785,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D0000000000000000000C004 /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */;
 			productName = IssueReporting;
+		};
+		D0000000000000000000D007 /* CasePaths */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C005 /* XCRemoteSwiftPackageReference "swift-case-paths" */;
+			productName = CasePaths;
+		};
+		D0000000000000000000D008 /* Perception */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C006 /* XCRemoteSwiftPackageReference "swift-perception" */;
+			productName = Perception;
+		};
+		D0000000000000000000D009 /* PerceptionCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C006 /* XCRemoteSwiftPackageReference "swift-perception" */;
+			productName = PerceptionCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
