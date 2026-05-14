@@ -27,8 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+      - name: Log selected Xcode version
+        # macos-26 runners ship with Xcode 26.x selected by default; just log
+        # the version so it is visible in the run. Avoid hard-coding a path
+        # like /Applications/Xcode_26.app, which is not guaranteed to exist
+        # on the runner image.
+        run: sudo xcodebuild -version
 
       - name: Cache Xcode derived data
         uses: actions/cache@v5

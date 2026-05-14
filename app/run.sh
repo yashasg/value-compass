@@ -67,9 +67,27 @@ validate_project() {
 }
 
 runtime_id() {
+  # Look up the SimRuntime identifier for the iOS marketing version (e.g. "26.4").
+  # The build version embedded in the identifier may include an extra component
+  # (e.g. iOS-26-4-1), so we resolve it from the runtime listing rather than
+  # constructing the ID from the marketing version.
   local version="$1"
-  local id="com.apple.CoreSimulator.SimRuntime.iOS-${version//./-}"
-  xcrun simctl list runtimes available | grep -F "$id" >/dev/null 2>&1 || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
+  local list
+  local list_status=0
+  local id
+
+  # Capture the runtime listing first so a failure of `xcrun simctl` (under
+  # `set -e -o pipefail`) does not abort the script before our explicit
+  # error message can run, and so any stderr is preserved for diagnostics.
+  list="$(xcrun simctl list runtimes available)" || list_status=$?
+  if [ "$list_status" -ne 0 ]; then
+    fail "Failed to list iOS Simulator runtimes (xcrun simctl exit $list_status). Check Xcode/Simulator install with 'xcrun simctl list runtimes available'."
+  fi
+
+  id="$(printf '%s\n' "$list" \
+    | sed -n "s/^iOS ${version//./\\.} .*[[:space:]]\\(com\\.apple\\.CoreSimulator\\.SimRuntime\\.iOS-[0-9-]*\\)[[:space:]]*$/\\1/p" \
+    | head -n 1)"
+  [ -n "$id" ] || fail "iOS Simulator runtime $version is not installed. Install it in Xcode Settings > Platforms, or override IOS_VERSION/IPADOS_VERSION."
   printf '%s\n' "$id"
 }
 
@@ -78,9 +96,27 @@ latest_ios_version() {
 }
 
 resolve_ios_version() {
+  # Normalize any caller-supplied version (latest, marketing, or runtime
+  # build version) to the marketing version reported by simctl. Downstream
+  # callers (simulator_udid, runtime_id) expect the marketing version
+  # because `simctl list devices "iOS X.Y"` only matches on it.
   local version="$1"
   if [ "$version" = "latest" ]; then
     latest_ios_version
+    return
+  fi
+
+  # If `version` matches the build version inside parentheses on a
+  # runtime line (e.g. "iOS 26.4 (26.4.1 - 24E5208a) - ..."), translate
+  # it back to the marketing version ("26.4") so all downstream lookups
+  # keep working when callers override IOS_VERSION/IPADOS_VERSION with
+  # the build version reported by `simctl list runtimes`.
+  local marketing
+  marketing="$(xcrun simctl list runtimes available 2>/dev/null \
+    | sed -n "s/^iOS \\([0-9][0-9.]*\\) (${version//./\\.} -.*/\\1/p" \
+    | head -n 1)"
+  if [ -n "$marketing" ]; then
+    printf '%s\n' "$marketing"
   else
     printf '%s\n' "$version"
   fi
@@ -107,19 +143,23 @@ simulator_udid() {
 }
 
 boot_simulator() {
+  # Boot the given simulator and wait for it to be ready. All status output
+  # (from `simctl boot`/`bootstatus`) is redirected to stderr so this function
+  # is safe to call from inside a `$(...)` capture without contaminating the
+  # captured stdout (e.g. a UDID being returned by `ensure_simulator`).
   local udid="$1"
   local boot_error
   boot_error="$(mktemp "${TMPDIR:-/tmp}/vca-sim-boot.XXXXXX")"
 
   for attempt in 1 2 3; do
-    if xcrun simctl boot "$udid" 2>"$boot_error"; then
-      xcrun simctl bootstatus "$udid" -b
+    if xcrun simctl boot "$udid" 2>"$boot_error" 1>&2; then
+      xcrun simctl bootstatus "$udid" -b 1>&2
       rm -f "$boot_error"
       return
     fi
 
     if grep -F "current state: Booted" "$boot_error" >/dev/null 2>&1; then
-      xcrun simctl bootstatus "$udid" -b
+      xcrun simctl bootstatus "$udid" -b 1>&2
       rm -f "$boot_error"
       return
     fi
@@ -138,6 +178,9 @@ boot_simulator() {
 }
 
 ensure_simulator() {
+  # Returns the UDID of an available simulator for the given device/version,
+  # creating one if necessary, then boots it. Status messages are written to
+  # stderr so the UDID can be captured from stdout by the caller.
   local device="$1"
   local version="$2"
   local runtime
@@ -147,10 +190,12 @@ ensure_simulator() {
   udid="$(simulator_udid "$device" "$version")"
 
   if [ -z "$udid" ]; then
-    printf '==> Creating simulator %s on iOS %s\n' "$device" "$version"
+    printf '==> Creating simulator %s on iOS %s\n' "$device" "$version" >&2
     udid="$(xcrun simctl create "$device" "$device" "$runtime")" || fail "Could not create simulator '$device' for runtime '$runtime'. Override IPHONE_DEVICE/IPAD_DEVICE with an installed simulator device type."
   fi
-  printf '==> Booting simulator %s (%s)\n' "$device" "$udid"
+
+  [ -n "$udid" ] || fail "Could not resolve UDID for simulator '$device' on iOS $version."
+  printf '==> Booting simulator %s (%s)\n' "$device" "$udid" >&2
   boot_simulator "$udid"
   printf '%s\n' "$udid"
 }
@@ -166,7 +211,11 @@ xcode_container_args() {
 build_app() {
   local device="$1"
   local version="$2"
-  local destination="platform=iOS Simulator,name=$device,OS=$version"
+  local udid="$3"
+  # Use the simulator UDID rather than name+OS to avoid mismatches between the
+  # marketing version reported by simctl (e.g. "26.4") and the build version
+  # used by xcodebuild's destination matcher (e.g. "26.4.1").
+  local destination="platform=iOS Simulator,id=$udid"
 
   printf '==> Building %s for %s %s\n' "$SCHEME" "$device" "$version"
   xcodebuild \
@@ -225,8 +274,8 @@ validate_project
 validate_positive_integer SIMCTL_RETRY_ATTEMPTS "$SIMCTL_RETRY_ATTEMPTS"
 validate_positive_integer SIMCTL_RETRY_DELAY_SECONDS "$SIMCTL_RETRY_DELAY_SECONDS"
 select_values
-SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION" | tail -n 1)"
-build_app "$DEVICE_NAME" "$OS_VERSION"
+SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION")"
+build_app "$DEVICE_NAME" "$OS_VERSION" "$SIM_UDID"
 APP_PATH="$(built_app_path)"
 [ -n "$APP_PATH" ] || fail "No built .app found under '$DERIVED_DATA_PATH'. Check SCHEME/CONFIGURATION or set DERIVED_DATA_PATH."
 BUNDLE_ID="$(bundle_id_for_app "$APP_PATH")"
