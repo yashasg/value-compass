@@ -26,6 +26,24 @@ Last-Modified: <UTC timestamp>
 X-Min-App-Version: <minimum supported iOS app version>
 ```
 
+## Error Responses
+
+Non-2xx API errors use a top-level structured envelope so generated clients can
+branch on stable codes instead of parsing message text:
+
+```json
+{
+  "code": "syncUnavailable",
+  "message": "Database is unreachable.",
+  "retry_after_seconds": 60
+}
+```
+
+Common codes include `appAttestMissing`, `portfolioNotFound`,
+`syncUnavailable`, `schemaUnsupported`, `conflictDetected`,
+`lossyMappingRejected`, `stockDataPending`, `stockDataMissing`,
+`stockDataStale`, and `unsupportedMovingAverageWindow`.
+
 ## Security
 
 - App Attest header validated on every request.

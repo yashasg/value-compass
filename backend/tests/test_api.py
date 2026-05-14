@@ -72,10 +72,32 @@ def test_health_ok(client: TestClient) -> None:
 
 
 def test_schema_version_requires_attest(client: TestClient) -> None:
-    assert client.get("/schema/version").status_code == 401
+    unauthorized = client.get("/schema/version")
+    assert unauthorized.status_code == 401
+    assert unauthorized.json() == {
+        "code": "appAttestMissing",
+        "message": "Missing X-App-Attest header.",
+        "retry_after_seconds": None,
+    }
+
     resp = client.get("/schema/version", headers=ATTEST)
     assert resp.status_code == 200
     assert resp.json()["version"] >= 1
+
+
+def test_openapi_describes_error_envelope(client: TestClient) -> None:
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+    error_schema = components["ErrorEnvelope"]
+
+    assert error_schema["properties"]["code"]["$ref"].endswith("/ErrorCode")
+    assert "syncUnavailable" in components["ErrorCode"]["enum"]
+    assert (
+        schema["paths"]["/portfolio/data"]["get"]["responses"]["404"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        == "#/components/schemas/ErrorEnvelope"
+    )
 
 
 def test_portfolio_status_empty(client: TestClient) -> None:
@@ -114,6 +136,11 @@ def test_portfolio_data_404_for_unknown_device(client: TestClient) -> None:
         headers=ATTEST,
     )
     assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "portfolioNotFound",
+        "message": "Portfolio not found for device.",
+        "retry_after_seconds": None,
+    }
 
 
 def test_portfolio_data_returns_holdings(
@@ -221,3 +248,4 @@ def test_add_holding_404_for_unknown_device(client: TestClient) -> None:
         headers=ATTEST,
     )
     assert resp.status_code == 404
+    assert resp.json()["code"] == "portfolioNotFound"
