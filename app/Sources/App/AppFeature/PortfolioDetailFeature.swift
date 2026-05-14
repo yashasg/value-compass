@@ -146,25 +146,20 @@ struct PortfolioDetailFeature {
 
   /// Loads the snapshot through a `BackgroundModelActor` so the read happens
   /// off the main actor. Static so the effect closure does not need to
-  /// capture `self`.
+  /// capture `self`. The body is already `async`, so it awaits the actor
+  /// task directly and uses `LockIsolated` only to bridge the
+  /// `modelContainer.task` `Void` return into a value the call site can
+  /// read.
   private static func loadSnapshot(
     modelContainer: ModelContainerClient,
     id: UUID
   ) async throws -> PortfolioDetailSnapshot? {
-    try await withCheckedThrowingContinuation { continuation in
-      Task {
-        do {
-          let collected = LockIsolated<PortfolioDetailSnapshot?>(nil)
-          try await modelContainer.task { actor in
-            let snapshot = try await actor.loadPortfolioDetailSnapshot(id: id)
-            collected.setValue(snapshot)
-          }
-          continuation.resume(returning: collected.value)
-        } catch {
-          continuation.resume(throwing: error)
-        }
-      }
+    let collected = LockIsolated<PortfolioDetailSnapshot?>(nil)
+    try await modelContainer.task { actor in
+      let snapshot = try await actor.loadPortfolioDetailSnapshot(id: id)
+      collected.setValue(snapshot)
     }
+    return collected.value
   }
 }
 
@@ -322,7 +317,7 @@ extension BackgroundModelActor {
 extension ContributionOutput: @unchecked Sendable {}
 
 extension ContributionOutput: Equatable {
-  public static func == (lhs: ContributionOutput, rhs: ContributionOutput) -> Bool {
+  static func == (lhs: ContributionOutput, rhs: ContributionOutput) -> Bool {
     lhs.totalAmount == rhs.totalAmount
       && lhs.categoryBreakdown == rhs.categoryBreakdown
       && lhs.allocations == rhs.allocations

@@ -352,13 +352,17 @@ private struct PortfolioDetailLegacyBridge: View {
 
 /// Holds the short-lived `Store` used by `PortfolioDetailLegacyBridge` so the
 /// store survives view re-creations triggered by SwiftUI re-renders. Mirrors
-/// the same pattern used by `PortfolioListLegacyStoreHolder`.
+/// the same pattern used by `PortfolioListLegacyStoreHolder`. The cache is
+/// keyed by `Portfolio.id` so iPad split-view selection changes (which can
+/// reuse the same view identity with a different portfolio) build a fresh
+/// store instead of leaking the previously selected portfolio's calculation.
 @MainActor
 private final class PortfolioDetailLegacyStoreHolder: ObservableObject {
   private var cachedStore: StoreOf<PortfolioDetailFeature>?
+  private var cachedPortfolioID: UUID?
 
   func store(for portfolio: Portfolio) -> StoreOf<PortfolioDetailFeature> {
-    if let cachedStore {
+    if let cachedStore, cachedPortfolioID == portfolio.id {
       return cachedStore
     }
     let initial = PortfolioDetailFeature.State(
@@ -369,6 +373,7 @@ private final class PortfolioDetailLegacyStoreHolder: ObservableObject {
       PortfolioDetailFeature()
     }
     cachedStore = store
+    cachedPortfolioID = portfolio.id
     return store
   }
 }
