@@ -1,7 +1,8 @@
+import ComposableArchitecture
 import SwiftData
 import SwiftUI
 
-enum HoldingsDraftIssue: Equatable {
+enum HoldingsDraftIssue: Equatable, Sendable {
   case noCategories
   case emptyCategoryName
   case invalidCategoryWeight
@@ -47,7 +48,7 @@ enum HoldingsDraftIssue: Equatable {
   }
 }
 
-struct HoldingsDraft: Equatable {
+struct HoldingsDraft: Equatable, Sendable {
   var categories: [CategoryDraft]
 
   init(categories: [CategoryDraft] = []) {
@@ -244,7 +245,7 @@ struct HoldingsDraft: Equatable {
   }
 }
 
-enum HoldingsEditorValidationError: LocalizedError, Equatable {
+enum HoldingsEditorValidationError: LocalizedError, Equatable, Sendable {
   case issue(HoldingsDraftIssue)
 
   var errorDescription: String? {
@@ -255,12 +256,12 @@ enum HoldingsEditorValidationError: LocalizedError, Equatable {
   }
 }
 
-enum MoveDirection {
+enum MoveDirection: Equatable, Sendable {
   case up
   case down
 }
 
-struct CategoryDraft: Identifiable, Equatable {
+struct CategoryDraft: Identifiable, Equatable, Sendable {
   let id: UUID
   var name: String
   var weightPercentText: String
@@ -336,7 +337,7 @@ struct CategoryDraft: Identifiable, Equatable {
   }
 }
 
-struct TickerDraft: Identifiable, Equatable {
+struct TickerDraft: Identifiable, Equatable, Sendable {
   let id: UUID
   var symbol: String
   var currentPriceText: String
@@ -451,33 +452,52 @@ struct TickerDraft: Identifiable, Equatable {
   }
 }
 
+/// Holdings editor view, driven by `HoldingsEditorFeature`.
+///
+/// Two initializers exist while the legacy MVVM stack still wraps this view:
+///
+/// - `init(store:)` is the production entry point that Phase 2 (#159) will
+///   use once `MainFeature.path.holdingsEditor` pushes the destination from
+///   `PortfolioDetailView` / `MainView`.
+/// - `init(portfolio:)` is the legacy bridge: it owns a short-lived `Store`
+///   anchored in `@State`, seeded synchronously from the SwiftData
+///   `Portfolio` so the existing `NavigationLink` call sites in `MainView`
+///   keep compiling without a per-render reset.
 struct HoldingsEditorView: View {
-  let portfolio: Portfolio
-
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
-  @Environment(\.modelContext) private var modelContext
-  @State private var draft: HoldingsDraft
-  @State private var saveError: SaveError?
+  @State private var store: StoreOf<HoldingsEditorFeature>
   @State private var selectedCategoryID: UUID?
 
+  init(store: StoreOf<HoldingsEditorFeature>) {
+    _store = State(initialValue: store)
+  }
+
   init(portfolio: Portfolio) {
-    self.portfolio = portfolio
-    _draft = State(initialValue: HoldingsDraft(portfolio: portfolio))
+    let initialState = HoldingsEditorFeature.State(
+      portfolioID: portfolio.id,
+      draft: HoldingsDraft(portfolio: portfolio)
+    )
+    _store = State(
+      initialValue: Store(initialState: initialState) {
+        HoldingsEditorFeature()
+      })
   }
 
   var body: some View {
+    @Bindable var store = store
     Group {
       if horizontalSizeClass == .regular {
-        splitEditor
+        splitEditor(store: store)
       } else {
-        compactEditor
+        compactEditor(store: store)
       }
     }
     .navigationTitle("Edit Holdings")
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Cancel") {
+          store.send(.delegate(.canceled))
           dismiss()
         }
       }
@@ -490,27 +510,45 @@ struct HoldingsEditorView: View {
 
       ToolbarItem(placement: .confirmationAction) {
         Button("Save") {
-          save()
+          Task {
+            await store.send(.saveTapped).finish()
+            if store.saveError == nil {
+              dismiss()
+            }
+          }
         }
         .accessibilityIdentifier("holdings.editor.save")
       }
     }
-    .alert(item: $saveError) { error in
-      Alert(
-        title: Text("Could Not Save Holdings"),
-        message: Text(error.message),
-        dismissButton: .default(Text("OK"))
-      )
+    .alert(
+      "Could Not Save Holdings",
+      isPresented: Binding(
+        get: { store.saveError != nil },
+        set: { isPresented in
+          if !isPresented {
+            store.send(.saveErrorDismissed)
+          }
+        }
+      ),
+      presenting: store.saveError
+    ) { _ in
+      Button("OK", role: .cancel) {
+        store.send(.saveErrorDismissed)
+      }
+    } message: { message in
+      Text(message)
     }
+    .task { await store.send(.task).finish() }
     .onAppear(perform: selectInitialCategoryIfNeeded)
-    .onChange(of: draft.categories.map(\.id)) { _, _ in
+    .onChange(of: store.draft.categories.map(\.id)) { _, _ in
       selectInitialCategoryIfNeeded()
     }
   }
 
-  private var compactEditor: some View {
-    Form {
-      if draft.categories.isEmpty {
+  private func compactEditor(store: StoreOf<HoldingsEditorFeature>) -> some View {
+    @Bindable var store = store
+    return Form {
+      if store.draft.categories.isEmpty {
         ContentUnavailableView {
           Label("No Categories", systemImage: "folder.badge.plus")
         } description: {
@@ -521,17 +559,18 @@ struct HoldingsEditorView: View {
       } else {
         validationSection
 
-        ForEach($draft.categories) { $category in
+        ForEach($store.draft.categories) { $category in
           categorySection(category: $category)
         }
       }
     }
   }
 
-  private var splitEditor: some View {
-    NavigationSplitView {
+  private func splitEditor(store: StoreOf<HoldingsEditorFeature>) -> some View {
+    @Bindable var store = store
+    return NavigationSplitView {
       List(selection: $selectedCategoryID) {
-        if draft.categories.isEmpty {
+        if store.draft.categories.isEmpty {
           ContentUnavailableView {
             Label("No Categories", systemImage: "folder.badge.plus")
           } description: {
@@ -542,7 +581,7 @@ struct HoldingsEditorView: View {
         } else {
           validationSummaryRow
 
-          ForEach(draft.categories) { category in
+          ForEach(store.draft.categories) { category in
             VStack(alignment: .leading, spacing: 6) {
               Text(category.displayName)
                 .valueCompassTextStyle(.bodyLarge)
@@ -572,7 +611,7 @@ struct HoldingsEditorView: View {
         ideal: AppLayoutMetrics.sidebarIdealWidth,
         max: AppLayoutMetrics.sidebarMaxWidth)
     } detail: {
-      if draft.categories.isEmpty {
+      if store.draft.categories.isEmpty {
         ContentUnavailableView {
           Label("No Categories", systemImage: "folder.badge.plus")
         } description: {
@@ -580,8 +619,8 @@ struct HoldingsEditorView: View {
         } actions: {
           addCategoryButton
         }
-      } else if let selectedCategory {
-        categoryDetail(category: selectedCategory)
+      } else if let selectedIndex = selectedCategoryIndex {
+        categoryDetail(category: $store.draft.categories[selectedIndex])
       } else {
         ContentUnavailableView {
           Label("Select a Category", systemImage: "sidebar.leading")
@@ -604,7 +643,7 @@ struct HoldingsEditorView: View {
 
   @ViewBuilder
   private var validationSummaryRow: some View {
-    let issues = draft.issues()
+    let issues = store.issues
     if !issues.isEmpty {
       Label("\(issues.count) warnings", systemImage: "exclamationmark.triangle")
         .foregroundStyle(validationSummaryColor(for: issues))
@@ -614,7 +653,7 @@ struct HoldingsEditorView: View {
 
   @ViewBuilder
   private var validationSection: some View {
-    let issues = draft.issues()
+    let issues = store.issues
     if !issues.isEmpty {
       Section("Warnings") {
         ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
@@ -654,7 +693,7 @@ struct HoldingsEditorView: View {
               .autocorrectionDisabled()
               .accessibilityIdentifier("holdings.ticker.symbol")
 
-            tickerControls(category: category, tickerID: ticker.id)
+            tickerControls(categoryID: category.wrappedValue.id, tickerID: ticker.id)
           }
 
           tickerMarketDataFields(ticker: $ticker)
@@ -673,7 +712,7 @@ struct HoldingsEditorView: View {
       }
 
       Button {
-        category.wrappedValue.addTicker()
+        store.send(.addTicker(categoryID: category.wrappedValue.id))
       } label: {
         Label("Add Ticker", systemImage: "plus")
       }
@@ -692,25 +731,25 @@ struct HoldingsEditorView: View {
   private func categoryControls(categoryID: UUID) -> some View {
     HStack {
       Button {
-        draft.moveCategory(id: categoryID, direction: .up)
+        store.send(.moveCategory(id: categoryID, direction: .up))
       } label: {
         Image(systemName: "chevron.up")
       }
-      .disabled(draft.categories.first?.id == categoryID)
+      .disabled(store.draft.categories.first?.id == categoryID)
       .appMinimumTouchTarget()
       .accessibilityLabel("Move category up")
 
       Button {
-        draft.moveCategory(id: categoryID, direction: .down)
+        store.send(.moveCategory(id: categoryID, direction: .down))
       } label: {
         Image(systemName: "chevron.down")
       }
-      .disabled(draft.categories.last?.id == categoryID)
+      .disabled(store.draft.categories.last?.id == categoryID)
       .appMinimumTouchTarget()
       .accessibilityLabel("Move category down")
 
       Button(role: .destructive) {
-        draft.deleteCategory(id: categoryID)
+        store.send(.deleteCategory(id: categoryID))
       } label: {
         Image(systemName: "trash")
       }
@@ -721,13 +760,13 @@ struct HoldingsEditorView: View {
     .buttonStyle(.borderless)
   }
 
-  private var selectedCategory: Binding<CategoryDraft>? {
+  private var selectedCategoryIndex: Int? {
     guard let selectedCategoryID,
-      let index = draft.categories.firstIndex(where: { $0.id == selectedCategoryID })
+      let index = store.draft.categories.firstIndex(where: { $0.id == selectedCategoryID })
     else {
       return nil
     }
-    return $draft.categories[index]
+    return index
   }
 
   private func categoryDetail(category: Binding<CategoryDraft>) -> some View {
@@ -761,7 +800,7 @@ struct HoldingsEditorView: View {
               .valueCompassTextStyle(.headlineMedium)
             Spacer()
             Button {
-              category.wrappedValue.addTicker()
+              store.send(.addTicker(categoryID: category.wrappedValue.id))
             } label: {
               Label("Add Ticker", systemImage: "plus")
             }
@@ -786,7 +825,7 @@ struct HoldingsEditorView: View {
 
                   tickerMarketDataFields(ticker: $ticker)
 
-                  tickerControls(category: category, tickerID: ticker.id)
+                  tickerControls(categoryID: category.wrappedValue.id, tickerID: ticker.id)
                 }
 
                 if let message = ticker.marketDataStatusMessage {
@@ -828,28 +867,28 @@ struct HoldingsEditorView: View {
     }
   }
 
-  private func tickerControls(category: Binding<CategoryDraft>, tickerID: UUID) -> some View {
+  private func tickerControls(categoryID: UUID, tickerID: UUID) -> some View {
     HStack(spacing: 4) {
       Button {
-        category.wrappedValue.moveTicker(id: tickerID, direction: .up)
+        store.send(.moveTicker(categoryID: categoryID, tickerID: tickerID, direction: .up))
       } label: {
         Image(systemName: "chevron.up")
       }
-      .disabled(category.wrappedValue.tickers.first?.id == tickerID)
+      .disabled(firstTickerID(in: categoryID) == tickerID)
       .appMinimumTouchTarget()
       .accessibilityLabel("Move ticker up")
 
       Button {
-        category.wrappedValue.moveTicker(id: tickerID, direction: .down)
+        store.send(.moveTicker(categoryID: categoryID, tickerID: tickerID, direction: .down))
       } label: {
         Image(systemName: "chevron.down")
       }
-      .disabled(category.wrappedValue.tickers.last?.id == tickerID)
+      .disabled(lastTickerID(in: categoryID) == tickerID)
       .appMinimumTouchTarget()
       .accessibilityLabel("Move ticker down")
 
       Button(role: .destructive) {
-        category.wrappedValue.deleteTicker(id: tickerID)
+        store.send(.deleteTicker(categoryID: categoryID, tickerID: tickerID))
       } label: {
         Image(systemName: "trash")
       }
@@ -860,46 +899,43 @@ struct HoldingsEditorView: View {
     .buttonStyle(.borderless)
   }
 
+  private func firstTickerID(in categoryID: UUID) -> UUID? {
+    store.draft.categories.first(where: { $0.id == categoryID })?.tickers.first?.id
+  }
+
+  private func lastTickerID(in categoryID: UUID) -> UUID? {
+    store.draft.categories.first(where: { $0.id == categoryID })?.tickers.last?.id
+  }
+
   private func addCategory() {
-    draft.addCategory()
-    selectedCategoryID = draft.categories.last?.id
+    store.send(.addCategoryTapped)
+    selectedCategoryID = store.draft.categories.last?.id
   }
 
   private func deleteCategories(at offsets: IndexSet) {
-    let deletedIDs = offsets.map { draft.categories[$0].id }
+    let deletedIDs = offsets.map { store.draft.categories[$0].id }
     for id in deletedIDs {
-      draft.deleteCategory(id: id)
+      store.send(.deleteCategory(id: id))
     }
     if let selectedCategoryID, deletedIDs.contains(selectedCategoryID) {
-      self.selectedCategoryID = draft.categories.first?.id
+      self.selectedCategoryID = store.draft.categories.first?.id
     }
   }
 
   private func selectInitialCategoryIfNeeded() {
-    guard !draft.categories.isEmpty else {
+    guard !store.draft.categories.isEmpty else {
       selectedCategoryID = nil
       return
     }
 
     if selectedCategoryID == nil
-      || !draft.categories.contains(where: { $0.id == selectedCategoryID })
+      || !store.draft.categories.contains(where: { $0.id == selectedCategoryID })
     {
-      selectedCategoryID = draft.categories.first?.id
+      selectedCategoryID = store.draft.categories.first?.id
     }
   }
 
   private func validationSummaryColor(for issues: [HoldingsDraftIssue]) -> Color {
     issues.contains(where: \.blocksSaving) ? Color.appError : Color.appWarning
-  }
-
-  private func save() {
-    do {
-      try draft.apply(to: portfolio, in: modelContext)
-      dismiss()
-    } catch let error as HoldingsEditorValidationError {
-      saveError = SaveError(message: error.localizedDescription)
-    } catch {
-      saveError = SaveError(message: error.localizedDescription)
-    }
   }
 }
