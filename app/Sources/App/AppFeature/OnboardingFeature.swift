@@ -1,5 +1,4 @@
 import ComposableArchitecture
-import Foundation
 
 /// Reducer that drives the first-launch onboarding flow shown by
 /// `OnboardingView`.
@@ -34,7 +33,6 @@ struct OnboardingFeature {
     }
   }
 
-  @Dependency(\.userDefaults) var userDefaults
   @Dependency(\.pushNotifications) var pushNotifications
 
   var body: some ReducerOf<Self> {
