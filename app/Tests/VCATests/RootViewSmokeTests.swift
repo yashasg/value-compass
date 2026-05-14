@@ -12,7 +12,9 @@ final class RootViewSmokeTests: XCTestCase {
     let store = Store(initialState: AppFeature.State()) {
       AppFeature()
     } withDependencies: {
-      $0.minAppVersion.events = { AsyncStream { _ in } }
+      $0.minAppVersion.events = {
+        AsyncStream { continuation in continuation.finish() }
+      }
     }
     let view = RootView(store: store)
       .modelContainer(container)
