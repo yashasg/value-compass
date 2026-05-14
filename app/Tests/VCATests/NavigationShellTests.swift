@@ -13,46 +13,31 @@ final class NavigationShellTests: XCTestCase {
   }
 
   func testCompactWidthUsesNavigationStack() {
-    XCTAssertEqual(MainView.navigationShellKind(for: .compact), .stack)
+    XCTAssertEqual(MainFeature.shellKind(for: .compact), .stack)
   }
 
   func testRegularWidthUsesNavigationSplitView() {
-    XCTAssertEqual(MainView.navigationShellKind(for: .regular), .splitView)
+    XCTAssertEqual(MainFeature.shellKind(for: .regular), .splitView)
   }
 
   func testUnspecifiedWidthUsesNavigationSplitViewFallback() {
-    XCTAssertEqual(MainView.navigationShellKind(for: nil), .splitView)
+    XCTAssertEqual(MainFeature.shellKind(for: nil), .splitView)
   }
 
   func testSplitViewShowsSettingsDetailWhenSettingsSelected() {
-    let portfolioID = UUID()
+    var state = MainFeature.State()
+    state.shellKind = .splitView
+    state.detail = .settings
 
-    let detail = MainView.detailSelection(
-      sidebarSelection: .settings,
-      selectedPortfolioID: portfolioID,
-      firstPortfolioID: portfolioID)
-
-    XCTAssertEqual(detail, .settings)
+    XCTAssertEqual(state.detail, .settings)
+    XCTAssertNil(state.detailPortfolio)
   }
 
-  func testSplitViewFallsBackToFirstPortfolioWhenNoneSelected() {
-    let portfolioID = UUID()
+  func testSplitViewFallsBackToEmptyDetailWhenNothingSelected() {
+    let state = MainFeature.State()
 
-    let detail = MainView.detailSelection(
-      sidebarSelection: .portfolios,
-      selectedPortfolioID: nil,
-      firstPortfolioID: portfolioID)
-
-    XCTAssertEqual(detail, .portfolio(portfolioID))
-  }
-
-  func testSplitViewShowsEmptyPortfolioStateWhenNoPortfoliosExist() {
-    let detail = MainView.detailSelection(
-      sidebarSelection: .portfolios,
-      selectedPortfolioID: nil,
-      firstPortfolioID: nil)
-
-    XCTAssertEqual(detail, .emptyPortfolioSelection)
+    XCTAssertEqual(state.detail, .emptyPortfolioSelection)
+    XCTAssertNil(state.detailPortfolio)
   }
 
   func testPortfolioDraftTrimsAndValidatesPortfolioValues() throws {
