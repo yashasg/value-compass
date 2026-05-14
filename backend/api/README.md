@@ -28,8 +28,8 @@ X-Min-App-Version: <minimum supported iOS app version>
 
 ## Error Responses
 
-Non-2xx API errors use a top-level structured envelope so generated clients can
-branch on stable codes instead of parsing message text:
+Application and request-validation errors use a top-level structured envelope so
+generated clients can branch on stable codes instead of parsing message text:
 
 ```json
 {

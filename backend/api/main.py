@@ -32,6 +32,7 @@ from fastapi import (
     Response,
     status,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
@@ -128,6 +129,22 @@ async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.envelope.model_dump(mode="json"),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    _: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Render request validation failures as the public error envelope."""
+    envelope = ErrorEnvelope(
+        code=ErrorCode.SCHEMA_UNSUPPORTED,
+        message="Request validation failed.",
+    )
+    log.info("request validation failed: %s", exc.errors())
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=envelope.model_dump(mode="json"),
     )
 
 
@@ -244,7 +261,11 @@ class AddHoldingRequest(BaseModel):
 @app.get(
     "/health",
     response_model=HealthResponse,
-    responses={status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[503]},
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ]
+    },
 )
 def health(db: Session = Depends(get_db)) -> HealthResponse:
     """Return 200 if the API process is up and Postgres is reachable."""
@@ -264,7 +285,11 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
 @app.get(
     "/schema/version",
     response_model=SchemaVersionResponse,
-    responses={status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[401]},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ]
+    },
 )
 def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
     """Return the API schema version required by the client."""
@@ -274,7 +299,11 @@ def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionRespons
 @app.get(
     "/portfolio/status",
     response_model=PortfolioStatusResponse,
-    responses={status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[401]},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ]
+    },
 )
 def portfolio_status(
     db: Session = Depends(get_db),
@@ -298,10 +327,16 @@ def portfolio_status(
     "/portfolio/data",
     response_model=PortfolioDataResponse,
     responses={
-        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[401],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[404],
-        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[422],
-        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[503],
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
     },
 )
 def portfolio_data(
@@ -313,9 +348,19 @@ def portfolio_data(
 
     Only called by the iOS client on a cache miss.
     """
-    portfolio = db.execute(
-        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
-    ).scalar_one_or_none()
+    try:
+        portfolio = db.execute(
+            select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("portfolio data lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
     if portfolio is None:
         raise ApiError(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -369,11 +414,17 @@ def portfolio_data(
     "/portfolio/holdings",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
-        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[401],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[404],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES[409],
-        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[422],
-        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[503],
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES[status.HTTP_409_CONFLICT],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
     },
 )
 def add_holding(
@@ -390,14 +441,47 @@ def add_holding(
     ``202 Accepted`` either way — the client shows a spinner until the
     APNs push arrives.
     """
-    portfolio = db.execute(
-        select(Portfolio).where(Portfolio.device_uuid == payload.device_uuid)
-    ).scalar_one_or_none()
+    try:
+        portfolio = db.execute(
+            select(Portfolio).where(Portfolio.device_uuid == payload.device_uuid)
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("portfolio lookup failed while adding holding: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
     if portfolio is None:
         raise ApiError(
             status_code=status.HTTP_404_NOT_FOUND,
             code=ErrorCode.PORTFOLIO_NOT_FOUND,
             message="Portfolio not found for device.",
+        )
+
+    try:
+        existing_holding = db.execute(
+            select(Holding).where(
+                Holding.portfolio_id == portfolio.id,
+                Holding.ticker == payload.ticker,
+            )
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("holding conflict lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+    if existing_holding is not None:
+        raise ApiError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.CONFLICT_DETECTED,
+            message="Holding already exists for portfolio.",
         )
 
     db.add(
@@ -407,9 +491,29 @@ def add_holding(
             weight=payload.weight,
         )
     )
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        log.warning("holding insert failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
 
-    cached = db.get(StockCache, payload.ticker) is not None
+    try:
+        cached = db.get(StockCache, payload.ticker) is not None
+    except SQLAlchemyError as exc:
+        log.warning("stock cache lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
     if not cached:
         background.add_task(
             _fetch_new_ticker, payload.ticker, payload.device_uuid
