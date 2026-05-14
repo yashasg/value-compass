@@ -20,6 +20,7 @@
 		A0000000000000000000B013 /* ForcedUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F013 /* ForcedUpdateView.swift */; };
 		A0000000000000000000B014 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F014 /* MainView.swift */; };
 		A0000000000000000000B015 /* HoldingsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F015 /* HoldingsEditorView.swift */; };
+		A0000000000000000000B019 /* PortfolioDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F019 /* PortfolioDetailView.swift */; };
 		A0000000000000000000B016 /* ValueCompassTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F016 /* ValueCompassTypography.swift */; };
 		A0000000000000000000B020 /* Disclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F020 /* Disclaimer.swift */; };
 		A0000000000000000000B021 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F021 /* DomainModels.swift */; };
@@ -38,6 +39,7 @@
 		A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F085 /* PushNotificationsClient.swift */; };
 		A0000000000000000000B086 /* ModelContainerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F086 /* ModelContainerClient.swift */; };
 		A0000000000000000000B087 /* BundleInfoClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F087 /* BundleInfoClient.swift */; };
+		A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F088 /* ContributionCalculatorClient.swift */; };
 		A0000000000000000000B090 /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F090 /* AppFeature.swift */; };
 		A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F091 /* ForcedUpdateFeature.swift */; };
 		A0000000000000000000B092 /* OnboardingFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F092 /* OnboardingFeature.swift */; };
@@ -103,6 +105,7 @@
 		A0000000000000000000F013 /* ForcedUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F014 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F015 /* HoldingsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingsEditorView.swift; sourceTree = "<group>"; };
+		A0000000000000000000F019 /* PortfolioDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F016 /* ValueCompassTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValueCompassTypography.swift; sourceTree = "<group>"; };
 		A0000000000000000000F020 /* Disclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Disclaimer.swift; sourceTree = "<group>"; };
 		A0000000000000000000F021 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
@@ -121,6 +124,7 @@
 		A0000000000000000000F085 /* PushNotificationsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationsClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F086 /* ModelContainerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelContainerClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F087 /* BundleInfoClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleInfoClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F088 /* ContributionCalculatorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F090 /* AppFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F091 /* ForcedUpdateFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F092 /* OnboardingFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFeature.swift; sourceTree = "<group>"; };
@@ -265,6 +269,7 @@
 				A0000000000000000000F085 /* PushNotificationsClient.swift */,
 				A0000000000000000000F086 /* ModelContainerClient.swift */,
 				A0000000000000000000F087 /* BundleInfoClient.swift */,
+				A0000000000000000000F088 /* ContributionCalculatorClient.swift */,
 			);
 			path = Dependencies;
 			sourceTree = "<group>";
@@ -280,6 +285,7 @@
 				A0000000000000000000F015 /* HoldingsEditorView.swift */,
 				A0000000000000000000F017 /* PortfolioListView.swift */,
 				A0000000000000000000F018 /* PortfolioEditorView.swift */,
+				A0000000000000000000F019 /* PortfolioDetailView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -501,6 +507,7 @@
 				A0000000000000000000B013 /* ForcedUpdateView.swift in Sources */,
 				A0000000000000000000B014 /* MainView.swift in Sources */,
 				A0000000000000000000B015 /* HoldingsEditorView.swift in Sources */,
+				A0000000000000000000B019 /* PortfolioDetailView.swift in Sources */,
 				A0000000000000000000B016 /* ValueCompassTypography.swift in Sources */,
 				A0000000000000000000B020 /* Disclaimer.swift in Sources */,
 				A0000000000000000000B021 /* DomainModels.swift in Sources */,
@@ -519,6 +526,7 @@
 				A0000000000000000000B085 /* PushNotificationsClient.swift in Sources */,
 				A0000000000000000000B086 /* ModelContainerClient.swift in Sources */,
 				A0000000000000000000B087 /* BundleInfoClient.swift in Sources */,
+				A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */,
 				A0000000000000000000B090 /* AppFeature.swift in Sources */,
 				A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */,
 				A0000000000000000000B092 /* OnboardingFeature.swift in Sources */,
