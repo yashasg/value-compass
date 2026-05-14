@@ -225,9 +225,27 @@ final class NavigationShellTests: XCTestCase {
     let may12 = date(year: 2026, month: 5, day: 12, calendar: calendar)
     let may2 = date(year: 2026, month: 5, day: 2, calendar: calendar)
     let april30 = date(year: 2026, month: 4, day: 30, calendar: calendar)
-    let mayRecent = ContributionRecord(portfolioId: UUID(), date: may12, totalAmount: Decimal(600))
-    let april = ContributionRecord(portfolioId: UUID(), date: april30, totalAmount: Decimal(250))
-    let mayOlder = ContributionRecord(portfolioId: UUID(), date: may2, totalAmount: Decimal(400))
+    let mayRecent = ContributionRecordSnapshot(
+      id: UUID(),
+      date: may12,
+      totalAmount: Decimal(600),
+      categoryBreakdown: [],
+      tickerAllocations: []
+    )
+    let april = ContributionRecordSnapshot(
+      id: UUID(),
+      date: april30,
+      totalAmount: Decimal(250),
+      categoryBreakdown: [],
+      tickerAllocations: []
+    )
+    let mayOlder = ContributionRecordSnapshot(
+      id: UUID(),
+      date: may2,
+      totalAmount: Decimal(400),
+      categoryBreakdown: [],
+      tickerAllocations: []
+    )
 
     let sections = ContributionHistoryMonthSection.group(
       records: [mayOlder, april, mayRecent],

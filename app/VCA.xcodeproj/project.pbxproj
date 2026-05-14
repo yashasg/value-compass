@@ -22,6 +22,7 @@
 		A0000000000000000000B015 /* HoldingsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F015 /* HoldingsEditorView.swift */; };
 		A0000000000000000000B019 /* PortfolioDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F019 /* PortfolioDetailView.swift */; };
 		A0000000000000000000B01A /* ContributionResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F01A /* ContributionResultView.swift */; };
+		A0000000000000000000B01B /* ContributionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F01B /* ContributionHistoryView.swift */; };
 		A0000000000000000000B016 /* ValueCompassTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F016 /* ValueCompassTypography.swift */; };
 		A0000000000000000000B020 /* Disclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F020 /* Disclaimer.swift */; };
 		A0000000000000000000B021 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F021 /* DomainModels.swift */; };
@@ -108,6 +109,7 @@
 		A0000000000000000000F015 /* HoldingsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingsEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F019 /* PortfolioDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F01A /* ContributionResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionResultView.swift; sourceTree = "<group>"; };
+		A0000000000000000000F01B /* ContributionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionHistoryView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F016 /* ValueCompassTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValueCompassTypography.swift; sourceTree = "<group>"; };
 		A0000000000000000000F020 /* Disclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Disclaimer.swift; sourceTree = "<group>"; };
 		A0000000000000000000F021 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 				A0000000000000000000F018 /* PortfolioEditorView.swift */,
 				A0000000000000000000F019 /* PortfolioDetailView.swift */,
 				A0000000000000000000F01A /* ContributionResultView.swift */,
+				A0000000000000000000F01B /* ContributionHistoryView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -512,6 +515,7 @@
 				A0000000000000000000B015 /* HoldingsEditorView.swift in Sources */,
 				A0000000000000000000B019 /* PortfolioDetailView.swift in Sources */,
 				A0000000000000000000B01A /* ContributionResultView.swift in Sources */,
+				A0000000000000000000B01B /* ContributionHistoryView.swift in Sources */,
 				A0000000000000000000B016 /* ValueCompassTypography.swift in Sources */,
 				A0000000000000000000B020 /* Disclaimer.swift in Sources */,
 				A0000000000000000000B021 /* DomainModels.swift in Sources */,
