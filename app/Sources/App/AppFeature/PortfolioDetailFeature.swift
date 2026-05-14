@@ -11,10 +11,9 @@ import SwiftData
 /// `@Dependency(\.modelContainer)`; the contribution calculation runs through
 /// `@Dependency(\.contributionCalculator)` so tests can stub the math.
 ///
-/// Phase 2 (#159) wires `MainFeature.path` to handle the `Delegate` cases.
-/// Until then the legacy bridge in `PortfolioDetailView.swift` observes a
-/// `legacyNavigation` latch to mirror those delegates onto the existing
-/// `NavigationStack` / `NavigationSplitView`.
+/// `MainFeature.path` consumes the `Delegate` cases below to drive the
+/// surrounding `NavigationStack` / `NavigationSplitView`; the reducer no
+/// longer carries a Phase-1 navigation latch.
 @Reducer
 struct PortfolioDetailFeature {
   @ObservableState
@@ -23,33 +22,18 @@ struct PortfolioDetailFeature {
     var snapshot: PortfolioDetailSnapshot
     var calculationOutput: ContributionOutput?
     var lastError: String?
-    /// Phase 1 only: legacy bridge consumes this latch to push the
-    /// corresponding view onto the surrounding `NavigationStack`. Phase 2
-    /// (#159) deletes this and `MainFeature` reads `delegate(.*)` directly.
-    var legacyNavigation: LegacyNavigation?
 
     init(
       portfolioID: UUID,
       snapshot: PortfolioDetailSnapshot,
       calculationOutput: ContributionOutput? = nil,
-      lastError: String? = nil,
-      legacyNavigation: LegacyNavigation? = nil
+      lastError: String? = nil
     ) {
       self.portfolioID = portfolioID
       self.snapshot = snapshot
       self.calculationOutput = calculationOutput
       self.lastError = lastError
-      self.legacyNavigation = legacyNavigation
     }
-  }
-
-  /// Phase-1 navigation latch consumed by `PortfolioDetailLegacyBridge`.
-  /// Mirrors the `Action.Delegate` cases.
-  @CasePathable
-  enum LegacyNavigation: Equatable {
-    case holdingsEditor(portfolioID: UUID)
-    case calculationResult(ContributionOutput)
-    case history(portfolioID: UUID)
   }
 
   enum Action: Equatable {
@@ -60,7 +44,6 @@ struct PortfolioDetailFeature {
     case calculationCompleted(ContributionOutput)
     case viewResultTapped
     case openHistoryTapped
-    case legacyNavigationConsumed
     case delegate(Delegate)
 
     @CasePathable
@@ -93,7 +76,6 @@ struct PortfolioDetailFeature {
 
       case .editHoldingsTapped:
         let id = state.portfolioID
-        state.legacyNavigation = .holdingsEditor(portfolioID: id)
         return .send(.delegate(.openHoldingsEditor(portfolioID: id)))
 
       case .calculateTapped:
@@ -126,17 +108,11 @@ struct PortfolioDetailFeature {
         guard let output = state.calculationOutput, output.error == nil else {
           return .none
         }
-        state.legacyNavigation = .calculationResult(output)
         return .send(.delegate(.openCalculationResult(output)))
 
       case .openHistoryTapped:
         let id = state.portfolioID
-        state.legacyNavigation = .history(portfolioID: id)
         return .send(.delegate(.openHistory(portfolioID: id)))
-
-      case .legacyNavigationConsumed:
-        state.legacyNavigation = nil
-        return .none
 
       case .delegate:
         return .none

@@ -13,10 +13,9 @@ import SwiftData
 /// stubbed via `@Dependency(\.contributionCalculator)` so retry uses the
 /// same code path tests can fake out.
 ///
-/// Phase 2 (#159) wires `MainFeature.path` to handle the `Delegate` cases.
-/// Until then the legacy bridge in `ContributionResultView.swift` observes a
-/// `legacyNavigation` latch to mirror those delegates onto the existing
-/// `NavigationStack`.
+/// `MainFeature.path` consumes the `Delegate` cases below to push history
+/// onto the surrounding `NavigationStack` / `NavigationSplitView`; the
+/// reducer no longer carries a Phase-1 navigation latch.
 @Reducer
 struct ContributionResultFeature {
   @ObservableState
@@ -25,31 +24,18 @@ struct ContributionResultFeature {
     var output: ContributionOutput
     var saveError: String?
     var saveConfirmation: String?
-    /// Phase 1 only: legacy bridge consumes this latch to push the
-    /// corresponding view onto the surrounding `NavigationStack`. Phase 2
-    /// (#159) deletes this and `MainFeature` reads `delegate(.*)` directly.
-    var legacyNavigation: LegacyNavigation?
 
     init(
       portfolioID: UUID,
       output: ContributionOutput,
       saveError: String? = nil,
-      saveConfirmation: String? = nil,
-      legacyNavigation: LegacyNavigation? = nil
+      saveConfirmation: String? = nil
     ) {
       self.portfolioID = portfolioID
       self.output = output
       self.saveError = saveError
       self.saveConfirmation = saveConfirmation
-      self.legacyNavigation = legacyNavigation
     }
-  }
-
-  /// Phase-1 navigation latch consumed by `ContributionResultLegacyBridge`.
-  /// Mirrors the `Action.Delegate` cases.
-  @CasePathable
-  enum LegacyNavigation: Equatable, Sendable {
-    case history(portfolioID: UUID)
   }
 
   enum Action: Equatable, Sendable {
@@ -61,7 +47,6 @@ struct ContributionResultFeature {
     case calculationCompleted(ContributionOutput)
     case persistFailed(String)
     case persistSucceeded(savedTotal: Decimal, portfolioName: String)
-    case legacyNavigationConsumed
     case delegate(Delegate)
 
     @CasePathable
@@ -128,7 +113,6 @@ struct ContributionResultFeature {
 
       case .openHistoryTapped:
         let id = state.portfolioID
-        state.legacyNavigation = .history(portfolioID: id)
         return .send(.delegate(.openHistory(portfolioID: id)))
 
       case .saveErrorDismissed:
@@ -152,10 +136,6 @@ struct ContributionResultFeature {
           savedTotal: savedTotal,
           portfolioName: portfolioName
         )
-        return .none
-
-      case .legacyNavigationConsumed:
-        state.legacyNavigation = nil
         return .none
 
       case .delegate:

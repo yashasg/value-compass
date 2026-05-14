@@ -13,10 +13,9 @@ import SwiftData
 /// `BackgroundModelActor` so the SwiftData I/O happens off the main
 /// thread.
 ///
-/// Phase 2 (#159) wires `MainFeature.path` to push the feature directly
-/// and consume the `Delegate.openCalculate` action. Until then the legacy
-/// bridge in `ContributionHistoryView.swift` mirrors the existing call
-/// sites.
+/// `MainFeature.path` consumes the `Delegate.openCalculate` action to push
+/// the calculate flow onto the surrounding navigation; the reducer no
+/// longer carries a Phase-1 navigation latch.
 @Reducer
 struct ContributionHistoryFeature {
   @ObservableState
@@ -25,32 +24,18 @@ struct ContributionHistoryFeature {
     var sections: [ContributionHistoryMonthSection] = []
     var pendingDeletion: ContributionRecordSnapshot?
     var deleteError: String?
-    /// Phase 1 only: legacy bridge consumes this latch to push the
-    /// corresponding view onto the surrounding `NavigationStack`. Phase 2
-    /// (#159) deletes this and `MainFeature` reads `delegate(.*)`
-    /// directly.
-    var legacyNavigation: LegacyNavigation?
 
     init(
       portfolioID: UUID,
       sections: [ContributionHistoryMonthSection] = [],
       pendingDeletion: ContributionRecordSnapshot? = nil,
-      deleteError: String? = nil,
-      legacyNavigation: LegacyNavigation? = nil
+      deleteError: String? = nil
     ) {
       self.portfolioID = portfolioID
       self.sections = sections
       self.pendingDeletion = pendingDeletion
       self.deleteError = deleteError
-      self.legacyNavigation = legacyNavigation
     }
-  }
-
-  /// Phase-1 navigation latch consumed by `ContributionHistoryLegacyBridge`.
-  /// Mirrors the `Action.Delegate` cases.
-  @CasePathable
-  enum LegacyNavigation: Equatable {
-    case calculate(portfolioID: UUID)
   }
 
   enum Action: Equatable {
@@ -62,7 +47,6 @@ struct ContributionHistoryFeature {
     case deleteFailed(String)
     case deleteErrorDismissed
     case openCalculate
-    case legacyNavigationConsumed
     case delegate(Delegate)
 
     @CasePathable
@@ -137,12 +121,7 @@ struct ContributionHistoryFeature {
 
       case .openCalculate:
         let id = state.portfolioID
-        state.legacyNavigation = .calculate(portfolioID: id)
         return .send(.delegate(.openCalculate(portfolioID: id)))
-
-      case .legacyNavigationConsumed:
-        state.legacyNavigation = nil
-        return .none
 
       case .delegate:
         return .none
