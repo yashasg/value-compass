@@ -623,7 +623,7 @@ struct HoldingsEditorView: View {
             systemImage: issue.blocksSaving
               ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
           )
-          .foregroundStyle(issue.blocksSaving ? Color.appError : Color.appNegative)
+          .foregroundStyle(issue.blocksSaving ? Color.appError : Color.appWarning)
         }
       }
       .accessibilityIdentifier("holdings.validation")
@@ -642,7 +642,7 @@ struct HoldingsEditorView: View {
 
       if category.wrappedValue.tickers.isEmpty {
         Label("Warning: no tickers", systemImage: "exclamationmark.circle")
-          .foregroundStyle(Color.appNegative)
+          .foregroundStyle(Color.appWarning)
           .accessibilityIdentifier("holdings.category.warning")
       }
 
@@ -666,7 +666,7 @@ struct HoldingsEditorView: View {
                 ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
             )
             .valueCompassTextStyle(.labelCaps)
-            .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appNegative)
+            .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appWarning)
             .accessibilityIdentifier("holdings.ticker.marketDataWarning")
           }
         }
@@ -772,7 +772,7 @@ struct HoldingsEditorView: View {
 
           if category.wrappedValue.tickers.isEmpty {
             Label("Warning: no tickers", systemImage: "exclamationmark.circle")
-              .foregroundStyle(Color.appNegative)
+              .foregroundStyle(Color.appWarning)
               .accessibilityIdentifier("holdings.category.warning")
           } else {
             ForEach(category.tickers) { $ticker in
@@ -796,7 +796,7 @@ struct HoldingsEditorView: View {
                       ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
                   )
                   .valueCompassTextStyle(.labelCaps)
-                  .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appNegative)
+                  .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appWarning)
                   .accessibilityIdentifier("holdings.ticker.marketDataWarning")
                 }
               }
@@ -889,7 +889,7 @@ struct HoldingsEditorView: View {
   }
 
   private func validationSummaryColor(for issues: [HoldingsDraftIssue]) -> Color {
-    issues.contains(where: \.blocksSaving) ? Color.appError : Color.appNegative
+    issues.contains(where: \.blocksSaving) ? Color.appError : Color.appWarning
   }
 
   private func save() {

@@ -11,6 +11,9 @@ enum AppColorToken: String, CaseIterable {
   case negative = "AppNegative"
   case neutral = "AppNeutral"
   case error = "AppError"
+  case warning = "AppWarning"
+  case success = "AppSuccess"
+  case info = "AppInfo"
   case input = "AppInput"
   case divider = "AppDivider"
   case contentPrimary = "AppContentPrimary"
@@ -43,6 +46,9 @@ extension Color {
   static let appNegative = Color(AppColorToken.negative.assetName)
   static let appNeutral = Color(AppColorToken.neutral.assetName)
   static let appError = Color(AppColorToken.error.assetName)
+  static let appWarning = Color(AppColorToken.warning.assetName)
+  static let appSuccess = Color(AppColorToken.success.assetName)
+  static let appInfo = Color(AppColorToken.info.assetName)
   static let appInput = Color(AppColorToken.input.assetName)
   static let appDivider = Color(AppColorToken.divider.assetName)
   static let appContentPrimary = Color(AppColorToken.contentPrimary.assetName)
