@@ -22,6 +22,14 @@ permissions:
   contents: read
   security-events: write
 
+# Cancel superseded PR runs so a new push to a PR branch frees the slow
+# macOS queue immediately. Pushes to main keep their own group per
+# branch+workflow and never cancel each other (cancel-in-progress is
+# false for the `push` event).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze iOS (swift)
