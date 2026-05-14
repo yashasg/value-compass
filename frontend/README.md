@@ -53,3 +53,9 @@ Displayed on onboarding and accessible from Settings:
 > constitute investment advice. Past price trends do not guarantee future
 > performance. Consult a licensed financial advisor before making
 > investment decisions.
+
+## Design System
+
+Color tokens are semantic SwiftUI colors backed by asset-catalog light/dark
+variants. See `docs/design-system-colors.md` for the token catalog, WCAG contrast
+evidence, and financial-data usage checklist.

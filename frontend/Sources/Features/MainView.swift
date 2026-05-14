@@ -688,7 +688,7 @@ struct PortfolioDetailView: View {
         Text(marketDataSummary(for: ticker))
           .valueCompassTextStyle(.data)
           .foregroundStyle(
-            ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative)
+            ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appWarning)
       }
       .accessibilityIdentifier("portfolio.detail.tickerMarketData")
     }
@@ -704,7 +704,7 @@ struct PortfolioDetailView: View {
   }
 
   private func tickerMarketDataStatusColor(for ticker: TickerDraft) -> Color {
-    ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appNegative
+    ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appWarning
   }
 
   private var calculateSection: some View {
@@ -914,7 +914,7 @@ struct ContributionResultView: View {
     VStack(alignment: .leading, spacing: 16) {
       Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
         .valueCompassTextStyle(.bodyLarge)
-        .foregroundStyle(Color.appNegative)
+        .foregroundStyle(Color.appError)
         .accessibilityIdentifier("contribution.result.error")
 
       Button {

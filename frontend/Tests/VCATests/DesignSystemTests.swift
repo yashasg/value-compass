@@ -25,6 +25,9 @@ final class DesignSystemTests: XCTestCase {
         "AppNegative",
         "AppNeutral",
         "AppError",
+        "AppWarning",
+        "AppSuccess",
+        "AppInfo",
         "AppInput",
         "AppDivider",
         "AppContentPrimary",
@@ -86,6 +89,13 @@ final class DesignSystemTests: XCTestCase {
       _ = resolvedRGB(token, style: .light)
       _ = resolvedRGB(token, style: .dark)
     }
+  }
+
+  func testValidationStateTokensMapToDistinctSemantics() {
+    XCTAssertEqual(AppColorToken.error.assetName, "AppError")
+    XCTAssertEqual(AppColorToken.warning.assetName, "AppWarning")
+    XCTAssertEqual(AppColorToken.success.assetName, "AppSuccess")
+    XCTAssertEqual(AppColorToken.info.assetName, "AppInfo")
   }
 
   private func resolvedRGB(_ token: AppColorToken, style: UIUserInterfaceStyle) -> AppRGB {
