@@ -63,6 +63,26 @@ private struct PortfolioListContent: View {
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
       PortfolioEditorView(store: editorStore)
     }
+    .confirmationDialog(
+      Self.deletionDialogTitle(for: store.pendingDeletion),
+      isPresented: Binding(
+        get: { store.pendingDeletion != nil },
+        set: { isPresented in
+          if !isPresented { store.send(.cancelDelete) }
+        }
+      ),
+      titleVisibility: .visible,
+      presenting: store.pendingDeletion
+    ) { _ in
+      Button("Delete", role: .destructive) { store.send(.confirmDelete) }
+        .accessibilityIdentifier("portfolio.delete.confirm")
+      Button("Cancel", role: .cancel) { store.send(.cancelDelete) }
+        .accessibilityIdentifier("portfolio.delete.cancel")
+    } message: { _ in
+      Text(
+        "This permanently removes the portfolio's categories, tickers, and saved contribution history. This can't be undone."
+      )
+    }
     .alert(
       "Could Not Save Portfolio",
       isPresented: Binding(
@@ -78,6 +98,17 @@ private struct PortfolioListContent: View {
       Text(message)
     }
     .task { store.send(.task) }
+  }
+
+  /// Builds the confirmation-dialog title from the staged portfolio so the
+  /// destructive action is unambiguous about *which* portfolio is being
+  /// deleted (HIG → *Patterns → Confirming an action*: "Make sure the
+  /// destructive choice is clearly identified"). Falls back to a generic
+  /// title only as a safety net for the brief window when SwiftUI evaluates
+  /// the title while `pendingDeletion` is being cleared.
+  private static func deletionDialogTitle(for snapshot: PortfolioSnapshot?) -> String {
+    guard let snapshot else { return "Delete Portfolio?" }
+    return "Delete \"\(snapshot.name)\"?"
   }
 
   @ToolbarContentBuilder

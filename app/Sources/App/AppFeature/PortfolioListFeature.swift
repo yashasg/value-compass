@@ -24,6 +24,16 @@ struct PortfolioListFeature {
     @Presents var editor: PortfolioEditorFeature.State?
     var saveError: String?
     var selectedPortfolioID: UUID?
+    /// Portfolio the user has staged for deletion via the swipe action.
+    /// Non-nil while the destructive `.confirmationDialog` in
+    /// `PortfolioListView` is presented. Holding the full snapshot (not
+    /// just the id) lets the dialog title and message name the portfolio
+    /// without re-fetching, and matches the same `pendingDeletion` /
+    /// `confirmDelete` / `cancelDelete` flow that
+    /// `ContributionHistoryFeature` already uses (issue #232 — confirm
+    /// destructive cascade-delete before destroying categories, tickers,
+    /// and saved contribution history).
+    var pendingDeletion: PortfolioSnapshot?
     /// Whether the toolbar should expose the Settings link. The legacy
     /// `MainView` toggles this based on the navigation shell (compact stack
     /// shows the link, iPad split view does not because Settings is its own
@@ -38,6 +48,8 @@ struct PortfolioListFeature {
     case createTapped
     case editTapped(id: UUID)
     case deleteTapped(id: UUID)
+    case confirmDelete
+    case cancelDelete
     case selected(id: UUID?)
     case editor(PresentationAction<PortfolioEditorFeature.Action>)
     case saveErrorDismissed
@@ -71,6 +83,11 @@ struct PortfolioListFeature {
         {
           state.selectedPortfolioID = nil
         }
+        if let pending = state.pendingDeletion,
+          !state.portfolios.contains(where: { $0.id == pending.id })
+        {
+          state.pendingDeletion = nil
+        }
         return .none
 
       case .createTapped:
@@ -82,9 +99,18 @@ struct PortfolioListFeature {
         return .none
 
       case .deleteTapped(let id):
+        guard let snapshot = state.portfolios.first(where: { $0.id == id }) else {
+          return .none
+        }
+        state.pendingDeletion = snapshot
+        return .none
+
+      case .confirmDelete:
+        guard let pending = state.pendingDeletion else { return .none }
+        state.pendingDeletion = nil
         return .run { [modelContainer] send in
           do {
-            try await Self.deleteSnapshot(modelContainer: modelContainer, id: id)
+            try await Self.deleteSnapshot(modelContainer: modelContainer, id: pending.id)
             let snapshots = try await Self.loadSnapshots(modelContainer: modelContainer)
             await send(.portfoliosLoaded(snapshots))
           } catch {
@@ -93,6 +119,10 @@ struct PortfolioListFeature {
             await send(.portfoliosLoaded(snapshots))
           }
         }
+
+      case .cancelDelete:
+        state.pendingDeletion = nil
+        return .none
 
       case .selected(let id):
         state.selectedPortfolioID = id
