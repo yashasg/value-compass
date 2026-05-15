@@ -92,12 +92,21 @@ final class DesignSystemTests: XCTestCase {
   }
 
   func testValidationStateTokensMeetWCAGAAContrastAgainstSurfaces() {
-    // The negative/warning tokens render text and icons on top of both the
+    // Every "status" token renders as text or icons on top of both the
     // flat `AppSurface` background and the elevated `AppSurfaceElevated`
     // card. The contract is WCAG 2.2 SC 1.4.3 (≥4.5:1 small-text contrast)
     // in both light and dark appearances against both surfaces, so a future
-    // hex change cannot regress contrast on either rendering target (#236).
-    let stateTokens: [AppColorToken] = [.negative, .warning]
+    // hex change cannot regress contrast on either rendering target.
+    //
+    // Originally landed for `.negative` / `.warning` in #236, then widened
+    // to `.success` / `.info` in #309 — the four tokens that surface
+    // user-facing copy on elevated cards (validation banners, success
+    // toasts, info chips). `.error` is included because alerts and inline
+    // error labels share the same surface palette. `.positive` is not a
+    // status surface (it tags gain/loss percentages against the chart
+    // background, not against `AppSurfaceElevated`) and is intentionally
+    // excluded from this contract.
+    let stateTokens: [AppColorToken] = [.negative, .warning, .success, .info, .error]
     let surfaceTokens: [AppColorToken] = [.surface, .surfaceElevated]
 
     for token in stateTokens {
