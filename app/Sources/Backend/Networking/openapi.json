@@ -862,6 +862,575 @@
           }
         }
       }
+    },
+    "/portfolio": {
+      "patch": {
+        "summary": "Patch Portfolio",
+        "description": "Correct one or more scalar fields on the calling device's portfolio.\n\nImplements the scalar half of GDPR Art. 16 (right to rectification),\nCCPA \u00a71798.106 (right to correct), and the rectification commitment\nreferenced in ``docs/legal/privacy-policy.md`` \u00a76. The companion\nholding-level path is ``PATCH /portfolio/holdings/{ticker}`` and the\ntypo-correction path is ``DELETE /portfolio/holdings/{ticker}``.\n\nOnly fields the client supplies are written; absent fields are\npreserved verbatim. ``ma_window`` is validated against the\ndocumented allow-list before the database CheckConstraint sees it\nso the client receives a precise ``unsupportedMovingAverageWindow``\nenvelope rather than a generic 422.\n\nOn success ``last_seen_at`` is stamped so a rectification call\nalone keeps the row out of the retention-purge sweep documented in\n``docs/legal/data-retention.md`` \u2014 consistent with every other\nauthenticated touch.",
+        "operationId": "patch_portfolio_portfolio_patch",
+        "parameters": [
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "title": "X-App-Attest",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPortfolioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchPortfolioResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/holdings/{ticker}": {
+      "patch": {
+        "summary": "Patch Holding",
+        "description": "Correct the weight on a single holding row.\n\nRenaming a holding (typo on ``ticker``) goes through\n``DELETE /portfolio/holdings/{ticker}`` followed by\n``POST /portfolio/holdings``: ``ticker`` is part of the row's\nnatural key (unique within a portfolio) and changing it via PATCH\nwould conflict with the same uniqueness invariant guarded by\n``POST``'s 409 path.\n\nReturns the persisted ``ticker`` + ``weight`` after commit so the\niOS client can confirm its local state. Market-data fields are\nintentionally excluded \u2014 ``GET /portfolio/data`` is the canonical\nenriched view.",
+        "operationId": "patch_holding_portfolio_holdings__ticker__patch",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "title": "X-App-Attest",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchHoldingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchHoldingResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Holding",
+        "description": "Remove a single holding from the calling device's portfolio.\n\nSupplies the ticker-typo correction path for GDPR Art. 16 /\nCCPA \u00a71798.106 (issue #374): a row whose ``ticker`` is wrong\ncannot be PATCHed (``ticker`` is part of the row's natural key);\nit must be removed and re-added via ``POST /portfolio/holdings``.\nThis DELETE is **not** the broader erasure mechanism tracked in\nissue #329 \u2014 it scopes strictly to one ``(portfolio, ticker)``\npair and leaves every other row, including the parent portfolio,\nuntouched.",
+        "operationId": "delete_holding_portfolio_holdings__ticker__delete",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "title": "X-App-Attest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response",
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1084,6 +1653,114 @@
         ],
         "title": "HoldingOut",
         "description": "Holding data returned to the iOS client."
+      },
+      "PatchHoldingRequest": {
+        "properties": {
+          "weight": {
+            "type": "string",
+            "format": "decimal",
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weight"
+        ],
+        "title": "PatchHoldingRequest",
+        "description": "Request body for ``PATCH /portfolio/holdings/{ticker}``.\n\nOnly ``weight`` is mutable through PATCH. A ticker typo (`AAPL`\nintended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/\n{ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename\nthe row's primary key. ``DecimalString`` preserves exact precision\nend-to-end (see #392)."
+      },
+      "PatchHoldingResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "weight": {
+            "type": "string",
+            "format": "decimal",
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "weight"
+        ],
+        "title": "PatchHoldingResponse",
+        "description": "Response body for ``PATCH /portfolio/holdings/{ticker}``.\n\nMirrors the persisted ``Holding`` row rather than the enriched\n:class:`HoldingOut` returned from ``/portfolio/data`` \u2014 market-data\nfields are intentionally excluded so PATCH returns only the\nrectified value the client wrote."
+      },
+      "PatchPortfolioRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "monthly_budget": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "decimal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Budget"
+          },
+          "ma_window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma Window"
+          }
+        },
+        "type": "object",
+        "title": "PatchPortfolioRequest",
+        "description": "Request body for ``PATCH /portfolio``.\n\nImplements the scalar half of the GDPR Art. 16 / CCPA \u00a71798.106\nright-to-rectification path (issue #374). Every field is optional\nso the client can correct a single value without re-stating the\nothers, but the body **must** carry at least one non-null field \u2014\nan empty PATCH is rejected as ``schemaUnsupported`` so the wire\ncontract never accepts a no-op write that silently stamps activity.\n\n``ma_window`` accepts only the values enumerated in\n:data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the\ndocumented ``unsupportedMovingAverageWindow`` envelope so the iOS\nclient can surface a specific error rather than the generic\n``schemaUnsupported`` validation failure."
+      },
+      "PatchPortfolioResponse": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Portfolio Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monthly_budget": {
+            "type": "string",
+            "format": "decimal",
+            "title": "Monthly Budget"
+          },
+          "ma_window": {
+            "type": "integer",
+            "title": "Ma Window"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "name",
+          "monthly_budget",
+          "ma_window"
+        ],
+        "title": "PatchPortfolioResponse",
+        "description": "Response body for ``PATCH /portfolio``.\n\nReturns the scalar portfolio fields after the correction commits so\nthe iOS client can confirm its local SwiftData state matches the\nserver. Excludes ``holdings`` and market-data joins (which are\nserved by ``GET /portfolio/data``) to keep the rectification\nresponse cheap."
       },
       "PortfolioDataResponse": {
         "properties": {
