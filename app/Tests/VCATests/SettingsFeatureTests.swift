@@ -639,6 +639,10 @@ final class SettingsFeatureTests: XCTestCase {
       $0.apiKeyLoadError = nil
       $0.accountErasureStatus = .erased
     }
+    // Issue #471: success path fires the `dataErased` delegate so
+    // `AppFeature` reroutes `destination` back to onboarding without
+    // asking the user to force-quit the app.
+    await store.receive(\.delegate.dataErased)
 
     XCTAssertEqual(callOrder.value, ["backend", "localData", "massiveKey", "rotate"])
 
@@ -682,6 +686,7 @@ final class SettingsFeatureTests: XCTestCase {
     await store.receive(\.accountErasureLocalCleanupCompleted) {
       $0.accountErasureStatus = .erased
     }
+    await store.receive(\.delegate.dataErased)
     XCTAssertEqual(localDataCalls.value, 1)
   }
 

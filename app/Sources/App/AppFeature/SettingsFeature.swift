@@ -110,6 +110,24 @@ struct SettingsFeature {
     /// onboarding reset) finished. `localCleanupError` carries the first
     /// failure reason or `nil` when every step succeeded.
     case accountErasureLocalCleanupCompleted(localCleanupError: String?)
+
+    // MARK: Delegate channel
+
+    /// Out-bound delegate notifications. Parent reducers consume these to
+    /// drive cross-feature navigation that this reducer cannot reach.
+    case delegate(Delegate)
+
+    /// Cross-feature notifications emitted by `SettingsFeature`. Kept
+    /// minimal so the contract surface with `AppFeature` is explicit.
+    @CasePathable
+    enum Delegate: Equatable, Sendable {
+      /// Account-erasure pipeline finished successfully. Parent
+      /// (`AppFeature`) reroutes `destination` back to `.onboarding(...)`
+      /// programmatically so the user does not have to force-quit the
+      /// app to see the freshly reset onboarding gate (HIG → Launching →
+      /// Quitting forbids quit/relaunch instructions). Issue #471.
+      case dataErased
+    }
   }
 
   @Dependency(\.userDefaults) var userDefaults
@@ -358,9 +376,7 @@ struct SettingsFeature {
         }
         // Clear reducer-state mirrors of state we just wiped on disk so
         // the Settings screen reflects the erased posture without
-        // needing a re-`.task` round trip. The View layer disables
-        // every other interactive row while `accountErasureStatus`
-        // is `.erased` and surfaces a relaunch prompt.
+        // needing a re-`.task` round trip.
         state.apiKeyStatus = .noStoredKey
         state.apiKeyMaskedDisplay = nil
         state.apiKeyMaskedAccessibilityLabel = nil
@@ -368,6 +384,17 @@ struct SettingsFeature {
         state.apiKeyRequestStatus = .idle
         state.apiKeyLoadError = nil
         state.accountErasureStatus = .erased
+        // Notify `AppFeature` so it can swap `destination` back to
+        // onboarding programmatically. HIG → Launching → Quitting
+        // forbids instructing the user to force-quit or relaunch the
+        // app, so the post-erase route swap must happen in-process.
+        // Issue #471.
+        return .send(.delegate(.dataErased))
+
+      case .delegate:
+        // Parent-bound notifications are inert here — `AppFeature`
+        // intercepts the cases it cares about (e.g. `.dataErased` →
+        // `destination = .onboarding(...)`).
         return .none
       }
     }

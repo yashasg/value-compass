@@ -219,6 +219,42 @@ final class AppFeatureTests: XCTestCase {
     )
   }
 
+  // MARK: - .destination(.main(.settings(.delegate(.dataErased)))) — issue #471
+
+  /// HIG → Launching → Quitting: the post-erase route swap must happen
+  /// in-process so the user does not have to force-quit the app to see
+  /// the freshly reset onboarding gate. `AppFeature` intercepts the
+  /// `SettingsFeature.delegate(.dataErased)` notification and swaps
+  /// `destination` to a fresh `OnboardingFeature.State()`.
+  func testSettingsDataErasedDelegateRoutesToOnboarding() async {
+    let store = TestStore(
+      initialState: AppFeature.State(destination: .main(MainFeature.State()))
+    ) {
+      AppFeature()
+    }
+
+    await store.send(.destination(.main(.settings(.delegate(.dataErased))))) {
+      $0.destination = .onboarding(OnboardingFeature.State())
+    }
+  }
+
+  /// While `requiresAppUpdate` is sticky, the post-erase reroute MUST
+  /// NOT clobber the forced-update destination. The forced-update gate
+  /// stays on screen until the user updates and relaunches naturally.
+  func testSettingsDataErasedDelegateWhileRequiresAppUpdateLeavesDestinationAlone() async {
+    let store = TestStore(
+      initialState: AppFeature.State(
+        destination: .forcedUpdate(ForcedUpdateFeature.State(minimumVersion: "1.2.3")),
+        requiresAppUpdate: true
+      )
+    ) {
+      AppFeature()
+    }
+
+    // No state mutation expected — destination stays on `.forcedUpdate(...)`.
+    await store.send(.destination(.main(.settings(.delegate(.dataErased)))))
+  }
+
   // MARK: - .task cancel-in-flight
 
   func testTaskCancelInFlightDeduplicatesEventSubscription() async {
