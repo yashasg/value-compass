@@ -1,5 +1,70 @@
 import Foundation
 
+/// The user-swappable seam for Value Compass's pluggable contribution algorithm.
+///
+/// Conformers map a fully validated ``ContributionInput`` to a
+/// ``ContributionOutput`` whose ``ContributionOutput/allocations`` describe how
+/// the monthly budget should be split across the portfolio's tickers. The seam
+/// is consumed end-to-end through ``ContributionCalculationService/calculate(input:calculator:)``
+/// and is the integration point for user-authored algorithms — see issue #238.
+///
+/// # Pre-conditions guaranteed by ``ContributionInputValidator``
+///
+/// When called through ``ContributionCalculationService``, the validator runs
+/// before this method and rejects any input that violates the contract below.
+/// Conformers therefore may rely on the following invariants:
+///
+/// - ``ContributionInput/portfolio`` is non-`nil`.
+/// - ``ContributionInput/monthlyBudget`` is strictly greater than `0`.
+/// - ``Portfolio/categories`` is non-empty and category weights sum to `1`.
+/// - Each category has at least one ticker.
+/// - For every ticker, ``MarketDataSnapshot/quote(for:)`` returns a quote whose
+///   ``MarketDataQuote/currentPrice`` and ``MarketDataQuote/movingAverage`` are
+///   both non-`nil` and strictly greater than `0`.
+///
+/// Conformers invoked **outside** the service (e.g. from tests calling
+/// `calculate(input:)` directly) must not assume the validator has run.
+/// Re-validate, or guard locally and return ``ContributionOutput/failure(_:)``
+/// — never crash. The validator runs first in every shipping conformer
+/// (`MovingAverageContributionCalculator`, `BandAdjustedContributionCalculator`,
+/// `ProportionalSplitContributionCalculator`); user-authored conformers should
+/// do the same.
+///
+/// # Post-conditions enforced by ``ContributionOutputValidator``
+///
+/// After this method returns, the service rejects outputs that violate any of:
+///
+/// - No ``TickerContributionAllocation/amount`` is negative.
+/// - The sum of ``ContributionOutput/allocations`` matches
+///   ``ContributionOutput/totalAmount`` within cent-level tolerance.
+/// - ``ContributionOutput/totalAmount`` matches the original
+///   ``ContributionInput/monthlyBudget`` within cent-level tolerance.
+///
+/// # Error channel
+///
+/// The canonical error channel is ``ContributionOutput/error`` (a
+/// `LocalizedError?`), populated via ``ContributionOutput/failure(_:)``. The
+/// protocol method is **non-throwing** by design: throws are reserved for
+/// callers that already know how to bubble failures, and the seam needs to be
+/// driven from TCA reducers that store errors as state. Reserved cases live in
+/// ``ContributionCalculationError``.
+///
+/// For invariants this protocol documents as guaranteed by the validator,
+/// returning ``ContributionOutput/failure(_:)`` is still preferred over
+/// `preconditionFailure` so that direct-call paths (tests, ad-hoc tooling) do
+/// not crash the process.
+///
+/// # Calculator-private input dependencies
+///
+/// Some indicators required by particular algorithms are not validated by
+/// ``ContributionInputValidator`` and are therefore **calculator-private input
+/// dependencies**. Conformers that depend on them must guard locally and
+/// return ``ContributionOutput/failure(_:)``.
+///
+/// - ``MarketDataQuote/bandPosition`` is not validator-checked. Band-style
+///   conformers (e.g. ``BandAdjustedContributionCalculator``) guard for it and
+///   return ``ContributionCalculationError/missingBandPosition(_:)`` when
+///   absent.
 protocol ContributionCalculating: Sendable {
   func calculate(input: ContributionInput) -> ContributionOutput
 }
@@ -279,7 +344,7 @@ struct MovingAverageContributionCalculator: ContributionCalculating {
     }
 
     guard let portfolio = input.portfolio else {
-      preconditionFailure("ContributionInputValidator must reject missing portfolios.")
+      return .failure(ContributionCalculationError.missingPortfolio)
     }
 
     let categories = portfolio.categories.sorted { $0.sortOrder < $1.sortOrder }
@@ -289,15 +354,18 @@ struct MovingAverageContributionCalculator: ContributionCalculating {
 
     for (category, categoryAmount) in zip(categories, categoryAmounts) {
       let tickers = category.tickers.sorted { $0.sortOrder < $1.sortOrder }
-      let rawMultipliers = tickers.map { ticker -> Decimal in
-        let quote = input.marketDataSnapshot.quote(for: ticker.normalizedSymbol)
+      var rawMultipliers: [Decimal] = []
+      rawMultipliers.reserveCapacity(tickers.count)
+      for ticker in tickers {
+        let symbol = ticker.normalizedSymbol
+        let quote = input.marketDataSnapshot.quote(for: symbol)
         guard
           let currentPrice = quote?.currentPrice,
           let movingAverage = quote?.movingAverage
         else {
-          preconditionFailure("ContributionInputValidator must reject missing market data.")
+          return .failure(ContributionCalculationError.missingMarketData(symbol))
         }
-        return movingAverage / currentPrice
+        rawMultipliers.append(movingAverage / currentPrice)
       }
       let multiplierTotal = rawMultipliers.reduce(Decimal(0), +)
       let normalizedWeights =

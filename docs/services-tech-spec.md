@@ -46,26 +46,50 @@ validation after the call, and persistence of accepted results. The algorithm
 implementation behind the seam is not specified here.
 
 ```swift
-protocol ContributionCalculating {
-    func calculate(for portfolio: Portfolio) throws -> [TickerAllocation]
+protocol ContributionCalculating: Sendable {
+    func calculate(input: ContributionInput) -> ContributionOutput
 }
 ```
 
 Expected contract:
 
-- Input is a fully populated local `Portfolio` including categories, tickers,
-  monthly budget, MA window, current prices, and moving-average values.
-- Return value is one allocation per investable ticker, expressed as currency
-  amounts rounded or roundable to cents by the app layer.
-- Returned allocations must be non-negative and must sum to the portfolio monthly
-  budget within the app's cent-level tolerance.
-- Throws are used for contract failures, not for ordinary UI validation that can
-  be caught before the call.
+- Input is a `ContributionInput` carrying a fully populated local `Portfolio`
+  (categories, tickers, monthly budget) plus a `MarketDataSnapshot` of
+  per-symbol current price, moving average, and optional band position.
+- Return value is a `ContributionOutput` whose `allocations` enumerate
+  per-ticker amounts and weights, plus a `categoryBreakdown` summary and an
+  `error: LocalizedError?` channel.
+- Returned allocations must be non-negative and must sum to
+  `ContributionInput.monthlyBudget` within cent-level tolerance.
+- The protocol method is **non-throwing**. The canonical error channel is
+  `ContributionOutput.error`, populated by `ContributionOutput.failure(_:)`.
+  Throws are not used because the seam is driven from TCA reducers that store
+  errors as state.
 
-V1 ships with a placeholder/manual-friendly implementation only so the app flow
-can be tested end-to-end. The placeholder may allocate by category weight and
-equal ticker split, but it must not claim to implement the real VCA/moving-average
-algorithm.
+`ContributionInputValidator` runs before the seam (inside
+`ContributionCalculationService.calculate(input:calculator:)`) and rejects any
+input that violates the contract above. Conformers therefore may rely on the
+following invariants when invoked through the service: non-`nil` portfolio,
+`monthlyBudget > 0`, non-empty categories whose weights sum to `1`, every
+category contains at least one ticker, and every ticker has non-`nil`
+`currentPrice` and `movingAverage` both strictly greater than `0`.
+
+For invariants the validator already guarantees, conformers should still return
+`ContributionOutput.failure(_:)` rather than calling `preconditionFailure`. The
+seam is intended to be invoked directly from tests and user-authored harnesses;
+a `preconditionFailure` for a validator-guaranteed invariant crashes those
+direct-call paths even though the live orchestrator path never triggers it.
+
+Calculator-private input dependencies live outside the validator. The notable
+case today is `MarketDataQuote.bandPosition`, which is not checked by
+`ContributionInputValidator`. Band-style conformers must guard for it locally
+and return `ContributionCalculationError.missingBandPosition(symbol)` when
+absent; this is what `BandAdjustedContributionCalculator` ships with.
+
+V1 ships three conformers — `MovingAverageContributionCalculator` (default),
+`BandAdjustedContributionCalculator`, and `ProportionalSplitContributionCalculator`
+— so the app flow can be tested end-to-end. The full user-owned VCA algorithm
+remains tracked by [issue #15](https://github.com/yashasg/value-compass/issues/15).
 
 Current placeholder/local policy: the band-adjusted implementation computes
 each ticker's raw multiplier as `1 + (0.5 - bandPosition)`. Because normalized
@@ -237,19 +261,32 @@ Swift networking surface.
 
 ### 8.1 Calculation errors
 
-Calculation-facing errors should be narrow and user-actionable:
+Calculation-facing errors are narrow and user-actionable. The shipping enum is
+`ContributionCalculationError` (`app/Sources/Backend/Services/ContributionCalculator.swift`)
+and surfaces through `ContributionOutput.error: LocalizedError?` — never as a
+thrown error. Cases group into pre-call invariants (caught by
+`ContributionInputValidator`), calculator-private input checks (a conformer's
+own guards), and post-call invariants (caught by `ContributionOutputValidator`).
 
-| Error | Meaning | User handling |
-|---|---|---|
-| `missingMarketData(ticker)` | Price or moving average is absent for a ticker. | Show the ticker and prompt for manual entry. |
-| `invalidWeights` | Category weights do not sum to 100%. | Keep calculation disabled and focus the editor. |
-| `zeroBudget` | Monthly budget is missing or non-positive. | Show inline budget validation. |
-| `emptyTickerSet` | No investable tickers are available. | Prompt user to add at least one ticker. |
-| `invalidOutput` | Implementation returned negative, duplicate, or non-summing allocations. | Block save and show a generic calculation-contract error. |
+| Error | Source | Meaning | User handling |
+|---|---|---|---|
+| `missingPortfolio` | input validator | `ContributionInput.portfolio` is `nil`. | Block calculation until a portfolio is selected. |
+| `invalidBudget` | input validator | `ContributionInput.monthlyBudget` is non-positive. | Show inline budget validation. |
+| `noCategories` | input validator | Portfolio has no categories. | Prompt user to add a category before calculating. |
+| `categoryWeightsDoNotSumTo100` | input validator | Category weights do not sum to `1`. | Keep calculation disabled and focus the editor. |
+| `categoryHasNoTickers(categoryName)` | input validator | A category has no tickers. | Show the category and prompt for at least one ticker. |
+| `missingMarketData(symbol)` | input validator | `currentPrice` or `movingAverage` is absent for a ticker. | Show the ticker and prompt for manual entry. |
+| `invalidMarketData(symbol)` | input validator | `currentPrice` or `movingAverage` is `≤ 0`. | Show the ticker and prompt for a corrected value. |
+| `missingBandPosition(symbol)` | conformer guard (band-style) | `MarketDataQuote.bandPosition` is `nil` for a calculator that needs it. | Show the ticker and prompt for a manual band position (or switch calculators). |
+| `negativeAllocation(symbol)` | output validator | A returned allocation is negative. | Block save and surface a generic calculation-contract error. |
+| `allocationTotalMismatch(expected, actual)` | output validator | Allocations do not sum to the returned `totalAmount`. | Block save; treat as a calculator contract bug. |
+| `outputTotalMismatch(expected, actual)` | output validator | Returned `totalAmount` does not match the input monthly budget. | Block save; treat as a calculator contract bug. |
 
 The app should catch predictable input states before invoking
-`ContributionCalculating`. Throws remain a defensive contract for implementations
-and future integrations.
+`ContributionCalculating`; the input validator is the backstop, not the primary
+UI gate. Conformers must not call `preconditionFailure` for invariants the
+validator already guarantees — return `.failure(_:)` instead so direct-call
+paths (tests, user-authored harnesses) never crash the process.
 
 ### 8.2 Market-data errors
 

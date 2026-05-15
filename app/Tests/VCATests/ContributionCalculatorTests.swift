@@ -352,6 +352,81 @@ final class ContributionCalculatorTests: XCTestCase {
     )
   }
 
+  func testCalculatorsReturnFailureRatherThanCrashWhenCalledDirectlyWithoutValidator() {
+    let invalidInputs:
+      [(label: String, input: ContributionInput, expected: ContributionCalculationError)] = [
+        (
+          "missingPortfolio",
+          ContributionInput(portfolio: nil), .missingPortfolio
+        ),
+        (
+          "invalidBudget",
+          ContributionInput(portfolio: makeValidPortfolio(monthlyBudget: 0)), .invalidBudget
+        ),
+        (
+          "noCategories",
+          ContributionInput(
+            portfolio: Portfolio(name: "Empty", monthlyBudget: Decimal(100))
+          ), .noCategories
+        ),
+        (
+          "missingMarketData",
+          ContributionInput(
+            portfolio: Portfolio(
+              name: "Missing",
+              monthlyBudget: Decimal(100),
+              categories: [
+                Category(
+                  name: "Equity", weight: 1, sortOrder: 0,
+                  tickers: [
+                    Ticker(symbol: "VTI", currentPrice: nil, movingAverage: 1, sortOrder: 0)
+                  ])
+              ]
+            )
+          ), .missingMarketData("VTI")
+        ),
+      ]
+
+    let calculators: [(label: String, calculator: any ContributionCalculating)] = [
+      ("MovingAverage", MovingAverageContributionCalculator()),
+      ("BandAdjusted", BandAdjustedContributionCalculator()),
+      ("ProportionalSplit", ProportionalSplitContributionCalculator()),
+    ]
+
+    for (calculatorLabel, calculator) in calculators {
+      for (inputLabel, input, expected) in invalidInputs {
+        let output = calculator.calculate(input: input)
+        XCTAssertEqual(
+          output.error as? ContributionCalculationError, expected,
+          "\(calculatorLabel) calculator should surface \(expected) for \(inputLabel) input"
+        )
+      }
+    }
+  }
+
+  func testBandAdjustedCalculatorReturnsMissingBandPositionWithoutCrashing() {
+    let portfolio = Portfolio(
+      name: "Bands",
+      monthlyBudget: Decimal(200),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(
+              symbol: "VTI", currentPrice: Decimal(250), movingAverage: Decimal(245),
+              bandPosition: nil, sortOrder: 0)
+          ])
+      ]
+    )
+
+    let output = BandAdjustedContributionCalculator().calculate(
+      input: ContributionInput(portfolio: portfolio))
+
+    XCTAssertEqual(
+      output.error as? ContributionCalculationError, .missingBandPosition("VTI"))
+    XCTAssertTrue(output.allocations.isEmpty)
+  }
+
   private func makeValidPortfolio(monthlyBudget: Decimal) -> Portfolio {
     Portfolio(
       name: "Core",
