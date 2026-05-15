@@ -230,7 +230,7 @@ private struct PortfolioDetailContent: View {
         Button {
           store.send(.calculateTapped)
         } label: {
-          Label("Calculate", systemImage: "play.fill")
+          Label("Calculate", systemImage: "function")
         }
         .buttonStyle(.borderedProminent)
         .appMinimumTouchTarget()
