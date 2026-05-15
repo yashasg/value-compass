@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import SwiftUI
+import UIKit
 
 /// Sheet presented from `PortfolioListView` for the create/edit portfolio
 /// flow. Routes form bindings, validation, and persistence through
@@ -110,8 +111,36 @@ struct PortfolioEditorView: View {
       // intentional dismiss path and runs through the same confirmation
       // dialog when dirty (#325).
       .interactiveDismissDisabled(store.hasUnsavedChanges)
+      // WCAG 2.2 SC 4.1.3 (Status Messages) / #293: when Save validation
+      // fails, the reducer inserts an inline `Text` below the Form. SwiftUI
+      // does not post an AT notification when an `if let` adds a view to
+      // the hierarchy, so VoiceOver focus stays on the Save toolbar button
+      // and the error is silent — to the AT user, Save just does nothing.
+      // Post the validation message imperatively so the outcome reaches
+      // VoiceOver without forcing a focus change. Sighted interaction is
+      // unchanged. Reducer behavior pins the trigger: `.binding` clears
+      // `validationError` to nil, `.validationFailed(_)` sets it again
+      // — so every failed Save tap traverses nil → value here and fires
+      // even when the same case repeats.
+      .onChange(of: store.validationError) { _, newValue in
+        guard let newValue else { return }
+        let message = PortfolioEditorAccessibility.announcement(for: newValue)
+        UIAccessibility.post(notification: .announcement, argument: message)
+      }
     }
     .task { store.send(.task) }
+  }
+}
+
+/// Composes the VoiceOver announcement posted by `PortfolioEditorView` when
+/// `PortfolioEditorFeature.State.validationError` transitions from nil to a
+/// value (`#293`). Mirrors the on-screen inline error text so screen-reader
+/// users hear what sighted users see. Exposed at file scope (not nested
+/// inside the view) so unit tests can pin every branch without spinning up
+/// a SwiftUI host.
+enum PortfolioEditorAccessibility {
+  static func announcement(for error: PortfolioEditorValidationError) -> String {
+    error.localizedDescription
   }
 }
 

@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import SwiftUI
+import UIKit
 
 /// Per-portfolio contribution-result surface. Renders on top of
 /// `ContributionResultFeature`. Replaces the MVVM definition that
@@ -63,6 +64,21 @@ struct ContributionResultContent: View {
       Text(message)
     }
     .accessibilityIdentifier("contribution.result")
+    // WCAG 2.2 SC 4.1.3 (Status Messages) / #293: the initial arrival on
+    // this screen is announced via the `navigationTitle` flip
+    // ("Contribution Result" ↔ "Calculation Failed"), but tapping Retry
+    // that lands on a *different* failure (e.g. transient network error
+    // → missing market data) keeps the same title and only swaps the
+    // inline error `Label`. SwiftUI fires no AT notification for that
+    // text swap, so the AT user hears nothing and assumes Retry was
+    // ignored. Post the new failure / success summary imperatively when
+    // `output` changes after the screen has appeared. `onChange` does not
+    // fire on first render, so the navigationTitle announcement and this
+    // hook do not overlap.
+    .onChange(of: store.output) { _, newValue in
+      let message = ContributionResultAccessibility.announcement(for: newValue)
+      UIAccessibility.post(notification: .announcement, argument: message)
+    }
   }
 
   private var resultSummary: some View {
@@ -174,5 +190,28 @@ struct ContributionResultContent: View {
 
   private func percentText(_ value: Decimal) -> String {
     decimalText(value * 100)
+  }
+}
+
+/// Composes the VoiceOver announcement posted by `ContributionResultView`
+/// when `ContributionResultFeature.State.output` changes after the screen
+/// has appeared — typically after a Retry tap that produced a new failure
+/// or finally succeeded (`#293`). The screen's first render is already
+/// announced by the `navigationTitle` flip; this string covers the silent
+/// gap when the title stays put and only the inline content swaps.
+///
+/// Exposed at file scope (not nested) so unit tests can pin every branch
+/// without spinning up a SwiftUI host. Mirrors the on-screen copy so
+/// screen-reader users hear what sighted users see.
+enum ContributionResultAccessibility {
+  static func announcement(for output: ContributionOutput) -> String {
+    if let error = output.error {
+      return error.localizedDescription
+    }
+    let amount = NSDecimalNumber(decimal: output.totalAmount).stringValue
+    let count = output.allocations.count
+    let allocationWord = count == 1 ? "allocation" : "allocations"
+    return
+      "Calculation complete. Monthly contribution $\(amount). \(count) ticker \(allocationWord) ready."
   }
 }

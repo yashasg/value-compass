@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import SwiftData
 import SwiftUI
+import UIKit
 
 enum HoldingsDraftIssue: Equatable, Sendable {
   case noCategories
@@ -580,6 +581,29 @@ struct HoldingsEditorView: View {
         // `PortfolioDetailFeature` (#229), so this finally engages the
         // interactive-dismissal gate that was pre-wired in #325.
         .interactiveDismissDisabled(store.hasUnsavedChanges)
+        // WCAG 2.2 SC 4.1.3 (Status Messages) / #293: `store.issues`
+        // recomputes on every keystroke and silently flips the "Warnings"
+        // section's contents — VoiceOver focus stays on the field being
+        // edited and the AT user never hears that weights sum changed,
+        // that a duplicate symbol appeared, or that all warnings cleared.
+        // Anchor announcements on the issue *count* (not the full array)
+        // so per-keystroke micro-edits inside the same set of issues don't
+        // produce speech spam: a user fixing a typo in one ticker symbol
+        // hears one transition ("Holdings warning cleared.") rather than
+        // an announcement per character. Transitions speech maps to:
+        //   N → 0  : "Holdings warnings cleared."
+        //   0 → N  : "N holdings warning(s). <first message>."
+        //   N → M  : "Now M holdings warning(s)." (M > 0, M ≠ N)
+        .onChange(of: store.issues.count) { previous, current in
+          guard
+            let message = HoldingsEditorAccessibility.announcement(
+              forIssueCountChangeFrom: previous,
+              to: current,
+              firstIssueMessage: store.issues.first?.message
+            )
+          else { return }
+          UIAccessibility.post(notification: .announcement, argument: message)
+        }
         .task { await store.send(.task).finish() }
     }
   }
@@ -790,5 +814,37 @@ struct HoldingsEditorView: View {
 
   private func lastTickerID(in categoryID: UUID) -> UUID? {
     store.draft.categories.first(where: { $0.id == categoryID })?.tickers.last?.id
+  }
+}
+
+/// Composes the VoiceOver announcement posted by `HoldingsEditorView` when
+/// the number of validation issues changes (`#293`). Lives at file scope so
+/// the announcement copy can be pinned by unit tests without spinning up a
+/// SwiftUI host.
+///
+/// The view binds to `store.issues.count` rather than the full array so
+/// per-keystroke edits inside the same set of issues do not generate speech
+/// spam — only meaningful set-cardinality transitions are announced. The
+/// emitted strings deliberately mirror the visible "Warnings" section copy
+/// so the AT user hears what the sighted user sees.
+enum HoldingsEditorAccessibility {
+  static func announcement(
+    forIssueCountChangeFrom previous: Int,
+    to current: Int,
+    firstIssueMessage: String?
+  ) -> String? {
+    if previous == current { return nil }
+    if current == 0 {
+      return "Holdings warnings cleared."
+    }
+    let issueWord = current == 1 ? "warning" : "warnings"
+    if previous == 0 {
+      let head = "\(current) holdings \(issueWord)."
+      if let firstIssueMessage, !firstIssueMessage.isEmpty {
+        return "\(head) \(firstIssueMessage)"
+      }
+      return head
+    }
+    return "Now \(current) holdings \(issueWord)."
   }
 }
