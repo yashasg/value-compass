@@ -7,6 +7,12 @@ import Foundation
 /// - Attaches the device UUID and current app version on every request so the
 ///   backend can identify the install and decide whether to emit
 ///   `X-Min-App-Version`.
+/// - Attaches the `X-App-Attest` header on every request that targets a
+///   protected backend route (everything except `/health`) so the
+///   `require_app_attest` dependency in `backend/api/main.py` does not
+///   reject calls with `401 appAttestMissing`. The token value comes from
+///   `AppAttestProvider.currentToken()` — see that type for the MVP
+///   placeholder vs. real `DCAppAttestService` plan.
 /// - Forwards every response to `MinAppVersionClient.observe(response:)` so
 ///   the forced-update screen can be triggered. Phase 2 (#158) replaced the
 ///   former `MinAppVersionMonitor.shared` singleton with this client-static
@@ -65,16 +71,57 @@ final class APIClient {
     case nonHTTPResponse
   }
 
+  /// Path of the only public backend endpoint that does NOT require an
+  /// `X-App-Attest` header. Mirrors the explicit opt-out documented in
+  /// `backend/api/main.py:require_app_attest`.
+  static let unauthenticatedHealthPath = "/health"
+
+  /// Returns `true` when the supplied request targets a backend route that
+  /// requires the `X-App-Attest` header. Returns `false` for the
+  /// unauthenticated `/health` endpoint and for requests whose URL does not
+  /// expose a path (which never reach the backend, but fail-open here so
+  /// `URLSession` surfaces the underlying error instead of a header that
+  /// would never be read).
+  static func appAttestRequired(for request: URLRequest) -> Bool {
+    guard let path = request.url?.path, !path.isEmpty else { return false }
+    return path != unauthenticatedHealthPath
+  }
+
+  /// Returns a copy of `request` with the standard backend headers applied.
+  /// Pulled out of `send(_:)` so reducers and tests can verify exactly which
+  /// headers the live transport attaches without spinning up a real
+  /// `URLSession`.
+  static func makeOutgoingRequest(
+    from request: URLRequest,
+    deviceID: String,
+    appVersion: String?,
+    appAttestToken: String?
+  ) -> URLRequest {
+    var req = request
+    req.setValue(deviceID, forHTTPHeaderField: "X-Device-UUID")
+    if let appVersion {
+      req.setValue(appVersion, forHTTPHeaderField: "X-App-Version")
+    }
+    if let appAttestToken {
+      req.setValue(appAttestToken, forHTTPHeaderField: "X-App-Attest")
+    }
+    return req
+  }
+
   /// Sends a request and returns `(Data, HTTPURLResponse)`. Every response
   /// is funneled through `MinAppVersionClient.observe` before being returned
   /// to the caller, regardless of HTTP status, so a 4xx with a min-version
   /// header still triggers the forced-update flow.
   func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-    var req = request
-    req.setValue(DeviceIDProvider.deviceID(), forHTTPHeaderField: "X-Device-UUID")
-    if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-      req.setValue(version, forHTTPHeaderField: "X-App-Version")
-    }
+    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    let appAttestToken: String? =
+      Self.appAttestRequired(for: request) ? AppAttestProvider.currentToken() : nil
+    let req = Self.makeOutgoingRequest(
+      from: request,
+      deviceID: DeviceIDProvider.deviceID(),
+      appVersion: appVersion,
+      appAttestToken: appAttestToken
+    )
 
     let (data, response) = try await session.data(for: req)
     guard let http = response as? HTTPURLResponse else {
