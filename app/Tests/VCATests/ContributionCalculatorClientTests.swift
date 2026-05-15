@@ -90,6 +90,9 @@ final class ContributionCalculatorClientTests: XCTestCase {
       calculateWithInput: { input, calculator in
         calculator.calculate(input: input)
       },
+      calculateForHoldings: { _, _, _, _ in
+        ContributionOutput.failure(ContributionCalculationError.missingPortfolio)
+      },
       defaultCalculator: { stub }
     )
 
