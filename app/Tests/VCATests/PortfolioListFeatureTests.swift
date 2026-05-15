@@ -29,9 +29,7 @@ final class PortfolioListFeatureTests: XCTestCase {
     }
 
     await store.send(.task)
-    await store.receive(\.portfoliosLoaded) {
-      $0.portfolios = []
-    }
+    await store.receive(.portfoliosLoaded([]))
   }
 
   func testTaskWithSeededPortfoliosLoadsNewestFirst() async throws {
@@ -82,9 +80,7 @@ final class PortfolioListFeatureTests: XCTestCase {
     }
 
     await store.send(.task)
-    await store.receive(\.portfoliosLoaded) {
-      $0.portfolios = []
-    }
+    await store.receive(.portfoliosLoaded([]))
   }
 
   // MARK: - .portfoliosLoaded reconciliation
