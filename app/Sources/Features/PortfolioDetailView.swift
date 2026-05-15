@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import SwiftUI
+import UIKit
 
 /// Per-portfolio detail surface. Renders on top of `PortfolioDetailFeature`
 /// and pushes `HoldingsEditorView` / `ContributionResultView` /
@@ -260,5 +261,34 @@ private struct PortfolioDetailContent: View {
     }
     .padding()
     .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
+    // WCAG 2.2 SC 4.1.3 (Status Messages) / #352: when the Calculate
+    // button completes, VoiceOver focus stays on the button and the
+    // inserted result block is silent by default. Post the result
+    // summary (or error) imperatively so AT users hear the outcome
+    // without having to swipe through the screen to find it.
+    .onChange(of: store.calculationOutput) { _, newValue in
+      guard let newValue else { return }
+      let message = PortfolioDetailAccessibility.announcement(for: newValue)
+      UIAccessibility.post(notification: .announcement, argument: message)
+    }
+  }
+}
+
+/// Composes the VoiceOver announcement posted by
+/// `PortfolioDetailContent.calculateSection` when
+/// `PortfolioDetailFeature.State.calculationOutput` transitions to a new
+/// value. Mirrors the on-screen summary so screen-reader users hear what
+/// sighted users see. Exposed at file scope (not nested inside the view)
+/// so unit tests can pin every branch without spinning up a SwiftUI host.
+enum PortfolioDetailAccessibility {
+  static func announcement(for output: ContributionOutput) -> String {
+    if let error = output.error {
+      return error.localizedDescription
+    }
+    let amount = PortfolioFormDraft.displayText(for: output.totalAmount)
+    let count = output.allocations.count
+    let allocationWord = count == 1 ? "allocation" : "allocations"
+    return
+      "Calculation complete. Monthly contribution $\(amount). \(count) ticker \(allocationWord) ready."
   }
 }
