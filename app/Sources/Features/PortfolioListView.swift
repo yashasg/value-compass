@@ -54,11 +54,6 @@ private struct PortfolioListContent: View {
                 .tint(.blue)
               }
           }
-          .onDelete { offsets in
-            for index in offsets {
-              store.send(.deleteTapped(id: store.portfolios[index].id))
-            }
-          }
         }
         .accessibilityIdentifier("portfolio.list")
       }

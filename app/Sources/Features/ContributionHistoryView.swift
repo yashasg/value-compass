@@ -56,11 +56,6 @@ private struct ContributionHistoryContent: View {
               }
               .accessibilityIdentifier("contribution.history.record")
             }
-            .onDelete { offsets in
-              if let firstOffset = offsets.first {
-                store.send(.deleteTapped(record: section.records[firstOffset]))
-              }
-            }
           } header: {
             HStack {
               Text(section.title)
