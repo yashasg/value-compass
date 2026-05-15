@@ -1,5 +1,14 @@
 # value-compass
 
+## License & copyright
+
+This is a **public** repository, but it is not open-source. Every
+original contribution is © 2025–2026 the Value Compass authors with
+**all rights reserved** unless a file states otherwise. See
+[`NOTICE.md`](./NOTICE.md) for the full repo-copyright posture and
+[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) for the upstream
+license texts that govern adapted third-party material (issue #338).
+
 ## Structure
 
 ```
