@@ -47,6 +47,8 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings.language")
       }
 
+      apiKeySection
+
       Section("About") {
         LabeledContent("Version", value: store.appVersion)
         LabeledContent("Device ID", value: store.deviceIDPrefix)
@@ -66,6 +68,144 @@ struct SettingsView: View {
     .navigationTitle("Settings")
     .tint(Color.appPrimary)
     .task { store.send(.task) }
+  }
+
+  // MARK: - Massive API key (issue #127)
+
+  /// Massive API key management section. Always renders an entry field for a
+  /// new / replacement key plus a status row that adapts to whether a key is
+  /// already stored. The raw key never appears in `apiKeyMaskedDisplay`; the
+  /// reducer only forwards a bullet-prefixed suffix.
+  @ViewBuilder
+  private var apiKeySection: some View {
+    Section("Massive API Key") {
+      apiKeyStatusRow
+      apiKeyEntryRow
+      apiKeyRequestStatusRow
+
+      if let loadError = store.apiKeyLoadError {
+        Text("Stored key could not be read: \(loadError)")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appNegative)
+          .accessibilityIdentifier("settings.apiKey.loadError")
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var apiKeyStatusRow: some View {
+    switch store.apiKeyStatus {
+    case .noStoredKey:
+      Text("No API key saved.")
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appContentSecondary)
+        .accessibilityIdentifier("settings.apiKey.status.empty")
+    case .storedAndValid:
+      HStack {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Saved key")
+            .valueCompassTextStyle(.bodySmall)
+            .foregroundStyle(Color.appContentSecondary)
+          Text(store.apiKeyMaskedDisplay ?? "")
+            .accessibilityIdentifier("settings.apiKey.maskedDisplay")
+        }
+        Spacer()
+        Button("Re-validate") {
+          store.send(.revalidateStoredKeyTapped)
+        }
+        .accessibilityIdentifier("settings.apiKey.revalidate")
+        .disabled(store.apiKeyRequestStatus.isInFlight)
+
+        Button(role: .destructive) {
+          store.send(.removeAPIKeyTapped)
+        } label: {
+          Text("Remove")
+        }
+        .accessibilityIdentifier("settings.apiKey.remove")
+        .disabled(store.apiKeyRequestStatus.isInFlight)
+      }
+    case .storedButLastCheckFailed(let reason):
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Saved key may be invalid: \(reason)")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appNegative)
+          .accessibilityIdentifier("settings.apiKey.status.failed")
+        if let mask = store.apiKeyMaskedDisplay {
+          Text(mask)
+            .accessibilityIdentifier("settings.apiKey.maskedDisplay")
+        }
+        HStack {
+          Button("Re-validate") {
+            store.send(.revalidateStoredKeyTapped)
+          }
+          .accessibilityIdentifier("settings.apiKey.revalidate")
+          .disabled(store.apiKeyRequestStatus.isInFlight)
+
+          Button(role: .destructive) {
+            store.send(.removeAPIKeyTapped)
+          } label: {
+            Text("Remove")
+          }
+          .accessibilityIdentifier("settings.apiKey.remove")
+          .disabled(store.apiKeyRequestStatus.isInFlight)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var apiKeyEntryRow: some View {
+    HStack {
+      SecureField("Enter API key", text: $store.apiKeyDraft)
+        .textContentType(.password)
+        .autocorrectionDisabled(true)
+        .textInputAutocapitalization(.never)
+        .accessibilityIdentifier("settings.apiKey.draftField")
+
+      Button("Save") {
+        store.send(.saveAPIKeyTapped)
+      }
+      .accessibilityIdentifier("settings.apiKey.save")
+      .disabled(
+        store.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+          || store.apiKeyRequestStatus.isInFlight)
+    }
+  }
+
+  @ViewBuilder
+  private var apiKeyRequestStatusRow: some View {
+    switch store.apiKeyRequestStatus {
+    case .idle:
+      EmptyView()
+    case .validating:
+      HStack(spacing: 8) {
+        ProgressView()
+        Text("Validating with Massive…")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appContentSecondary)
+      }
+      .accessibilityIdentifier("settings.apiKey.request.validating")
+    case .rejected(let reason):
+      Text("Rejected: \(reason)")
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .accessibilityIdentifier("settings.apiKey.request.rejected")
+    case .networkError(let reason):
+      Text("Network error: \(reason)")
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .accessibilityIdentifier("settings.apiKey.request.networkError")
+    case .storeError(let reason):
+      Text("Could not save key: \(reason)")
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .accessibilityIdentifier("settings.apiKey.request.storeError")
+    case .savedSuccessfully:
+      Text("API key saved.")
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appPositive)
+        .accessibilityIdentifier("settings.apiKey.request.saved")
+    }
   }
 }
 

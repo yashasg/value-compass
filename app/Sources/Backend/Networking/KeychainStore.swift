@@ -42,6 +42,23 @@ enum KeychainStore {
     }
   }
 
+  /// Removes any entry stored under `key`. Treats "no item present" as
+  /// success so callers (full local reset, `MassiveAPIKeyClient.delete`) can
+  /// invoke this idempotently without first checking for existence.
+  static func remove(_ key: String) throws {
+    let query: [String: Any] = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrAccount as String: key,
+    ]
+    let status = SecItemDelete(query as CFDictionary)
+    switch status {
+    case errSecSuccess, errSecItemNotFound:
+      return
+    default:
+      throw KeychainError.unexpectedStatus(status)
+    }
+  }
+
   /// Returns the value previously stored under `key`, or `nil` if no entry
   /// exists. Throws on unexpected keychain errors.
   static func get(_ key: String) throws -> String? {
