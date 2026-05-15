@@ -43,3 +43,6 @@ Created 4 non-blocking design follow-up issues to support app development alongs
 - **#38 iPad Layout Polish: Split-View Navigation and Adaptive Spacing** — Ensure NavigationSplitView layouts work comfortably on iPad (Pro/Air/mini), verify touch targets, balanced spacing, and readable line lengths across compact/regular width classes.
 
 All issues labeled with "squad" for visibility. Issues are intentionally non-blocking design follow-ups that allow Basher's implementation work to proceed while planning visual system refinement.
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.

@@ -1,0 +1,38 @@
+{
+  "defaultWorkflow": "branch-per-issue",
+  "workstreams": [
+    {
+      "name": "Frontend",
+      "labelFilter": "team:frontend",
+      "folderScope": [
+        "app/Sources/Features/**",
+        "app/Sources/App/AppFeature/**",
+        "app/Sources/DesignSystem/**",
+        "app/Sources/Assets/**",
+        "app/Tests/**",
+        "docs/design-system-colors.md"
+      ],
+      "description": "Frontend (Basher, Tess) + Dev QA tests (Linus) — iOS/iPadOS UI, design system, feature surfaces, and the XCTest target."
+    },
+    {
+      "name": "Backend",
+      "labelFilter": "team:backend",
+      "folderScope": [
+        "app/Sources/Backend/**",
+        "app/Sources/App/Dependencies/**"
+      ],
+      "description": "Backend (Virgil) — iOS data layer: Networking, Contracts, Models, Services, and DI/composition root. Refers to the iOS-side data backend; the Python backend/ directory is mothballed in v1 and intentionally not covered by any stream."
+    },
+    {
+      "name": "Strategy",
+      "labelFilter": "team:strategy",
+      "folderScope": [
+        "docs/audits/**",
+        "docs/research/**",
+        "docs/legal/**",
+        "docs/aso/**"
+      ],
+      "description": "Strategy (Saul, Reuben, Yen, Frank, Turk, Nagel) — market research, legal, accessibility audits, App Store optimization, HIG compliance, API contract monitoring. Authors audit/research/legal/aso docs; reviewer-gate on UI and contract surfaces lives in routing.md, not here."
+    }
+  ]
+}

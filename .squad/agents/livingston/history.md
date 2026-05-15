@@ -112,3 +112,6 @@ Filed P0 GitHub issue #206 (`yashasg/value-compass`) to track iOS CI/CD findings
 - **Quick wins:** Flip `RUN_ANALYZE=true` to `false` in ios-ci.yml; move CodeQL to nightly cron on main only
 
 **Effect:** Squad Lead (danny) will triage via `squad` label; issue is now tracked and prioritized for implementation.
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.
