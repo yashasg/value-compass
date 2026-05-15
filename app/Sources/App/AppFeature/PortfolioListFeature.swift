@@ -51,6 +51,7 @@ struct PortfolioListFeature {
     case confirmDelete
     case cancelDelete
     case selected(id: UUID?)
+    case settingsOpenTapped
     case editor(PresentationAction<PortfolioEditorFeature.Action>)
     case saveErrorDismissed
     case delegate(Delegate)
@@ -58,6 +59,17 @@ struct PortfolioListFeature {
     @CasePathable
     enum Delegate: Equatable {
       case portfolioOpened(UUID)
+      /// Compact / iPhone toolbar requested the Settings screen. The
+      /// parent (`MainFeature`) handles this by pushing
+      /// `MainFeature.Path.settings(...)` onto its navigation path so
+      /// the Settings instance is scoped under `MainFeature.path` (and
+      /// transitively under `AppFeature.destination.main`). Routing
+      /// through the parent — instead of `NavigationLink { SettingsView() }`
+      /// with a self-contained store — is what makes
+      /// `SettingsFeature.delegate(.dataErased)` reach `AppFeature` from
+      /// the iPhone toolbar entry point and unblocks the HIG-compliant
+      /// post-erase reroute (#471).
+      case settingsOpenRequested
     }
   }
 
@@ -130,6 +142,9 @@ struct PortfolioListFeature {
           return .send(.delegate(.portfolioOpened(id)))
         }
         return .none
+
+      case .settingsOpenTapped:
+        return .send(.delegate(.settingsOpenRequested))
 
       case .editor(.presented(.delegate(.saved))):
         return .run { [modelContainer] send in

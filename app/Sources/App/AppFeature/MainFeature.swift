@@ -18,10 +18,14 @@ import Foundation
 struct MainFeature {
   @ObservableState
   struct State: Equatable {
-    /// iPad sidebar selection. Compact (iPhone) ignores this; the toolbar's
-    /// own `NavigationLink { SettingsView() }` keeps powering the compact
-    /// settings push because Phase 1 (#152) deliberately kept that
-    /// presentation MVVM-style for the empty-detail case.
+    /// iPad sidebar selection. Compact (iPhone) ignores this; the
+    /// toolbar's Settings button dispatches `PortfolioListFeature`
+    /// `.settingsOpenTapped`, which `MainFeature` translates into a
+    /// `.path.append(.settings(...))` push so the compact Settings
+    /// store is scoped under `MainFeature.path` (and through it,
+    /// `AppFeature.destination.main`). That is what lets
+    /// `SettingsFeature.delegate(.dataErased)` reach `AppFeature` from
+    /// the iPhone toolbar entry point.
     var sidebar: Sidebar = .portfolios
 
     /// Source of truth for the iPad content column when sidebar = portfolios
@@ -155,6 +159,18 @@ struct MainFeature {
           state.sidebar = .portfolios
           MainFeature.selectPortfolioDetail(id: id, in: &state)
         }
+        return .none
+
+      case .portfolios(.delegate(.settingsOpenRequested)):
+        // Compact (iPhone) toolbar routes Settings through `path` so the
+        // Settings store is scoped under `MainFeature` (and through it,
+        // under `AppFeature.destination.main`). This makes
+        // `SettingsFeature.delegate(.dataErased)` reach `AppFeature`,
+        // which is what powers the HIG-compliant post-erase reroute
+        // (#471). iPad regular width hides this toolbar entry point
+        // (`showsSettingsLink = false` while `shellKind == .splitView`)
+        // because the sidebar already exposes Settings.
+        state.path.append(.settings(SettingsFeature.State()))
         return .none
 
       // PortfolioDetailFeature delegates from inside the path stack

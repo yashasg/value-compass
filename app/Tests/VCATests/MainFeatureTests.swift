@@ -185,6 +185,23 @@ final class MainFeatureTests: XCTestCase {
     }
   }
 
+  /// HIG → Launching → Quitting (#471): the compact iPhone toolbar
+  /// pushes Settings through `MainFeature.path` so the Settings
+  /// instance is scoped under `MainFeature` (and through it,
+  /// `AppFeature.destination.main`). That scoping is what lets
+  /// `SettingsFeature.delegate(.dataErased)` reach `AppFeature` from
+  /// the iPhone toolbar entry point.
+  func testSettingsOpenRequestedDelegateAppendsSettingsToPath() async {
+    var initialState = MainFeature.State()
+    initialState.shellKind = .stack
+
+    let store = TestStore(initialState: initialState) { MainFeature() }
+
+    await store.send(.portfolios(.delegate(.settingsOpenRequested))) {
+      $0.path.append(.settings(SettingsFeature.State()))
+    }
+  }
+
   // MARK: - PortfolioDetail delegates from path
 
   func testPortfolioDetailOpenCalculationResultFromPathAppendsContributionResult() async {

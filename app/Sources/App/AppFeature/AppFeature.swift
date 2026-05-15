@@ -97,12 +97,22 @@ struct AppFeature {
         }
         return .none
 
-      case .destination(.main(.settings(.delegate(.dataErased)))):
+      case .destination(.main(.settings(.delegate(.dataErased)))),
+        .destination(.main(.path(.element(_, .settings(.delegate(.dataErased)))))):
         // Settings → Erase All My Data pipeline finished. Swap
         // `destination` back to onboarding programmatically so the
         // user sees the freshly reset disclaimer/welcome screen
         // without being asked to force-quit the app (HIG → Launching
         // → Quitting forbids quit/relaunch instructions). Issue #471.
+        //
+        // We match both shapes so the reroute fires regardless of
+        // which Settings entry point the user hit:
+        //   * `.main(.settings(...))` — iPad split-view sidebar slot
+        //     (`MainFeature.settings`, the directly-scoped child).
+        //   * `.main(.path(.element(_, .settings(...))))` — iPhone
+        //     toolbar push (`MainFeature.Path.settings`, pushed by
+        //     `MainFeature` in response to
+        //     `PortfolioListFeature.delegate(.settingsOpenRequested)`).
         //
         // `SettingsFeature` already cleared the persisted onboarding-
         // gate user defaults (`AppPreferenceKeys.disclaimer` /
@@ -116,8 +126,8 @@ struct AppFeature {
         // .completed))`. In practice, by the time `requiresAppUpdate`
         // is `true`, `destination` is already `.forcedUpdate(...)` (set
         // in the same `.minVersionEvent` reduction) and TCA's
-        // `.ifCaseLet` aborts this `.main(.settings(...))` action
-        // before it reaches this case — the guard is unreachable but
+        // `.ifCaseLet` aborts the wrapped `.main(...)` action before
+        // it reaches this case — the guard is unreachable but
         // documents the invariant.
         if !state.requiresAppUpdate {
           state.destination = .onboarding(OnboardingFeature.State())

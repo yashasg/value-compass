@@ -13,22 +13,6 @@ struct SettingsView: View {
     self.store = store
   }
 
-  /// Convenience initializer for legacy callers (`MainView`,
-  /// `PortfolioListView` legacy bridge) that construct `SettingsView` without
-  /// a parent store. Spawns a self-contained `SettingsFeature` store; the
-  /// reducer's `.task` effect immediately rehydrates `theme` / `language`
-  /// from `UserDefaults` (via `@Dependency(\.userDefaults)`) and persists
-  /// future binding changes the same way, so behavior is bit-identical to
-  /// the legacy `AppState`-backed path. Removed when `MainFeature.shell`
-  /// passes a scoped settings store directly (#159).
-  init() {
-    self.init(
-      store: Store(initialState: SettingsFeature.State()) {
-        SettingsFeature()
-      }
-    )
-  }
-
   var body: some View {
     Form {
       Section("Preferences") {
