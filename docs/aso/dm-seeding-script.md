@@ -175,10 +175,16 @@ positioning honesty rules baked into #322 / #353 / #418.
 
 - **Review asks of any kind.** Not "leave a review," not "rate the
   app," not "tell others." Apple App Store Review Guideline §5.6.3
-  is the bright line; the DM channel is the closest-to-the-line
-  surface in the whole funnel and the rule is non-negotiable. Per
-  `docs/aso/cold-start-launch-playbook.md` §"Phase 1 / Phase 2 Out
-  of scope," reviews are recipient-initiated only.
+  (Discovery Fraud — "Manipulating any element of the App Store
+  customer experience such as charts, search, reviews, or referrals
+  to your app … is not permitted") read together with the §3
+  (Business) preamble's explicit ban on "paid, incentivized,
+  filtered, or fake feedback" is the bright line; the DM channel is
+  the closest-to-the-line surface in the whole funnel and the rule
+  is non-negotiable. Verbatim quotes recorded in §"Reuben compliance
+  gate → Evidence quotes." Per `docs/aso/cold-start-launch-playbook.md`
+  §"Phase 1 / Phase 2 Out of scope," reviews are recipient-initiated
+  only.
 - **Plural recipients per comment-thread.** One DM per surfaced-pain
   comment, full stop. Mass-DMing multiple users in the same thread
   is the spam-pattern Reddit mods can detect across modmail reports.
@@ -246,11 +252,170 @@ the review.
 
 | Reuben issue | Sign-off date | Evidence URLs cited | Required edits |
 |---|---|---|---|
-| _(pending — see §"Hand-offs")_ | _(blocked)_ | _(blocked)_ | _(blocked)_ |
+| [#484](https://github.com/yashasg/value-compass/issues/484) | 2026-05-15 | `https://redditinc.com/policies/user-agreement` (§3, §7, §8); `https://redditinc.com/policies/content-policy`; `https://www.redditinc.com/policies/moderator-code-of-conduct` (Rule 3, Rule 5); `https://developer.apple.com/app-store/review/guidelines/` (§3 preamble, §4.5.3, §5.6.1, §5.6.3); `https://news.ycombinator.com/showhn.html` (referenced from `docs/aso/channel-feasibility.md`); `docs/legal/third-party-services.md` (§5.2.3 register, Massive row). Verbatim quotes recorded in §"Evidence quotes" below. | Precision edit applied to §"Forbidden patterns" preamble: `Apple 5.6.3 (review incentivization)` rephrased to cite both §5.6.3 (Discovery Fraud — review manipulation) and §3 preamble (no paid/incentivized/filtered/fake feedback) since the explicit "incentivized" verb lives in §3. **No DM-template body edits (T1-T4 ship as drafted).** **No §"Forbidden patterns" enumeration edits required** — the block is exhaustive against §5.6.3 + §3 + Apple §4.5.3 (no unsolicited messaging via Apple Services). **No §"Cohort manifest schema" storage-rule edits required** — hashed-handle column, paraphrase-if-identifiable rule, 30-day retention, gitignored `.squad/.scratch/` path, and "never enters repo/app/backend" commitment align with #322 commitment #2 + #353 Data-Not-Collected posture. **Confirmed:** the DM does **not** need to surface Massive's terms — Apple §5.2.3 attaches to in-binary surfaces (`app/Sources/Features/SettingsView.swift` Massive API Key section per `docs/legal/third-party-services.md`); the DM never references Massive, market data, or the API key. |
 
 Until this table has at least one signed row, the DM funnel is
 **closed**. Sender does not send the first DM; abort and re-route
 recruits to the volume funnel (#456 HN + r/SideProject + IH).
+
+### Evidence quotes
+
+Verbatim fetches taken on the sign-off cycle (2026-05-15) supporting
+the row above. Mirrors the verbatim-quote audit pattern in
+`docs/aso/channel-feasibility.md` §"Rule quotes (verbatim)". Re-fetch
+required if the DM funnel opens >30 days from this date (per
+§"Honest evidence ceilings" #11 — Reddit / Apple policy drift).
+
+#### Reddit User Agreement (`https://redditinc.com/policies/user-agreement`, fetched 2026-05-15)
+
+- **§3 "Your Use of the Services":** *"Subject to your complete and
+  ongoing compliance with these Terms, Reddit grants you a personal,
+  non-transferable, non-exclusive, revocable, limited license to:
+  (a) install and use a copy of our mobile application … and (b)
+  access and use the Services."* The 1:1-after-surfaced-pain DM
+  pattern is "use of the Services" by an account that satisfies
+  §"Pre-conditions checklist"; no automated/bot use, no scraping —
+  Reddit's own UI is the send surface.
+- **§7 "Things You Cannot Do":** *"Use the Services in any manner
+  (automated, including via bots, or otherwise) that could interfere
+  with, disable, disrupt, overburden, or otherwise impair the
+  Services; … Use the Services in any manner that we reasonably
+  believe to be an abuse of or fraud on Reddit or any payment
+  system."* The DM is single-recipient, manual, no automation, and
+  abort-criteria fire on any mod warn — structurally not a
+  load/abuse pattern.
+- **§8 "Moderators":** *"You may not perform moderation actions in
+  return for any form of compensation, consideration, gift, or favor
+  from third parties; … You may create and enforce rules for the
+  subreddits you moderate, provided that such rules do not conflict
+  with these Terms, the Reddit Rules, or the Moderator Code of
+  Conduct."* Confirms that the sub-level self-promo rules audited in
+  `docs/aso/channel-feasibility.md` are the operative gate at the
+  *public-post* surface — the DM surface routes around the
+  sub-mod-enforced rules, but inherits Reddit's platform-level Terms
+  (§3, §7) and the sender-side §"Pre-conditions checklist" 9:1
+  posture as the structural defence.
+
+#### Reddit Content Policy (`https://redditinc.com/policies/content-policy`, fetched 2026-05-15)
+
+- *"While not every community may be for you (and you may find some
+  unrelatable or even offensive), no community should be used as a
+  weapon. Communities should create a sense of belonging for their
+  members, not try to diminish it for others. Likewise, everyone on
+  Reddit should have an expectation of privacy and safety, so please
+  respect the privacy and safety of others."* The DM channel
+  respects recipient privacy (single recipient, opt-out line, no
+  cross-thread DM aggregation, hashed-handle manifest); the
+  surfaced-pain reference is the recipient's own public phrasing, so
+  the DM does not violate privacy by surfacing information the
+  recipient did not publish.
+
+#### Reddit Moderator Code of Conduct (`https://www.redditinc.com/policies/moderator-code-of-conduct`, fetched 2026-05-15)
+
+- **Rule 3 "Respect Your Neighbors":** *"While we allow meta
+  discussions about Reddit, including other subreddits, your
+  community should not be used to direct, coordinate, or encourage
+  interference in other communities and/or to target redditors for
+  harassment. As a moderator, you cannot interfere with or disrupt
+  Reddit communities, nor can you facilitate, encourage, coordinate,
+  or enable members of your community to do this."* The DM is
+  sender-initiated 1:1; no community-level coordination, no
+  cross-sub brigading. The structural defence is `n=1 per surfaced
+  pain comment` per §"Forbidden patterns" → no plural recipients per
+  comment thread, no thread-wide DM sweeps.
+- **Rule 5 "Moderate with Integrity":** *"moderators are prohibited
+  from taking moderation actions (including actions taken using mod
+  tools, bots, and other services) in exchange for any form of
+  compensation, consideration, gift, or favor from or on behalf of
+  third parties."* Investrum's sender is **not a moderator** in any
+  target sub per §"Pre-conditions checklist" (commenter-only
+  posture); Rule 5 is observed structurally by exclusion. If the
+  sender ever becomes a mod of a target sub mid-cycle, the DM
+  posture from that sub must be retired (would conflict with Rule 5
+  given the developer-status disclosure).
+
+#### Reddit self-promotion / 9:1-rule guidance (`https://support.reddit.com/hc/en-us/articles/360043071072`, attempted 2026-05-15)
+
+- **Auto-fetch blocked:** Reddit's self-promotion help-center article
+  was returned behind a Cloudflare JS challenge on this cycle (HTTP
+  challenge page rather than article body). Re-fetch on the next
+  Reuben cycle when the funnel opens; if the challenge persists,
+  manual operator capture into this section is the fallback.
+- **Defensible posture without the help-center text:** the 9:1 ratio
+  is a long-standing Reddit community convention (called out in
+  `docs/aso/channel-feasibility.md` §"Honest evidence ceiling 1" as
+  Reuben's lane and consistently echoed by sub-level rule pages
+  audited there). §"Pre-conditions checklist" requires 9:1
+  satisfaction over a rolling 30-day window with the DM counted as
+  the single self-promo action; this is *stricter* than any
+  documented Reddit-platform threshold, so the defensible compliance
+  claim is unaffected by the article-level fetch gap. Recorded as
+  §"Honest evidence ceiling 11" below.
+
+#### Apple App Store Review Guidelines (`https://developer.apple.com/app-store/review/guidelines/`, fetched 2026-05-15; "Last Updated: February 6, 2026")
+
+- **§3 (Business) preamble:** *"If we find that you have attempted
+  to manipulate reviews, inflate your chart rankings with paid,
+  incentivized, filtered, or fake feedback, or engage with
+  third-party services to do so on your behalf, we will take steps
+  to preserve the integrity of the App Store, which may include
+  expelling you from the Apple Developer Program."* This is the
+  explicit "incentivized feedback" prohibition. The DM channel
+  contains zero review asks, zero implicit review framing, and zero
+  consideration of any kind in exchange for reviews — §"Forbidden
+  patterns" enumerates the failure modes (no "leave a review," no
+  "rate the app," no "tell others"). The DM-funnel review-ask
+  posture is full ban.
+- **§4.5.3 "Apple Sites and Services":** *"Do not use Apple Services
+  to spam, phish, or send unsolicited messages to customers,
+  including Game Center, Push Notifications, etc."* The DM channel
+  is Reddit-side messaging, not Apple Services; the DM never reaches
+  Game Center, Push Notifications, or any Apple-mediated surface, so
+  §4.5.3 is observed by surface exclusion.
+- **§5.6.1 "App Store Reviews":** *"App Store customer reviews can
+  be an integral part of the app experience, so you should treat
+  customers with respect when responding to their comments. Keep
+  your responses targeted to the user's comments and do not include
+  personal information, spam, or marketing in your response. Use the
+  provided API to prompt users to review your app; this
+  functionality allows customers to provide an App Store rating and
+  review without the inconvenience of leaving your app, and we will
+  disallow custom review prompts."* The DM channel is a recruitment
+  surface, not a review-prompting surface; in-app review prompts are
+  routed through `SKStoreReviewController` per Frank #345 and never
+  through the DM. Both surfaces are independent and the DM does not
+  cross the §5.6.1 line.
+- **§5.6.3 "Discovery Fraud":** *"Participating in the App Store
+  requires integrity and a commitment to building and maintaining
+  customer trust. Manipulating any element of the App Store customer
+  experience such as charts, search, reviews, or referrals to your
+  app erodes customer trust and is not permitted."* The bright-line
+  rule. The DM ladders to the TestFlight invite, not to an App Store
+  rating/review action; recipients who later install via TestFlight
+  and post a review do so **without prompting** by the funnel (post-
+  Reuben-gate, this is the H2 hypothesis recorded in §"Honest
+  evidence ceiling 3"). The funnel does not manipulate App Store
+  reviews, search, or charts.
+
+#### `docs/legal/third-party-services.md` (§"Massive (market-data API key validation)", in-tree as of 2026-05-15)
+
+- **Massive registration surface:** *"User-consent surface | Settings
+  → Massive API Key section. Section footer names Massive as the
+  recipient before the user taps Save; the two `Link` rows hand the
+  user off to Safari to read the published policy text before
+  consent."* The canonical Massive-disclosure surface is in-binary.
+  The DM templates T1-T4 do not reference Massive, market-data API
+  keys, or any service requiring the §5.2.3 register treatment; the
+  DM ladders to the no-account/no-tracking/Free positioning per
+  `docs/aso/subtitle-positioning.md`. **Massive's terms do not need
+  to surface in the DM** — confirmed.
+
+#### Hacker News Show HN guidance (`https://news.ycombinator.com/showhn.html`, referenced from `docs/aso/channel-feasibility.md` 2026-05-17 fetch)
+
+- *Already verbatim-recorded* in `docs/aso/channel-feasibility.md`
+  §"Quotes / criteria (verbatim)" for the volume funnel (#456). Not
+  the DM channel's gate but cross-linked because §"Abort criteria"
+  fallback routes to the volume funnel if persona-fit aborts.
 
 ## Sniff-test (pre-sign-off, qualitative validation, n=5)
 
@@ -504,12 +669,34 @@ the funnel mix shifts.
    invite URL in every template. Templates remain ≤120 words either
    way.
 9. **Apple §5.6.3 enforcement is Apple-side discretion.** The
-   bright-line rule is "no review incentivization" — the DM is
-   structurally compliant (no review-ask, no implicit review-ask)
-   but Apple's monitoring of review-pattern correlation is
-   non-deterministic. The structural guard is the §"Forbidden
-   patterns" review-ask block + Reuben's §5.6.3 sign-off in
-   §"Reuben compliance gate."
+   bright-line rule is no review manipulation (§5.6.3 "Discovery
+   Fraud") and no paid/incentivized/filtered/fake feedback (§3
+   preamble) — the DM is structurally compliant (no review-ask, no
+   implicit review-ask, no incentivized framing) but Apple's
+   monitoring of review-pattern correlation is non-deterministic.
+   The structural guard is the §"Forbidden patterns" review-ask
+   block + Reuben's §5.6.3 sign-off in §"Reuben compliance gate."
+10. **Reddit self-promotion help-center article was not auto-fetchable
+    on the Reuben sign-off cycle.** `https://support.reddit.com/hc/en-us/articles/360043071072`
+    returned a Cloudflare JS challenge rather than the article body
+    (`docs/aso/dm-seeding-script.md` §"Reuben compliance gate →
+    Evidence quotes → Reddit self-promotion / 9:1-rule guidance"
+    records the gap). §"Pre-conditions checklist" applies a 9:1
+    floor that is stricter than any documented Reddit-platform
+    threshold (rolling 30-day window with the DM counted as one
+    self-promo action), so the defensible compliance posture is
+    unaffected by the article-level fetch gap; the gap is a
+    re-fetch-on-next-cycle action, not a funnel-blocker.
+11. **Reddit + Apple policy URLs can drift between Reuben sign-off
+    and DM execution.** Apple last-updated the Review Guidelines on
+    "February 6, 2026" (per the page footer fetched on the sign-off
+    cycle); Reddit policies do not publish a similar last-updated
+    stamp. The §"Reuben compliance gate → Evidence quotes" fetch
+    date (2026-05-15) anchors the audit. If the DM funnel opens >30
+    days after this fetch, Reuben must re-fetch and re-sign before
+    the first DM ships. Per `docs/aso/channel-feasibility.md`
+    §"Honest evidence ceiling 1" the re-verification cadence is
+    Reuben's lane, not Saul's.
 
 ## Cross-links
 
@@ -538,3 +725,8 @@ the funnel mix shifts.
 — Saul, cycle 2026-05-15 #27. Operationalizes the persona-fit
 funnel that closed #448 defined and routed but did not script.
 Companion Reuben compliance issue cross-linked from #458.
+
+— Reuben compliance gate signed 2026-05-15 (issue #484). Verbatim
+audits recorded in §"Reuben compliance gate → Evidence quotes."
+Re-fetch + re-sign required if funnel opens >30 days from this
+date (per §"Honest evidence ceiling 11").
