@@ -10,7 +10,8 @@
       "created_at": "2026-05-12T22:54:36.349Z",
       "persistent_name": "Rusty",
       "universe": "Ocean's Eleven",
-      "status": "active"
+      "status": "retired",
+      "retired_at": "2026-05-15T00:54:42.716-07:00"
     },
     "basher": {
       "created_at": "2026-05-12T22:54:36.349Z",
@@ -47,6 +48,57 @@
       "created_at": "2026-05-12T22:54:36.349Z",
       "persistent_name": "Ralph",
       "universe": "Ocean's Eleven",
+      "status": "active"
+    },
+    "virgil": {
+      "created_at": "2026-05-15T00:58:45.054-07:00",
+      "persistent_name": "Virgil",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "saul": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Saul",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "reuben": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Reuben",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "yen": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Yen",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "frank": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Frank",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "turk": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Turk",
+      "universe": "Ocean's Eleven",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "nagel": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "persistent_name": "Nagel",
+      "full_character_name": "Roman Nagel",
+      "universe": "Ocean's Eleven",
+      "diegetic_expansion_from": "Ocean's Twelve",
+      "legacy_named": false,
       "status": "active"
     }
   }
