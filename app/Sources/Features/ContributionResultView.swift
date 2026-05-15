@@ -95,9 +95,13 @@ struct ContributionResultContent: View {
         .valueCompassTextStyle(.labelCaps)
         .foregroundStyle(Color.appContentSecondary)
 
+      // WCAG 2.2 SC 1.4.4 (Resize Text) + SC 1.4.10 (Reflow) — allow
+      // the headline currency value to wrap naturally at accessibility
+      // Dynamic Type sizes instead of shrinking to 70% of its scaled
+      // size (#228). The surrounding VStack already provides leading
+      // alignment and full-width sizing for multi-line layout.
       Text(store.output.totalAmount.appCurrencyFormatted())
         .valueCompassTextStyle(.displayLarge)
-        .minimumScaleFactor(0.7)
         .foregroundStyle(Color.appContentPrimary)
         .accessibilityIdentifier("contribution.result.total")
     }
