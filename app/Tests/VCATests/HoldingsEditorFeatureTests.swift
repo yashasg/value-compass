@@ -11,8 +11,10 @@ import XCTest
 ///
 /// Pins the holdings editor reducer:
 ///
-/// - `.task` no-op when the legacy `init(portfolio:)` bridge has pre-seeded
-///   `state.draft`, the happy path that loads via
+/// - `.task` no-op when `state.draft` is pre-seeded with at least one
+///   category, no-op when the production state from `MainFeature` is
+///   pushed (issue #209 — `state.issues = [.noCategories]` short-circuits
+///   the guard), the guarded happy path that loads via
 ///   `\.modelContainer.task` + `BackgroundModelActor.loadHoldingsDraft`,
 ///   and the throwing-container failure that surfaces via
 ///   `state.saveError`.
@@ -22,9 +24,11 @@ import XCTest
 /// - The `.binding(_)` recompute rule that keeps `state.issues` in sync
 ///   with per-row text edits (covered through a top-level `\.draft`
 ///   binding which also exercises the `BindingReducer` write).
-/// - `.saveTapped` happy path through `BackgroundModelActor.applyHoldingsDraft`,
-///   the throwing-container failure path that writes `state.saveError`,
-///   and the `.saveSucceeded` → `.delegate(.saved)` follow-up.
+/// - `.saveTapped` happy path through `BackgroundModelActor.applyHoldingsDraft`
+///   (verifying the SwiftData side effect by fetching the persisted
+///   `Portfolio` from the in-memory container), the throwing-container
+///   failure path that writes `state.saveError`, and the `.saveSucceeded`
+///   → `.delegate(.saved)` follow-up.
 /// - `.saveErrorDismissed`, `.revertTapped` happy + failure paths, and the
 ///   `.delegate` no-op terminator.
 @MainActor
@@ -32,9 +36,9 @@ final class HoldingsEditorFeatureTests: XCTestCase {
   // MARK: - .task
 
   func testTaskIsNoOpWhenStateIsPreSeeded() async {
-    // The legacy `init(portfolio:)` bridge synchronously seeds
-    // `state.draft`, so the reducer's guard short-circuits and never hits
-    // the async loader.
+    // When the host pushes `State(portfolioID:, draft:)` with a non-empty
+    // draft, `state.draft.categories.isEmpty` is false and the reducer's
+    // `.task` guard returns `.none` before touching the dependency.
     let portfolioID = UUID()
     let categoryID = UUID()
     let preSeededDraft = HoldingsDraft(categories: [
@@ -52,7 +56,48 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.task)
   }
 
+  func testTaskIsNoOpForProductionStateFromMainFeature() async {
+    // Pins the actual production behavior (issue #209): `MainFeature`
+    // pushes `HoldingsEditorFeature.State(portfolioID:)` (empty draft),
+    // whose synthesized `init` derives
+    // `issues = draft.issues() = [.noCategories]` for an empty draft.
+    // The reducer's `.task` guard requires *both*
+    // `state.draft.categories.isEmpty` AND `state.issues.isEmpty`, so the
+    // `[.noCategories]` element short-circuits the loader and `.task` is a
+    // no-op for the production state shape — the editor never hydrates
+    // from disk for an existing portfolio when opened from `MainFeature`.
+    //
+    // This test will need to flip (assert the load *does* run) when #209
+    // is fixed; until then it documents the current surface so the next
+    // change is forced to acknowledge it.
+    let portfolioID = UUID()
+    let state = HoldingsEditorFeature.State(portfolioID: portfolioID)
+    // The exact set of issues depends on `HoldingsDraft.issues()` (currently
+    // `[.noCategories, .categoryWeightsDoNotSumTo100]` for an empty draft);
+    // assert the guard-relevant invariant instead so this test is robust to
+    // unrelated changes in `issues()`.
+    XCTAssertFalse(state.issues.isEmpty)
+    XCTAssertTrue(state.draft.categories.isEmpty)
+
+    // Intentionally omit a `\.modelContainer.container` override: if the
+    // guard ever stops short-circuiting on this state shape, the test
+    // will fail loudly via the unimplemented dependency rather than
+    // silently passing.
+    let store = TestStore(initialState: state) {
+      HoldingsEditorFeature()
+    }
+
+    await store.send(.task)
+  }
+
   func testTaskWithEmptyStateLoadsDraftFromContainer() async throws {
+    // Exercises the `.task` guarded loader path. The only state shape that
+    // satisfies the guard (`categories.isEmpty` AND `issues.isEmpty`) is
+    // *not* producible by the public `State(portfolioID:)` initializer
+    // (which seeds `[.noCategories]` — see #209), so we construct it
+    // manually. This covers the load + `.draftLoaded` reducer surface;
+    // the production entry path is pinned by
+    // `testTaskIsNoOpForProductionStateFromMainFeature` above.
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = container.mainContext
 
@@ -77,11 +122,6 @@ final class HoldingsEditorFeatureTests: XCTestCase {
         ]))
     try context.save()
 
-    // The reducer's `.task` guard requires both `categories.isEmpty` and
-    // `state.issues.isEmpty`. The synthesized `init(...)` always derives
-    // `issues = draft.issues()` so an empty draft seeds `[.noCategories]`.
-    // Force-clear `state.issues` so the load actually runs (mirrors the
-    // host pushing a freshly-built state).
     var state = HoldingsEditorFeature.State(portfolioID: portfolioID)
     state.issues = []
 
@@ -117,6 +157,11 @@ final class HoldingsEditorFeatureTests: XCTestCase {
   }
 
   func testTaskWithThrowingContainerWritesSaveError() async {
+    // Same caveat as `testTaskWithEmptyStateLoadsDraftFromContainer`: we
+    // force-clear `state.issues` to satisfy the reducer's guard so the
+    // throwing dependency is actually invoked. The production state
+    // shape is pinned separately by
+    // `testTaskIsNoOpForProductionStateFromMainFeature` (see #209).
     struct StubError: LocalizedError, Equatable {
       var errorDescription: String? { "boom" }
     }
@@ -409,6 +454,25 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     // into `.delegate(.saved)` which the host listens for to dismiss.
     await store.receive(.saveSucceeded)
     await store.receive(\.delegate.saved)
+
+    // Verify the SwiftData side effect: the in-memory container should now
+    // hold the persisted category + ticker derived from `validDraft`.
+    // Asserting only the action chain would let a regression where
+    // `persistDraft` no-ops (or silently drops the draft) pass this test.
+    let descriptor = FetchDescriptor<Portfolio>(
+      predicate: #Predicate { $0.id == portfolioID })
+    let persisted = try XCTUnwrap(try context.fetch(descriptor).first)
+    XCTAssertEqual(persisted.categories.count, 1)
+    let persistedCategory = try XCTUnwrap(persisted.categories.first)
+    XCTAssertEqual(persistedCategory.id, categoryID)
+    XCTAssertEqual(persistedCategory.name, "US Stocks")
+    XCTAssertEqual(persistedCategory.weight, Decimal(string: "1.0")!)
+    XCTAssertEqual(persistedCategory.tickers.count, 1)
+    let persistedTicker = try XCTUnwrap(persistedCategory.tickers.first)
+    XCTAssertEqual(persistedTicker.id, tickerID)
+    XCTAssertEqual(persistedTicker.symbol, "VTI")
+    XCTAssertEqual(persistedTicker.currentPrice, Decimal(300))
+    XCTAssertEqual(persistedTicker.movingAverage, Decimal(280))
   }
 
   func testSaveTappedFailurePathWritesSaveError() async {
