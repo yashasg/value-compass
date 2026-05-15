@@ -19,12 +19,31 @@ struct PortfolioEditorFeature {
 
     let mode: Mode
     var draft: PortfolioFormDraft = .init()
+    /// Snapshot of `draft` captured at presentation time (and again after the
+    /// edit-mode load resolves via `.draftHydrated`). The discard-confirmation
+    /// flow (#325) compares `draft` against `baseline` to detect unsaved edits
+    /// before allowing Cancel / swipe-down dismissal to drop user content.
+    var baseline: PortfolioFormDraft = .init()
     var validationError: PortfolioEditorValidationError?
     var saveError: String?
+    /// Drives the "Discard Changes?" confirmation dialog presented when the
+    /// user taps Cancel (or attempts a sheet swipe-down on iOS 17+) while the
+    /// draft diverges from `baseline`. Reset by `.confirmDiscard` / `.keepEditing`.
+    var pendingCancellation: Bool = false
 
     init(mode: Mode, draft: PortfolioFormDraft = .init()) {
       self.mode = mode
       self.draft = draft
+      self.baseline = draft
+    }
+
+    /// `true` when the user has typed into the form since presentation or the
+    /// last successful hydration. Used by the view to gate
+    /// `.interactiveDismissDisabled` and by the reducer to decide whether
+    /// `.cancelTapped` opens the discard-confirmation dialog or dismisses
+    /// straight through.
+    var hasUnsavedChanges: Bool {
+      draft != baseline
     }
 
     var navigationTitle: String {
@@ -44,6 +63,8 @@ struct PortfolioEditorFeature {
     case saveFailed(String)
     case validationFailed(PortfolioEditorValidationError)
     case cancelTapped
+    case confirmDiscard
+    case keepEditing
     case delegate(Delegate)
 
     @CasePathable
@@ -79,6 +100,7 @@ struct PortfolioEditorFeature {
 
       case .draftHydrated(let draft):
         state.draft = draft
+        state.baseline = draft
         return .none
 
       case .saveTapped:
@@ -117,10 +139,29 @@ struct PortfolioEditorFeature {
         return .none
 
       case .cancelTapped:
+        // HIG Modality + Sheets: if the user has unsaved edits, ask for
+        // confirmation before discarding instead of dismissing silently
+        // (#325). When the draft still matches `baseline`, fall through to
+        // the original dismiss path so a clean Cancel stays a one-tap action.
+        if state.hasUnsavedChanges {
+          state.pendingCancellation = true
+          return .none
+        }
         return .run { send in
           await send(.delegate(.canceled))
           await dismiss()
         }
+
+      case .confirmDiscard:
+        state.pendingCancellation = false
+        return .run { send in
+          await send(.delegate(.canceled))
+          await dismiss()
+        }
+
+      case .keepEditing:
+        state.pendingCancellation = false
+        return .none
 
       case .delegate:
         return .none

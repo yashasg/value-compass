@@ -126,6 +126,7 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.task)
     await store.receive(.draftLoaded(expectedDraft)) {
       $0.draft = expectedDraft
+      $0.baseline = expectedDraft
       $0.issues = expectedDraft.issues()
       $0.saveError = nil
     }
@@ -189,6 +190,7 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.task)
     await store.receive(.draftLoaded(expectedDraft)) {
       $0.draft = expectedDraft
+      $0.baseline = expectedDraft
       $0.issues = expectedDraft.issues()
       $0.saveError = nil
     }
@@ -613,6 +615,7 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.revertTapped)
     await store.receive(.revertLoaded(expectedDraft)) {
       $0.draft = expectedDraft
+      $0.baseline = expectedDraft
       $0.issues = expectedDraft.issues()
       $0.saveError = nil
     }
@@ -655,6 +658,107 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     // `.saved` and `.canceled` must be reducer no-ops.
     await store.send(.delegate(.saved))
     await store.send(.delegate(.canceled))
+  }
+
+  // MARK: - .cancelTapped / .confirmDiscard / .keepEditing (#325)
+
+  func testCancelTappedOnCleanDraftEmitsCanceledDelegate() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let draft = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    let store = TestStore(
+      initialState: HoldingsEditorFeature.State(portfolioID: portfolioID, draft: draft)
+    ) {
+      HoldingsEditorFeature()
+    }
+
+    // baseline == draft after `init`, so `hasUnsavedChanges == false` and
+    // `.cancelTapped` chains straight into `.delegate(.canceled)` — the view
+    // dismisses on that signal.
+    await store.send(.cancelTapped)
+    await store.receive(\.delegate.canceled)
+  }
+
+  func testCancelTappedWithUnsavedChangesOpensDiscardDialog() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let baseline = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    var dirtyDraft = baseline
+    dirtyDraft.categories[0].name = "Edited"
+
+    var state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: baseline)
+    state.draft = dirtyDraft  // diverge from baseline that was set in init
+
+    let store = TestStore(initialState: state) {
+      HoldingsEditorFeature()
+    }
+
+    await store.send(.cancelTapped) {
+      $0.pendingCancellation = true
+    }
+  }
+
+  func testConfirmDiscardEmitsCanceledDelegate() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let baseline = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    var dirtyDraft = baseline
+    dirtyDraft.categories[0].weightPercentText = "50"
+
+    var state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: baseline)
+    state.draft = dirtyDraft
+    state.pendingCancellation = true
+
+    let store = TestStore(initialState: state) {
+      HoldingsEditorFeature()
+    }
+
+    await store.send(.confirmDiscard) {
+      $0.pendingCancellation = false
+    }
+    await store.receive(\.delegate.canceled)
+  }
+
+  func testKeepEditingClearsPendingCancellation() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let baseline = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    var dirtyDraft = baseline
+    dirtyDraft.categories[0].name = "Edited"
+
+    var state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: baseline)
+    state.draft = dirtyDraft
+    state.pendingCancellation = true
+
+    let store = TestStore(initialState: state) {
+      HoldingsEditorFeature()
+    }
+
+    await store.send(.keepEditing) {
+      $0.pendingCancellation = false
+    }
+  }
+
+  // MARK: - hasUnsavedChanges (#325)
+
+  func testHasUnsavedChangesIsFalseForUnmodifiedDraft() {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let draft = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    let state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: draft)
+    XCTAssertFalse(
+      state.hasUnsavedChanges,
+      "Pre-seeded baseline must match the initial draft so opening the editor does not falsely warn."
+    )
+  }
+
+  func testHasUnsavedChangesFlipsTrueAfterDraftMutation() {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let draft = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    var state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: draft)
+    state.draft.categories[0].name = "Edited"
+    XCTAssertTrue(state.hasUnsavedChanges)
   }
 
   // MARK: - Accessibility-row identity (issue #268)

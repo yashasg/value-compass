@@ -33,8 +33,19 @@ struct HoldingsEditorFeature {
   struct State: Equatable, Sendable {
     let portfolioID: UUID
     var draft: HoldingsDraft
+    /// Snapshot of `draft` captured at presentation time and again whenever
+    /// the persisted portfolio is reloaded (`.draftLoaded`, `.revertLoaded`).
+    /// The discard-confirmation flow (#325) compares `draft` against
+    /// `baseline` to detect unsaved edits before allowing Cancel / swipe-down
+    /// dismissal to drop user content.
+    var baseline: HoldingsDraft
     var issues: [HoldingsDraftIssue]
     var saveError: String?
+    /// Drives the "Discard Changes?" confirmation dialog presented when the
+    /// user taps Cancel (or attempts a swipe-down dismissal after #229)
+    /// while the draft diverges from `baseline`. Reset by `.confirmDiscard`
+    /// / `.keepEditing`.
+    var pendingCancellation: Bool = false
 
     init(
       portfolioID: UUID,
@@ -43,8 +54,19 @@ struct HoldingsEditorFeature {
     ) {
       self.portfolioID = portfolioID
       self.draft = draft
+      self.baseline = draft
       self.issues = draft.issues()
       self.saveError = saveError
+    }
+
+    /// `true` when the user has edited the draft (added/deleted/moved a row
+    /// or typed into any field) since presentation or the last successful
+    /// hydration/revert. Used by the view to gate
+    /// `.interactiveDismissDisabled` and by the reducer to decide whether
+    /// `.cancelTapped` opens the discard-confirmation dialog or proceeds
+    /// straight through.
+    var hasUnsavedChanges: Bool {
+      draft != baseline
     }
   }
 
@@ -65,6 +87,9 @@ struct HoldingsEditorFeature {
     case saveErrorDismissed
     case revertTapped
     case revertLoaded(HoldingsDraft)
+    case cancelTapped
+    case confirmDiscard
+    case keepEditing
     case delegate(Delegate)
 
     @CasePathable
@@ -115,6 +140,7 @@ struct HoldingsEditorFeature {
 
       case .draftLoaded(let draft):
         state.draft = draft
+        state.baseline = draft
         state.issues = draft.issues()
         state.saveError = nil
         return .none
@@ -206,8 +232,29 @@ struct HoldingsEditorFeature {
 
       case .revertLoaded(let draft):
         state.draft = draft
+        state.baseline = draft
         state.issues = draft.issues()
         state.saveError = nil
+        return .none
+
+      case .cancelTapped:
+        // HIG Modality + Sheets: if the user has unsaved edits, ask for
+        // confirmation before discarding instead of dismissing silently
+        // (#325). When `draft == baseline`, the host (view today, parent
+        // path in Phase 2) treats `.delegate(.canceled)` as the dismiss
+        // signal — matches the previous one-tap clean Cancel behaviour.
+        if state.hasUnsavedChanges {
+          state.pendingCancellation = true
+          return .none
+        }
+        return .send(.delegate(.canceled))
+
+      case .confirmDiscard:
+        state.pendingCancellation = false
+        return .send(.delegate(.canceled))
+
+      case .keepEditing:
+        state.pendingCancellation = false
         return .none
 
       case .delegate:
