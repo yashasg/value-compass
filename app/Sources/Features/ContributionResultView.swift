@@ -63,6 +63,24 @@ struct ContributionResultContent: View {
       Text(message)
     }
     .accessibilityIdentifier("contribution.result")
+    // WCAG 2.2 SC 4.1.3 — Status Messages. The Retry button keeps the
+    // user on this screen; when calculation still fails, the inline
+    // error `Label` is replaced silently, so AT users have no cue that
+    // their retry was rejected. Announce on `output.error` transitions
+    // so VoiceOver hears the message even when focus stays on Retry
+    // (#293).
+    .appAnnounceOnChange(of: errorMessage) { message in
+      message
+    }
+  }
+
+  /// Snapshot of `store.output.error?.localizedDescription` so the
+  /// announcement helper only fires when the error text actually changes.
+  /// Returning `nil` on success suppresses the announce-on-success path,
+  /// which the navigation title and result summary already cover for
+  /// sighted and AT users alike.
+  private var errorMessage: String? {
+    store.output.error?.localizedDescription
   }
 
   private var resultSummary: some View {

@@ -580,8 +580,40 @@ struct HoldingsEditorView: View {
         // `PortfolioDetailFeature` (#229), so this finally engages the
         // interactive-dismissal gate that was pre-wired in #325.
         .interactiveDismissDisabled(store.hasUnsavedChanges)
+        // WCAG 2.2 SC 4.1.3 — Status Messages. `validationSection` is
+        // inserted silently when `store.issues` flips from empty to
+        // non-empty as the user types; VoiceOver focus stays on the
+        // current field so the warning is never spoken. Debounced so
+        // per-keystroke weight churn (e.g. "60" → "5" → "50") does not
+        // stack announcements — only the post-rest summary speaks
+        // (#293).
+        .appAnnounceOnSettledChange(of: holdingsAnnouncementSignal) { _ in
+          Self.holdingsAnnouncementMessage(for: store.issues)
+        }
         .task { await store.send(.task).finish() }
     }
+  }
+
+  /// Diff key that fires `appAnnounceOnSettledChange` whenever the
+  /// validation surface meaningfully changes. Encodes presence (so
+  /// transitions to "all clear" fire) and a per-issue snapshot (so
+  /// fixing one warning while another is still pending re-announces the
+  /// remaining condition).
+  private var holdingsAnnouncementSignal: [String] {
+    store.issues.map(\.message)
+  }
+
+  /// Builds the spoken summary for `issues`. Returns `nil` to suppress
+  /// announcement on transitions to empty so VoiceOver stays quiet when
+  /// the editor is already in a valid state; the visual warning section
+  /// also disappears in that case, so silence accurately reflects the
+  /// state.
+  static func holdingsAnnouncementMessage(for issues: [HoldingsDraftIssue]) -> String? {
+    guard let leadIssue = issues.first else { return nil }
+    if issues.count == 1 {
+      return leadIssue.message
+    }
+    return "\(issues.count) validation warnings. \(leadIssue.message)"
   }
 
   private func compactEditor(store: StoreOf<HoldingsEditorFeature>) -> some View {

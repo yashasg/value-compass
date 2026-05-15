@@ -110,6 +110,15 @@ struct PortfolioEditorView: View {
       // intentional dismiss path and runs through the same confirmation
       // dialog when dirty (#325).
       .interactiveDismissDisabled(store.hasUnsavedChanges)
+      // WCAG 2.2 SC 4.1.3 — Status Messages. The inline `Text` above is
+      // inserted silently when `validationError` transitions to non-nil,
+      // so VoiceOver users tapping Save have no auditory cue that the
+      // attempt was rejected. Routing the message through the centralized
+      // announcer posts an AT announcement without yanking focus off
+      // Save (#293).
+      .appAnnounceOnChange(of: store.validationError) { error in
+        error?.localizedDescription
+      }
     }
     .task { store.send(.task) }
   }
