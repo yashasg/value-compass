@@ -91,6 +91,36 @@ final class DesignSystemTests: XCTestCase {
     }
   }
 
+  func testValidationStateTokensMeetWCAGAAContrastAgainstSurfaces() {
+    // The negative/warning tokens render text and icons on top of both the
+    // flat `AppSurface` background and the elevated `AppSurfaceElevated`
+    // card. The contract is WCAG 2.2 SC 1.4.3 (≥4.5:1 small-text contrast)
+    // in both light and dark appearances against both surfaces, so a future
+    // hex change cannot regress contrast on either rendering target (#236).
+    let stateTokens: [AppColorToken] = [.negative, .warning]
+    let surfaceTokens: [AppColorToken] = [.surface, .surfaceElevated]
+
+    for token in stateTokens {
+      for surface in surfaceTokens {
+        let lightForeground = resolvedRGB(token, style: .light)
+        let lightSurface = resolvedRGB(surface, style: .light)
+        let darkForeground = resolvedRGB(token, style: .dark)
+        let darkSurface = resolvedRGB(surface, style: .dark)
+
+        XCTAssertGreaterThanOrEqual(
+          lightForeground.contrastRatio(against: lightSurface),
+          4.5,
+          "\(token.assetName) must meet WCAG AA small-text contrast against \(surface.assetName) in light mode"
+        )
+        XCTAssertGreaterThanOrEqual(
+          darkForeground.contrastRatio(against: darkSurface),
+          4.5,
+          "\(token.assetName) must meet WCAG AA small-text contrast against \(surface.assetName) in dark mode"
+        )
+      }
+    }
+  }
+
   func testValidationStateTokensMapToDistinctSemantics() {
     XCTAssertEqual(AppColorToken.error.assetName, "AppError")
     XCTAssertEqual(AppColorToken.warning.assetName, "AppWarning")
