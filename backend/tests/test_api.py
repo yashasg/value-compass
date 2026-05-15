@@ -84,8 +84,13 @@ def test_schema_version_requires_attest(client: TestClient) -> None:
 
     resp = client.get("/schema/version", headers=ATTEST)
     assert resp.status_code == 200
-    assert resp.json()["version"] >= 1
-    assert resp.json()["min_app_version"] == config.MIN_APP_VERSION
+    body = resp.json()
+    assert body["version"] >= 1
+    # ``min_app_version`` is intentionally NOT in the response body — the
+    # authoritative channel is the ``X-Min-App-Version`` response header
+    # declared on every operation. See issue #402.
+    assert "min_app_version" not in body
+    assert resp.headers["X-Min-App-Version"] == config.MIN_APP_VERSION
 
 
 def test_openapi_describes_error_envelope(client: TestClient) -> None:
@@ -108,8 +113,12 @@ def test_openapi_describes_error_envelope(client: TestClient) -> None:
         == "#/components/schemas/ErrorEnvelope"
     )
     schema_version = components["SchemaVersionResponse"]
-    assert "min_app_version" in schema_version["properties"]
-    assert "min_app_version" not in schema_version["required"]
+    # ``min_app_version`` was removed from the response body in favor of the
+    # ``X-Min-App-Version`` response header which is declared on every
+    # operation (issue #402). Lock the removal so reintroducing the dead
+    # body channel fails contract tests.
+    assert "min_app_version" not in schema_version["properties"]
+    assert "min_app_version" not in schema_version.get("required", [])
     schema_version_200 = schema["paths"]["/schema/version"]["get"]["responses"]["200"]
     assert "X-Min-App-Version" in schema_version_200["headers"]
 

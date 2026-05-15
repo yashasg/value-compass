@@ -312,10 +312,19 @@ class HealthResponse(BaseModel):
 
 
 class SchemaVersionResponse(BaseModel):
-    """API schema-version response body."""
+    """API schema-version response body.
+
+    The minimum supported iOS app version is carried exclusively on the
+    ``X-Min-App-Version`` response header — declared on every operation by
+    :func:`add_standard_headers` and consumed by
+    ``MinAppVersionClient.observe`` on the iOS side. The body intentionally
+    does **not** duplicate that value: a dual-source contract (body field +
+    response header from the same ``config.MIN_APP_VERSION``) has no defined
+    precedence rule, and shipping both invites future consumers to fork on
+    which channel they trust. See issue #402.
+    """
 
     version: int
-    min_app_version: str | None = Field(default=None)
 
 
 class PortfolioStatusResponse(BaseModel):
@@ -396,10 +405,7 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
 )
 def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
     """Return the API schema version required by the client."""
-    return SchemaVersionResponse(
-        version=config.SCHEMA_VERSION,
-        min_app_version=config.MIN_APP_VERSION,
-    )
+    return SchemaVersionResponse(version=config.SCHEMA_VERSION)
 
 
 @app.get(
