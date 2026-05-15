@@ -4,21 +4,26 @@ import XCTest
 @testable import VCA
 
 /// Pins the v1 SwiftData schema baseline + migration plan introduced for
-/// issue #235 and the v2 additive schema bump introduced for issue #249.
+/// issue #235, the v2 additive schema bump introduced for issue #249, and
+/// the v3 additive schema bump introduced for issue #356.
 /// These tests guarantee that:
 ///
 /// 1. ``LocalSchemaV1`` enumerates every `@Model` type registered in
 ///    ``LocalPersistence/schema``, so the in-memory schema and the on-disk
 ///    versioned baseline cannot drift.
-/// 2. ``LocalSchemaMigrationPlan`` pins both schema versions in order and
-///    registers exactly one migration stage (`v1 → v2`) per the v2
-///    contribution-row identity contract.
-/// 3. ``LocalSchemaV1`` and ``LocalSchemaV2`` are *frozen* snapshots — their
-///    `models` arrays must reference distinct nested `@Model` types so a
-///    future edit to a live `@Model` class cannot retroactively change the
-///    v1 on-disk shape (issue #337). The frozen baseline must also carry the
-///    documented v1 → v2 field-level delta: `CategoryContribution` and
-///    `TickerAllocation` ship the `id: UUID` column in v2 but not in v1.
+/// 2. ``LocalSchemaMigrationPlan`` pins all three schema versions in order
+///    and registers the exact set of migration stages (`v1 → v2`,
+///    `v2 → v3`) — `v1 → v2` per the v2 contribution-row identity contract
+///    (issue #249) and `v2 → v3` per the v3 holding indicator-field
+///    contract (issue #356, additive nullable columns).
+/// 3. ``LocalSchemaV1``, ``LocalSchemaV2``, and ``LocalSchemaV3`` are
+///    *frozen* snapshots — their `models` arrays must reference pairwise
+///    distinct nested `@Model` types so a future edit to a live `@Model`
+///    class cannot retroactively change a prior on-disk shape (issue
+///    #337). The frozen baseline must also carry the documented
+///    deltas: `CategoryContribution` and `TickerAllocation` ship the
+///    `id: UUID` column in v2 (not v1); `Holding` ships the eight
+///    optional indicator columns in v3 (not v1/v2).
 /// 4. A disk-backed container can be opened cold (creates the store),
 ///    written to, and reopened warm against the same URL without raising a
 ///    migration error. Reopening warm exercises the SwiftData migration
@@ -53,29 +58,55 @@ final class LocalSchemaMigrationTests: XCTestCase {
     XCTAssertEqual(LocalSchemaV2.versionIdentifier, Schema.Version(2, 0, 0))
   }
 
+  func testSchemaV3AdvertisesABumpedVersionIdentifier() {
+    XCTAssertEqual(LocalSchemaV3.versionIdentifier, Schema.Version(3, 0, 0))
+  }
+
   func testSchemaV2ListsTheSameEntityNamesAsV1() {
     let v1Names = Set(LocalSchemaV1.models.map { entityName(for: $0) })
     let v2Names = Set(LocalSchemaV2.models.map { entityName(for: $0) })
     XCTAssertEqual(v1Names, v2Names)
   }
 
-  /// Frozen-snapshot invariant: ``LocalSchemaV1`` and ``LocalSchemaV2`` must
-  /// reference *distinct* `@Model` class objects. If the two `models` arrays
-  /// ever share live class identity, an edit to any of those classes would
-  /// silently mutate `LocalSchemaV1` — making the v1 baseline useless for
-  /// migration. Issue #337.
-  func testSchemaV1AndV2DoNotShareLiveModelTypes() {
+  func testSchemaV3ListsTheSameEntityNamesAsV2() {
+    let v2Names = Set(LocalSchemaV2.models.map { entityName(for: $0) })
+    let v3Names = Set(LocalSchemaV3.models.map { entityName(for: $0) })
+    XCTAssertEqual(v2Names, v3Names)
+  }
+
+  /// Frozen-snapshot invariant: ``LocalSchemaV1``, ``LocalSchemaV2``, and
+  /// ``LocalSchemaV3`` must reference *pairwise distinct* `@Model` class
+  /// objects. If any two `models` arrays ever share live class identity, an
+  /// edit to one of those classes would silently mutate an earlier baseline
+  /// — making the historical schema unusable for migration (issues #337 and
+  /// #356).
+  func testSchemaVersionsDoNotShareLiveModelTypes() {
     let v1Identifiers = Set(LocalSchemaV1.models.map { ObjectIdentifier($0) })
     let v2Identifiers = Set(LocalSchemaV2.models.map { ObjectIdentifier($0) })
+    let v3Identifiers = Set(LocalSchemaV3.models.map { ObjectIdentifier($0) })
     XCTAssertTrue(
       v1Identifiers.isDisjoint(with: v2Identifiers),
       """
       LocalSchemaV1 and LocalSchemaV2 share at least one live @Model class. \
       Each schema version must own its own frozen snapshot of every entity \
       so future edits to the live shape cannot retroactively mutate the v1 \
-      on-disk baseline. Move the live class into LocalSchemaV2 and add a \
-      frozen V1 copy to LocalSchemaV1Models.swift (issue #337).
+      on-disk baseline. Move the live class into LocalSchemaV3 and add a \
+      frozen V2 copy to LocalSchemaV2Models.swift (issues #337, #356).
       """
+    )
+    XCTAssertTrue(
+      v2Identifiers.isDisjoint(with: v3Identifiers),
+      """
+      LocalSchemaV2 and LocalSchemaV3 share at least one live @Model class. \
+      Each schema version must own its own frozen snapshot of every entity \
+      so future edits to the live shape cannot retroactively mutate the v2 \
+      on-disk baseline. Move the live class into LocalSchemaV3 and add a \
+      frozen V2 copy to LocalSchemaV2Models.swift (issue #356).
+      """
+    )
+    XCTAssertTrue(
+      v1Identifiers.isDisjoint(with: v3Identifiers),
+      "LocalSchemaV1 and LocalSchemaV3 must reference distinct @Model classes."
     )
   }
 
@@ -120,11 +151,52 @@ final class LocalSchemaMigrationTests: XCTestCase {
     )
   }
 
-  func testMigrationPlanPinsV1AndV2InOrderWithSingleV1ToV2Stage() {
-    XCTAssertEqual(LocalSchemaMigrationPlan.schemas.count, 2)
+  func testMigrationPlanPinsV1V2V3InOrderWithTwoStages() {
+    XCTAssertEqual(LocalSchemaMigrationPlan.schemas.count, 3)
     XCTAssertTrue(LocalSchemaMigrationPlan.schemas.first == LocalSchemaV1.self)
-    XCTAssertTrue(LocalSchemaMigrationPlan.schemas.last == LocalSchemaV2.self)
-    XCTAssertEqual(LocalSchemaMigrationPlan.stages.count, 1)
+    XCTAssertTrue(LocalSchemaMigrationPlan.schemas[1] == LocalSchemaV2.self)
+    XCTAssertTrue(LocalSchemaMigrationPlan.schemas.last == LocalSchemaV3.self)
+    XCTAssertEqual(LocalSchemaMigrationPlan.stages.count, 2)
+  }
+
+  /// Asserts the v2 → v3 field-level delta documented in
+  /// `LocalSchemaV2Models.swift`: V3 ships eight optional indicator columns
+  /// on `Holding` (matching the wire shape of `Components.Schemas.HoldingOut`
+  /// on `GET /portfolio/data`), V2 does not. The test fails closed if either
+  /// side drifts — protecting the BandAdjustedContributionCalculator
+  /// reachability contract (issue #356) and the V2 frozen baseline.
+  func testSchemaV2AndV3DifferOnHoldingIndicatorColumns() throws {
+    let v2Schema = Schema(versionedSchema: LocalSchemaV2.self)
+    let v3Schema = Schema(versionedSchema: LocalSchemaV3.self)
+
+    let v2Holding = try XCTUnwrap(
+      v2Schema.entities.first { $0.name == "Holding" }
+    )
+    let v3Holding = try XCTUnwrap(
+      v3Schema.entities.first { $0.name == "Holding" }
+    )
+
+    let indicatorColumns = [
+      "currentPrice",
+      "sma50",
+      "sma200",
+      "midline",
+      "atr",
+      "upperBand",
+      "lowerBand",
+      "bandPosition",
+    ]
+
+    for column in indicatorColumns {
+      XCTAssertFalse(
+        v2Holding.properties.contains(where: { $0.name == column }),
+        "LocalSchemaV2.Holding must NOT expose '\(column)' — that field is the v2→v3 delta (issue #356)."
+      )
+      XCTAssertTrue(
+        v3Holding.properties.contains(where: { $0.name == column }),
+        "LocalSchemaV3.Holding must expose '\(column)' (issue #356)."
+      )
+    }
   }
 
   func testInMemoryContainerOpensWithMigrationPlanWithoutThrowing() throws {
@@ -174,18 +246,19 @@ final class LocalSchemaMigrationTests: XCTestCase {
     XCTAssertEqual(portfolios.first?.name, "Reopen")
   }
 
-  /// Compatibility test (#337): a disk-backed store created with the *current*
-  /// v2 model graph (which now lives under nested `LocalSchemaV2.*` types) can
-  /// be reopened by the same `LocalSchemaMigrationPlan` without losing any of
-  /// the 11 v2 entities. This guards against the failure mode flagged on the
-  /// schema-freeze PR — namely, that renaming v2 model classes from
-  /// module-scope to nested types could (in theory) change the on-disk class
-  /// identity SwiftData keys entities by, even while the `versionIdentifier`
-  /// stays at 2.0.0. If that ever broke, this round-trip would either throw
-  /// at warm reopen or come back with empty fetches.
-  func testV2DiskContainerRoundTripsEveryEntityAcrossReopens() throws {
+  /// Compatibility test (issue #356 update of issue #337): a disk-backed
+  /// store created with the *current* v3 model graph (which now lives under
+  /// nested `LocalSchemaV3.*` types) can be reopened by the same
+  /// `LocalSchemaMigrationPlan` without losing any of the 11 v3 entities.
+  /// This guards against the failure mode flagged on the schema-freeze PR
+  /// — namely, that renaming model classes between schema versions could
+  /// (in theory) change the on-disk class identity SwiftData keys entities
+  /// by, even while the `versionIdentifier` is incremented correctly. If
+  /// that ever broke, this round-trip would either throw at warm reopen
+  /// or come back with empty fetches.
+  func testV3DiskContainerRoundTripsEveryEntityAcrossReopens() throws {
     let storeURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("vca-mig-v2-\(UUID().uuidString).store")
+      .appendingPathComponent("vca-mig-v3-\(UUID().uuidString).store")
     addTeardownBlock {
       try? FileManager.default.removeItem(at: storeURL)
       try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
@@ -310,8 +383,8 @@ final class LocalSchemaMigrationTests: XCTestCase {
     coldContext.insert(appSettings)
     try coldContext.save()
 
-    // Warm reopen: same URL, same schema + migration plan. Confirms the v2
-    // shape stored under the nested `LocalSchemaV2.*` class identities is
+    // Warm reopen: same URL, same schema + migration plan. Confirms the v3
+    // shape stored under the nested `LocalSchemaV3.*` class identities is
     // still readable on a subsequent process boot.
     let warmConfiguration = ModelConfiguration(
       schema: LocalPersistence.schema,
@@ -326,7 +399,7 @@ final class LocalSchemaMigrationTests: XCTestCase {
 
     XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Portfolio>()).first?.id, portfolioID)
     XCTAssertEqual(
-      try warmContext.fetch(FetchDescriptor<LocalSchemaV2.Category>()).first?.id, categoryID)
+      try warmContext.fetch(FetchDescriptor<LocalSchemaV3.Category>()).first?.id, categoryID)
     XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Ticker>()).first?.id, tickerID)
     XCTAssertEqual(
       try warmContext.fetch(FetchDescriptor<ContributionRecord>()).first?.id, recordID)

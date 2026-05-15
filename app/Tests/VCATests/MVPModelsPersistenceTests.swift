@@ -34,6 +34,64 @@ final class MVPModelsPersistenceTests: XCTestCase {
     XCTAssertEqual(fetched.sortOrder, 2)
   }
 
+  /// Round-trips the eight optional indicator columns added by the v2→v3
+  /// schema bump (issue #356). Confirms they (a) are written through
+  /// SwiftData on insert, and (b) are read back bit-identical after save.
+  func testHoldingRoundTripsIndicatorFieldsAddedInV3() throws {
+    let context = try makeInMemoryContext()
+    let holding = Holding(
+      portfolioId: UUID(),
+      symbol: "VTI",
+      costBasis: Decimal(string: "250")!,
+      shares: Decimal(string: "5")!,
+      sortOrder: 0,
+      currentPrice: Decimal(string: "260.10")!,
+      sma50: Decimal(string: "255.55")!,
+      sma200: Decimal(string: "248.33")!,
+      midline: Decimal(string: "256.00")!,
+      atr: Decimal(string: "3.21")!,
+      upperBand: Decimal(string: "262.50")!,
+      lowerBand: Decimal(string: "249.10")!,
+      bandPosition: Decimal(string: "0.65")!
+    )
+
+    context.insert(holding)
+    try context.save()
+
+    let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Holding>()).first)
+    XCTAssertEqual(fetched.currentPrice, Decimal(string: "260.10"))
+    XCTAssertEqual(fetched.sma50, Decimal(string: "255.55"))
+    XCTAssertEqual(fetched.sma200, Decimal(string: "248.33"))
+    XCTAssertEqual(fetched.midline, Decimal(string: "256.00"))
+    XCTAssertEqual(fetched.atr, Decimal(string: "3.21"))
+    XCTAssertEqual(fetched.upperBand, Decimal(string: "262.50"))
+    XCTAssertEqual(fetched.lowerBand, Decimal(string: "249.10"))
+    XCTAssertEqual(fetched.bandPosition, Decimal(string: "0.65"))
+    XCTAssertEqual(fetched.movingAverage(forWindow: 50), Decimal(string: "255.55"))
+    XCTAssertEqual(fetched.movingAverage(forWindow: 200), Decimal(string: "248.33"))
+    XCTAssertNil(fetched.movingAverage(forWindow: 100))
+  }
+
+  func testHoldingDefaultsIndicatorFieldsToNil() throws {
+    let context = try makeInMemoryContext()
+    let holding = Holding(portfolioId: UUID(), symbol: "BND")
+
+    context.insert(holding)
+    try context.save()
+
+    let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Holding>()).first)
+    XCTAssertNil(fetched.currentPrice)
+    XCTAssertNil(fetched.sma50)
+    XCTAssertNil(fetched.sma200)
+    XCTAssertNil(fetched.midline)
+    XCTAssertNil(fetched.atr)
+    XCTAssertNil(fetched.upperBand)
+    XCTAssertNil(fetched.lowerBand)
+    XCTAssertNil(fetched.bandPosition)
+    XCTAssertNil(fetched.movingAverage(forWindow: 50))
+    XCTAssertNil(fetched.movingAverage(forWindow: 200))
+  }
+
   // MARK: - TickerMetadata
 
   func testTickerMetadataUpsertsBySymbolKey() throws {
