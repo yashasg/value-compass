@@ -3,12 +3,21 @@ name: codeql-ios
 # CodeQL for iOS/app sources only. Keep this separate from backend
 # analysis so documentation/backend-only pull requests do not run Swift gates.
 
+# CodeQL is gated on every PR by default, but on this repo a full Swift
+# CodeQL run + xcodebuild compile takes ~16-26 minutes and the macOS
+# runner queue regularly exceeds 30 minutes. Combined with rapid squad
+# commit cadence, every PR-triggered run was being cancelled by
+# `cancel-in-progress` before it could finish, so security findings were
+# never uploaded. We therefore restrict triggers to: nightly schedule on
+# `main`, pushes to `main`, and manual dispatch. PR security feedback is
+# delegated to the swift-format / xcodebuild gates in `ios-ci.yml`. See
+# issue #206.
 on:
-  pull_request:
-    paths:
-      - "app/**"
-      - "openapi.json"
-      - ".github/workflows/codeql-ios.yml"
+  schedule:
+    # 06:00 UTC daily ≈ 22:00/23:00 PT — outside US business hours so
+    # macOS runner contention is lowest. Schedule fires only on the
+    # default branch (main).
+    - cron: "0 6 * * *"
   push:
     branches: [main]
     paths:
@@ -22,13 +31,13 @@ permissions:
   contents: read
   security-events: write
 
-# Cancel superseded PR runs so a new push to a PR branch frees the slow
-# macOS queue immediately. Pushes to main keep their own group per
-# branch+workflow and never cancel each other (cancel-in-progress is
-# false for the `push` event).
+# Serialize runs per ref so back-to-back pushes to main don't queue
+# duplicate Swift CodeQL builds on the slow macOS runners. PR-triggered
+# runs no longer exist (see `on:` above), so we never need to cancel
+# in-progress runs.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   analyze:
