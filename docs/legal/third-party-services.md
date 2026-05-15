@@ -35,7 +35,7 @@ operation").
 | Role | Independent controller for the developer account / API key the user creates with Massive. Recipient of user-initiated requests authenticated by the user-supplied key. | App Store Review Guideline §5.2.3; GDPR Art. 4(7) and Art. 13(1)(e) |
 | Service used | Account/key validation endpoint; future EOD market-data lookups (issue #128, deferred). | [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) |
 | API host | `https://api.massive.com` | Base URL declared inside [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) (`validate(key:)` request construction) |
-| Endpoints exercised | `POST /v1/account` (key validation; called on save and re-validate from Settings). | [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) |
+| Endpoints exercised | `GET /v1/account` (key validation; called on save and re-validate from Settings). | [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) |
 | Data sent | The Massive API key the user enters, carried as `Authorization: Bearer <key>`. No portfolio, holdings, contribution history, device identifier, or telemetry is sent in this request path. | [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) |
 | Data received | HTTP status only (the response body is consulted for validity but never surfaced to the UI, persisted, or logged). | [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift) |
 | At-rest storage of the key | iOS Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) — never `UserDefaults`, SwiftData, fixtures, logs, or analytics. | [`app/Sources/Backend/Networking/KeychainStore.swift`](../../app/Sources/Backend/Networking/KeychainStore.swift), [`app/Sources/Backend/Networking/MassiveAPIKeyStore.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyStore.swift) |
@@ -94,6 +94,7 @@ operation").
 | Date | Change | Reviewer | Approved at SHA |
 |---|---|---|---|
 | 2026-05-15 | Initial register published; Massive added with `massive.com/legal/terms` and `massive.com/legal/privacy` URLs verified against the operator's site on this date. Surfaced in `SettingsView` Massive API Key section (issue #294). | Pending (Reuben — engineering record; licensed counsel pre-submission gate). | _to be set on submission_ |
+| 2026-05-15 | Corrected the "Endpoints exercised" row from `POST /v1/account` to `GET /v1/account` so the §5.2.3 register matches the shipping runtime (`MassiveAPIKeyValidator.swift` — `request.httpMethod = "GET"`). Engineering-record accuracy only; no user-facing copy or policy commitment changed (issue #441). | Pending (Reuben — engineering record; licensed counsel pre-submission gate). | _to be set on submission_ |
 
 ## References
 

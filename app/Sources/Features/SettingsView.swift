@@ -112,9 +112,10 @@ struct SettingsView: View {
   /// Service and Privacy Policy so the user can review the third-party data
   /// flow that the saved key triggers (issue #294 — App Store Review
   /// Guideline §5.2.3, GDPR Art. 13(1)(e), and Cal. Civ. Code §1798.130).
-  /// Saving a key POSTs it to `https://api.massive.com` under the user's
-  /// `Authorization: Bearer` header; the disclosure must therefore be
-  /// reachable before the Save action.
+  /// Saving a key sends it to `https://api.massive.com` via an
+  /// authenticated `GET` under the user's `Authorization: Bearer`
+  /// header; the disclosure must therefore be reachable before the
+  /// Save action.
   @ViewBuilder
   private var apiKeySection: some View {
     Section {
