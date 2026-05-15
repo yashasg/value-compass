@@ -24,7 +24,15 @@ struct SettingsFeature {
   struct State: Equatable, Sendable {
     var theme: AppTheme = .system
     var language: AppLanguage = .system
-    var isDisclaimerExpanded: Bool = false
+    /// Defaults to `true` so the Settings > Legal disclaimer copy is
+    /// visible without an extra tap (#233 remediation point 4). The
+    /// onboarding gate + the Settings DisclosureGroup are the two
+    /// long-form surfaces that complement the short-form footer
+    /// rendered on every calculation-output screen via
+    /// `CalculationOutputDisclaimerFooter`; keeping the disclosure
+    /// expanded by default preserves the "load-bearing and visible"
+    /// posture required by Reuben's charter.
+    var isDisclaimerExpanded: Bool = true
     var appVersion: String = ""
     var deviceIDPrefix: String = ""
 

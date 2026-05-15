@@ -77,6 +77,14 @@ private struct ContributionHistoryContent: View {
             }
           }
         }
+        // #233: render `Disclaimer.text` so every saved per-record
+        // dollar total in the list above is contemporaneous with the
+        // canonical informational-only disclaimer.
+        Section {
+          CalculationOutputDisclaimerFooter()
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
       }
     }
     .navigationTitle("History")
@@ -188,6 +196,15 @@ private struct ContributionHistoryDetailContent: View {
           }
           .accessibilityIdentifier("contribution.history.detail.ticker")
         }
+      }
+
+      // #233: render `Disclaimer.text` alongside the per-record total
+      // and per-ticker dollar amounts above. Mirrors the list surface
+      // so a saved-result drill-down still ships the disclaimer.
+      Section {
+        CalculationOutputDisclaimerFooter()
+          .listRowBackground(Color.clear)
+          .listRowSeparator(.hidden)
       }
     }
     .navigationTitle("Saved Result")
