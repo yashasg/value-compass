@@ -5,9 +5,19 @@ import SwiftData
 // `LocalSchemaV1` on-disk schema (issue #337). These nested classes are
 // intentionally separate from the live app-facing classes (which back
 // ``LocalSchemaV2``) so future edits to the live shape cannot retroactively
-// mutate the V1 schema. SwiftData's migration runtime hands V1-typed rows to
-// `MigrationStage.custom(fromVersion: LocalSchemaV1.self, …)` callbacks; the
-// app never instantiates these types directly.
+// mutate the V1 schema. The app never instantiates these types directly.
+//
+// **Where V1-typed rows are reachable.** SwiftData only exposes the source
+// schema's types to the `willMigrate` callback of a
+// `MigrationStage.custom(fromVersion: LocalSchemaV1.self, …)`. The current
+// `LocalSchemaMigrationPlan.migrateV1toV2` stage runs in `didMigrate`, which
+// already sees the *destination* (V2) schema and fetches via the
+// `Portfolio`/`CategoryContribution`/… typealiases (resolved to
+// `LocalSchemaV2.*`). Future migration stages that need to read the v1 on-disk
+// shape — for example to rewrite a column before SwiftData's lightweight
+// bridge runs — must do so from `willMigrate` and fetch
+// `LocalSchemaV1.<Type>` directly; the same fetches from `didMigrate` would
+// resolve against the v2 entity graph instead.
 //
 // **V1 → V2 delta.** ``LocalSchemaV1/CategoryContribution`` and
 // ``LocalSchemaV1/TickerAllocation`` *do not* declare an `id` column — that

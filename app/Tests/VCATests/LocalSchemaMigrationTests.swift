@@ -174,6 +174,317 @@ final class LocalSchemaMigrationTests: XCTestCase {
     XCTAssertEqual(portfolios.first?.name, "Reopen")
   }
 
+  /// Compatibility test (#337): a disk-backed store created with the *current*
+  /// v2 model graph (which now lives under nested `LocalSchemaV2.*` types) can
+  /// be reopened by the same `LocalSchemaMigrationPlan` without losing any of
+  /// the 11 v2 entities. This guards against the failure mode flagged on the
+  /// schema-freeze PR — namely, that renaming v2 model classes from
+  /// module-scope to nested types could (in theory) change the on-disk class
+  /// identity SwiftData keys entities by, even while the `versionIdentifier`
+  /// stays at 2.0.0. If that ever broke, this round-trip would either throw
+  /// at warm reopen or come back with empty fetches.
+  func testV2DiskContainerRoundTripsEveryEntityAcrossReopens() throws {
+    let storeURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("vca-mig-v2-\(UUID().uuidString).store")
+    addTeardownBlock {
+      try? FileManager.default.removeItem(at: storeURL)
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("wal"))
+    }
+
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let tickerID = UUID()
+    let recordID = UUID()
+    let categoryContributionID = UUID()
+    let tickerAllocationID = UUID()
+    let holdingID = UUID()
+    let snapshotID = UUID()
+    let appSettingsID = UUID()
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+    // Cold open: fresh store at `storeURL`, write one row of every v2 entity.
+    let coldConfiguration = ModelConfiguration(
+      schema: LocalPersistence.schema,
+      url: storeURL
+    )
+    let coldContainer = try ModelContainer(
+      for: LocalPersistence.schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [coldConfiguration]
+    )
+    let coldContext = ModelContext(coldContainer)
+
+    let portfolio = Portfolio(
+      id: portfolioID,
+      name: "Roundtrip",
+      monthlyBudget: Decimal(500),
+      createdAt: referenceDate
+    )
+    let category = Category(
+      id: categoryID,
+      name: "Equities",
+      weight: Decimal(1),
+      sortOrder: 0,
+      portfolio: portfolio
+    )
+    let ticker = Ticker(
+      id: tickerID,
+      symbol: "VTI",
+      sortOrder: 0,
+      category: category
+    )
+    let record = ContributionRecord(
+      id: recordID,
+      portfolioId: portfolioID,
+      date: referenceDate,
+      totalAmount: Decimal(500),
+      portfolio: portfolio
+    )
+    let categoryContribution = CategoryContribution(
+      id: categoryContributionID,
+      categoryName: "Equities",
+      amount: Decimal(500),
+      allocatedWeight: Decimal(1),
+      record: record
+    )
+    let tickerAllocation = TickerAllocation(
+      id: tickerAllocationID,
+      tickerSymbol: "VTI",
+      categoryName: "Equities",
+      amount: Decimal(500),
+      allocatedWeight: Decimal(1),
+      record: record
+    )
+    let holding = Holding(
+      id: holdingID,
+      portfolioId: portfolioID,
+      symbol: "VTI",
+      costBasis: Decimal(100),
+      shares: Decimal(5),
+      sortOrder: 0,
+      createdAt: referenceDate
+    )
+    let tickerMetadata = TickerMetadata(
+      symbol: "VTI",
+      name: "Vanguard Total Stock Market",
+      exchange: "NYSE",
+      assetClass: "ETF"
+    )
+    let marketDataBar = MarketDataBar(
+      id: "VTI-\(referenceDate.timeIntervalSince1970)",
+      symbol: "VTI",
+      date: referenceDate,
+      open: Decimal(string: "100.00")!,
+      high: Decimal(string: "101.00")!,
+      low: Decimal(string: "99.00")!,
+      close: Decimal(string: "100.50")!,
+      volume: 1_000,
+      fetchedAt: referenceDate
+    )
+    let investSnapshot = InvestSnapshot(
+      id: snapshotID,
+      portfolioId: portfolioID,
+      capturedAt: referenceDate,
+      capitalAmount: Decimal(500),
+      maWindow: 50,
+      marketDataWindowStart: referenceDate,
+      marketDataWindowEnd: referenceDate,
+      compositionJSON: "[]",
+      warningsJSON: "[]"
+    )
+    let appSettings = AppSettings(
+      id: appSettingsID,
+      themePreference: "system"
+    )
+
+    coldContext.insert(portfolio)
+    coldContext.insert(category)
+    coldContext.insert(ticker)
+    coldContext.insert(record)
+    coldContext.insert(categoryContribution)
+    coldContext.insert(tickerAllocation)
+    coldContext.insert(holding)
+    coldContext.insert(tickerMetadata)
+    coldContext.insert(marketDataBar)
+    coldContext.insert(investSnapshot)
+    coldContext.insert(appSettings)
+    try coldContext.save()
+
+    // Warm reopen: same URL, same schema + migration plan. Confirms the v2
+    // shape stored under the nested `LocalSchemaV2.*` class identities is
+    // still readable on a subsequent process boot.
+    let warmConfiguration = ModelConfiguration(
+      schema: LocalPersistence.schema,
+      url: storeURL
+    )
+    let warmContainer = try ModelContainer(
+      for: LocalPersistence.schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [warmConfiguration]
+    )
+    let warmContext = ModelContext(warmContainer)
+
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Portfolio>()).first?.id, portfolioID)
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Category>()).first?.id, categoryID)
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Ticker>()).first?.id, tickerID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<ContributionRecord>()).first?.id, recordID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<CategoryContribution>()).first?.id,
+      categoryContributionID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<TickerAllocation>()).first?.id,
+      tickerAllocationID)
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Holding>()).first?.id, holdingID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<TickerMetadata>()).first?.symbol, "VTI")
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<MarketDataBar>()).first?.symbol, "VTI")
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<InvestSnapshot>()).first?.id, snapshotID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<AppSettings>()).first?.id, appSettingsID)
+  }
+
+  /// End-to-end exercise of the v1→v2 custom migration stage (#337). Writes a
+  /// `LocalSchemaV1`-only store containing the legacy contribution-breakdown
+  /// rows that lack the v2 `id: UUID` column, then reopens the same URL with
+  /// `LocalSchemaMigrationPlan` and confirms:
+  ///
+  /// 1. SwiftData's lightweight bridge successfully populates the new `id`
+  ///    column on every pre-existing row before this stage's `didMigrate`
+  ///    block runs (the inline `= UUID()` default on the v2 declarations is
+  ///    what the bridge consults — see #298 / the comment on `migrateV1toV2`).
+  /// 2. The `didMigrate` belt-and-suspenders pass produces *distinct* UUIDs
+  ///    for every row, satisfying the `@Attribute(.unique)` constraint even
+  ///    if the bridge happened to seed a single shared default.
+  /// 3. Non-breakdown rows (e.g. the parent `ContributionRecord`) survive the
+  ///    migration unchanged.
+  func testCustomV1ToV2StageBackfillsUniqueIDsForBreakdownRows() throws {
+    let storeURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("vca-mig-v1tov2-\(UUID().uuidString).store")
+    addTeardownBlock {
+      try? FileManager.default.removeItem(at: storeURL)
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("wal"))
+    }
+
+    let portfolioID = UUID()
+    let recordID = UUID()
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+    // Stage 1: open a *v1-only* container (no migration plan, v1 schema) and
+    // write rows in the v1 on-disk shape — including breakdown rows that have
+    // no `id` column at all. This is the exact pre-PR state of a real user's
+    // store on disk before the v2 bump shipped.
+    do {
+      let v1Schema = Schema(versionedSchema: LocalSchemaV1.self)
+      let v1Configuration = ModelConfiguration(schema: v1Schema, url: storeURL)
+      let v1Container = try ModelContainer(
+        for: v1Schema,
+        configurations: [v1Configuration]
+      )
+      let v1Context = ModelContext(v1Container)
+
+      let portfolio = LocalSchemaV1.Portfolio(
+        id: portfolioID,
+        name: "Legacy",
+        monthlyBudget: Decimal(300),
+        createdAt: referenceDate
+      )
+      let record = LocalSchemaV1.ContributionRecord(
+        id: recordID,
+        portfolioId: portfolioID,
+        date: referenceDate,
+        totalAmount: Decimal(300),
+        portfolio: portfolio
+      )
+      let categoryRow1 = LocalSchemaV1.CategoryContribution(
+        categoryName: "Equities",
+        amount: Decimal(180),
+        allocatedWeight: Decimal(string: "0.6")!,
+        record: record
+      )
+      let categoryRow2 = LocalSchemaV1.CategoryContribution(
+        categoryName: "Bonds",
+        amount: Decimal(120),
+        allocatedWeight: Decimal(string: "0.4")!,
+        record: record
+      )
+      let tickerRow1 = LocalSchemaV1.TickerAllocation(
+        tickerSymbol: "VTI",
+        categoryName: "Equities",
+        amount: Decimal(180),
+        allocatedWeight: Decimal(string: "0.6")!,
+        record: record
+      )
+      let tickerRow2 = LocalSchemaV1.TickerAllocation(
+        tickerSymbol: "BND",
+        categoryName: "Bonds",
+        amount: Decimal(120),
+        allocatedWeight: Decimal(string: "0.4")!,
+        record: record
+      )
+
+      v1Context.insert(portfolio)
+      v1Context.insert(record)
+      v1Context.insert(categoryRow1)
+      v1Context.insert(categoryRow2)
+      v1Context.insert(tickerRow1)
+      v1Context.insert(tickerRow2)
+      try v1Context.save()
+    }
+
+    // Stage 2: reopen the same URL with the v2 schema + migration plan. The
+    // custom `migrateV1toV2` stage should run, the lightweight bridge should
+    // fill the new `id` columns, and `didMigrate` should reassign fresh
+    // UUIDs on every row.
+    let v2Configuration = ModelConfiguration(
+      schema: LocalPersistence.schema,
+      url: storeURL
+    )
+    let v2Container = try ModelContainer(
+      for: LocalPersistence.schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [v2Configuration]
+    )
+    let v2Context = ModelContext(v2Container)
+
+    // The parent record survives the migration with its identity intact.
+    let migratedRecords = try v2Context.fetch(FetchDescriptor<ContributionRecord>())
+    XCTAssertEqual(migratedRecords.count, 1)
+    XCTAssertEqual(migratedRecords.first?.id, recordID)
+    XCTAssertEqual(migratedRecords.first?.totalAmount, Decimal(300))
+
+    // Breakdown rows now have unique, non-empty `id` UUIDs even though they
+    // were written without one.
+    let migratedCategories = try v2Context.fetch(FetchDescriptor<CategoryContribution>())
+    XCTAssertEqual(migratedCategories.count, 2)
+    let categoryIDs = Set(migratedCategories.map(\.id))
+    XCTAssertEqual(
+      categoryIDs.count, 2, "Migrated CategoryContribution rows must have distinct IDs.")
+    XCTAssertFalse(
+      categoryIDs.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000000")!),
+      "Migrated CategoryContribution rows must not share the all-zero UUID.")
+
+    let migratedAllocations = try v2Context.fetch(FetchDescriptor<TickerAllocation>())
+    XCTAssertEqual(migratedAllocations.count, 2)
+    let allocationIDs = Set(migratedAllocations.map(\.id))
+    XCTAssertEqual(
+      allocationIDs.count, 2, "Migrated TickerAllocation rows must have distinct IDs.")
+    XCTAssertFalse(
+      allocationIDs.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000000")!),
+      "Migrated TickerAllocation rows must not share the all-zero UUID.")
+
+    // Cross-entity payload survived the migration — categoryName / amount /
+    // allocatedWeight are still legible against the migrated rows.
+    let migratedCategoryNames = Set(migratedCategories.map(\.categoryName))
+    XCTAssertEqual(migratedCategoryNames, ["Equities", "Bonds"])
+    let migratedAllocationSymbols = Set(migratedAllocations.map(\.tickerSymbol))
+    XCTAssertEqual(migratedAllocationSymbols, ["VTI", "BND"])
+  }
+
   // MARK: - v2 identity contract (#249)
 
   func testCategoryContributionDefaultInitAssignsAUniqueID() {
