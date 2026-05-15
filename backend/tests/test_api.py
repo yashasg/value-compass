@@ -136,6 +136,7 @@ PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
     ("/portfolio/data", "get"),
     ("/portfolio/export", "get"),
     ("/portfolio", "patch"),
+    ("/portfolio", "delete"),
     ("/portfolio/holdings", "post"),
     ("/portfolio/holdings/{ticker}", "patch"),
     ("/portfolio/holdings/{ticker}", "delete"),
@@ -197,6 +198,7 @@ def test_protected_routes_reject_missing_x_app_attest(client: TestClient) -> Non
         ("get", "/portfolio/data", {"device_uuid": str(uuid.uuid4())}),
         ("get", "/portfolio/export", {"device_uuid": str(uuid.uuid4())}),
         ("patch", "/portfolio", {"device_uuid": str(uuid.uuid4())}),
+        ("delete", "/portfolio", {"device_uuid": str(uuid.uuid4())}),
         (
             "post",
             "/portfolio/holdings",
@@ -1314,4 +1316,156 @@ def test_delete_holding_does_not_touch_other_devices(
     ).one()
     assert other_row.ticker == "AAPL"
     assert other_row.weight == Decimal("0.25")
+
+
+# ---------------------------------------------------------------------------
+# GDPR Art. 17 / CCPA §1798.105 right-to-erasure (full account) — issue #450
+# ---------------------------------------------------------------------------
+def test_delete_portfolio_404_for_unknown_device(client: TestClient) -> None:
+    resp = client.delete(
+        "/portfolio",
+        params={"device_uuid": str(uuid.uuid4())},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "portfolioNotFound",
+        "message": "Portfolio not found for device.",
+        "retry_after_seconds": None,
+    }
+
+
+def test_delete_portfolio_erases_portfolio_and_cascades_to_holdings(
+    client: TestClient, db_session: Session
+) -> None:
+    """Successful erasure removes the Portfolio AND every Holding keyed to it.
+
+    Validates the model-side ``cascade="all, delete-orphan"`` on
+    ``Portfolio.holdings`` and the ``ondelete="CASCADE"`` on
+    ``Holding.portfolio_id`` — the privacy contract requires that
+    "delete my data" leaves zero ``X-Device-UUID``-linked rows behind.
+    """
+    device_uuid, portfolio = _seed_portfolio(
+        db_session,
+        holdings=(
+            ("AAPL", Decimal("0.3")),
+            ("MSFT", Decimal("0.4")),
+            ("VOO", Decimal("0.3")),
+        ),
+    )
+    portfolio_id = portfolio.id
+
+    resp = client.delete(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 204
+    assert resp.content == b""
+
+    db_session.expire_all()
+    assert (
+        db_session.scalars(
+            select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+        ).first()
+        is None
+    )
+    assert (
+        db_session.scalars(
+            select(Holding).where(Holding.portfolio_id == portfolio_id)
+        ).first()
+        is None
+    )
+
+
+def test_delete_portfolio_does_not_touch_other_devices(
+    client: TestClient, db_session: Session
+) -> None:
+    """Cross-device scoping: an account erasure cannot reach foreign rows.
+
+    Mirrors the row-scoped DELETE guard (#374) at the account level so
+    a regression that drops the ``where(device_uuid == ...)`` filter
+    fails immediately.
+    """
+    caller_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    other_uuid, other_portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.25")),)
+    )
+
+    resp = client.delete(
+        "/portfolio",
+        params={"device_uuid": str(caller_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 204
+
+    surviving_portfolio = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == other_uuid)
+    ).one()
+    assert surviving_portfolio.id == other_portfolio.id
+    surviving_holding = db_session.scalars(
+        select(Holding).where(Holding.portfolio_id == other_portfolio.id)
+    ).one()
+    assert surviving_holding.ticker == "AAPL"
+    assert surviving_holding.weight == Decimal("0.25")
+
+
+def test_delete_portfolio_does_not_stamp_activity_on_a_doomed_row(
+    client: TestClient, db_session: Session
+) -> None:
+    """Erasure must not stamp ``last_seen_at`` on a row that is being deleted.
+
+    Every other authenticated touch stamps activity so the
+    retention-purge sweep (``docs/legal/data-retention.md``) keeps live
+    rows alive. Erasure is the deliberate exception — the row is gone,
+    so a stamp would either no-op (if it runs first) or resurrect a
+    freshly-deleted row. Locks in the intentional asymmetry so a
+    regression that pastes ``portfolio.last_seen_at = datetime.now(UTC)``
+    into the erasure handler fails immediately.
+    """
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    device_uuid, _ = _seed_portfolio(
+        db_session,
+        holdings=(("AAPL", Decimal("0.5")),),
+        last_seen_at=stale,
+    )
+
+    resp = client.delete(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 204
+
+    db_session.expire_all()
+    assert (
+        db_session.scalars(
+            select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+        ).first()
+        is None
+    )
+
+
+def test_delete_portfolio_documented_in_openapi(client: TestClient) -> None:
+    """The OpenAPI artifact must advertise the new operation under #450.
+
+    Locks in the operation's existence (a regression that drops the
+    handler is caught by the missing path), the 204 success contract,
+    the four documented error envelopes, and the App Attest gate so
+    generated iOS clients can't accidentally call the endpoint without
+    the required header.
+    """
+    schema = client.get("/openapi.json").json()
+    operation = schema["paths"]["/portfolio"]["delete"]
+
+    assert "204" in operation["responses"]
+    assert "401" in operation["responses"]
+    assert "404" in operation["responses"]
+    assert "422" in operation["responses"]
+    assert "503" in operation["responses"]
+
+    parameter = _x_app_attest_parameter(operation)
+    assert parameter["required"] is True
 

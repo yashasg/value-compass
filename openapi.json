@@ -1051,6 +1051,177 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Delete Portfolio",
+        "description": "Erase every ``X-Device-UUID``-linked row for the calling device.\n\nImplements GDPR Art. 17 (right to erasure / right to be forgotten),\nCCPA \u00a71798.105 (right to delete), and the erasure commitment\nreferenced in ``docs/legal/privacy-policy.md`` \u00a76 \u2014 the\nbackend-side prerequisite for the iOS Settings \"Erase All My Data\"\nflow tracked under issue #329.\n\nCascade-deletes the resolved ``Portfolio`` row and, via the\n``Holding.portfolio_id`` FK ``ON DELETE CASCADE`` and the\n``Portfolio.holdings`` ``delete-orphan`` relationship cascade\n(``backend/db/models.py``), every ``Holding`` keyed to it. The\ncache-only ``StockCache`` table is **not** touched \u2014 ticker market\ndata is not personal data and is shared across devices.\n\nUnlike every other authenticated endpoint, this handler\ndeliberately does **not** stamp ``last_seen_at``: the row is\nbeing removed in the same transaction, and a stamp would either\nno-op (if it runs first) or resurrect a freshly-deleted row (if\nit runs against an orphan reference). The retention-purge sweep\ndocumented in ``docs/legal/data-retention.md`` does not need a\nstamp here \u2014 the row is gone, which is a strictly stronger\noutcome than a stamp could provide.\n\nScoped strictly to the calling device \u2014 the ``device_uuid`` query\nparameter is the only selector, and the row-scoped ``DELETE``\ncontract for holdings (#374) is preserved orthogonally: an\naccount-level erasure on device A cannot reach device B's rows.",
+        "operationId": "delete_portfolio_portfolio_delete",
+        "parameters": [
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "title": "X-App-Attest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response",
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/portfolio/holdings/{ticker}": {

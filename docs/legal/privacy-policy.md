@@ -252,10 +252,24 @@ Both paths together leave no Investrum-controlled data on your device.
 The `X-Device-UUID` Keychain entry is removed when the app is deleted
 because the Keychain access group is scoped to the app bundle ID.
 
-A standalone in-app erasure control for backend-held rows is tracked
-under issue #329. While backend sync remains unwired in v1, "delete the
-app" already achieves complete erasure of `X-Device-UUID`-linked data
-because nothing has been transmitted off-device under that identifier.
+When backend sync is active, the `DELETE /portfolio` endpoint erases
+every `X-Device-UUID`-linked row the backend holds about you in a
+single transaction: the `Portfolio` row itself and, via the model
+relationship cascade, every `Holding` keyed to it. Cache-only
+`StockCache` market data is intentionally not touched — ticker
+market data is shared across devices and is not personal data of the
+caller. The endpoint is authenticated by App Attest, scoped strictly
+to the calling device's portfolio, and returns `204 No Content` on
+success. The contract is documented in the OpenAPI artifact at
+[`app/Sources/Backend/Networking/openapi.json`](../../app/Sources/Backend/Networking/openapi.json)
+under the `DELETE /portfolio` operation, and the consolidated DSR
+posture lives in
+[`docs/legal/data-subject-rights.md`](data-subject-rights.md).
+
+The in-app "Erase All My Data" Settings control that calls this
+endpoint and rotates the Keychain `X-Device-UUID` is tracked under
+issue #329; until that lands, the endpoint is reachable to the iOS
+client but does not yet have a dedicated Settings row.
 
 ### Right to restrict processing (GDPR Art. 18) and to object (GDPR Art. 21)
 
