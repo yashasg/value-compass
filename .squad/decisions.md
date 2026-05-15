@@ -2,6 +2,62 @@
 
 ## Active Decisions
 
+### 2026-05-15T16:07:00Z: Data retention is an eighth pre-submission sync surface, gated on counsel sign-off of the 540 / 30-day windows
+**By:** Squad loop (compliance stream) | **Status:** Adopted | **Issue:** #339 | **PR:** TBD
+
+[`docs/legal/data-retention.md`](../docs/legal/data-retention.md) is the
+engineering record of how long every surface of `X-Device-UUID`-linked
+personal data persists, and the mechanisms that enforce those limits:
+
+* **`portfolios` + cascaded `holdings`** — 540 days of inactivity,
+  enforced by the daily APScheduler sweep in
+  `backend/poller/purge.py::purge_inactive_portfolios` reading the
+  `portfolios.last_seen_at` column added in migration
+  `0003_add_portfolio_last_seen_at`. The activity stamp lands on every
+  authenticated touch through `_stamp_activity` in
+  `backend/api/main.py`.
+* **Application logs** (`vca.api`, `vca.poller`, `vca.poller.purge`,
+  `vca.apns`) — 30 days, enforced by
+  `backend/infra/systemd/journald-vca-retention.conf`
+  (`MaxRetentionSec=30day`). Log lines never quote the raw
+  `device_uuid`; `backend/poller/apns.py::_redact` reduces the field to
+  the last-4 hex characters (Art. 25 data-protection-by-design
+  complement).
+* **`stock_cache`** — not personal data (ticker-keyed), retained
+  indefinitely; documented explicitly so future readers do not confuse
+  it with PII.
+* **Cloudflare access logs** — 30 days, contingent on the active
+  Cloudflare plan default or a Logpush rotation; verified at every
+  plan change.
+
+This raises the count of pre-submission sync surfaces from **seven** to
+**eight** — alongside the binary, `PrivacyInfo.xcprivacy`, the Privacy
+Policy (#224), the App Privacy nutrition label (#271 closed), the
+Age-Rating Questionnaire (#287), the third-party-ToS surface
+([`docs/legal/data-processing-agreements.md`](../docs/legal/data-processing-agreements.md)),
+and the in-app DSR path (#329 / #333). Submission may proceed only when
+all eight agree.
+
+**No retention number is asserted as legally sufficient by this
+decision.** The 540 / 30-day values mirror common regulator guidance
+(CNIL on low-sensitivity pseudonymous identifiers; common ops practice
+on log retention) but must be reviewed by a qualified attorney in each
+launch jurisdiction before the matching Privacy Policy copy publishes
+via #224. The values are tuneable without a code change via
+`PORTFOLIO_RETENTION_DAYS` / `PURGE_HOUR_UTC` env vars so counsel
+output can land via a runtime override.
+
+**Follow-up:** when counsel returns the retention-window memo, replace
+the table values in `docs/legal/data-retention.md`, update
+`PORTFOLIO_RETENTION_DAYS` (and journald `MaxRetentionSec` if log
+retention changes), and update this decision entry with the chosen
+windows and the counsel name. The App Store Connect *App Privacy →
+Data Retention* answers must be filed from the table in
+`docs/legal/data-retention.md` (cross-referenced from
+`docs/legal/privacy-manifest.md`) at submission time.
+
+---
+
 ### 2026-05-15T15:16:00Z: Trademark clearance is a five-surface pre-submission gate, gated on licensed counsel
 **By:** Squad loop (compliance stream) | **Status:** Adopted | **Issue:** #314 | **PR:** TBD
 

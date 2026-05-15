@@ -47,3 +47,20 @@ POLYGON_SMA_REQUESTS_PER_MIN: int = 5
 # Alert if ``stock_cache.last_modified`` is older than this — one trading
 # day plus a 2 h grace window.
 STALE_ALERT_HOURS: int = 26
+
+# ---------------------------------------------------------------------------
+# Data retention — see ``docs/legal/data-retention.md``
+# ---------------------------------------------------------------------------
+# Inactivity window after which a portfolio row (and cascaded holdings) is
+# purged by the retention sweep. Default 540 days ≈ 18 months, mirroring
+# CNIL guidance for low-sensitivity pseudonymous identifiers. Override via
+# the ``PORTFOLIO_RETENTION_DAYS`` env var to tune the schedule without a
+# code change (counsel sign-off on the final value).
+PORTFOLIO_RETENTION_DAYS: int = int(os.getenv("PORTFOLIO_RETENTION_DAYS", "540"))
+
+# Daily hour (UTC) at which the retention sweep runs. Separate from the
+# nightly market-data job so the two jobs never compete for the database
+# during peak fetch windows. Override via ``PURGE_HOUR_UTC`` for staging
+# environments that want to fire the sweep on-demand.
+PURGE_HOUR_UTC: int = int(os.getenv("PURGE_HOUR_UTC", "3"))
+PURGE_MINUTE_UTC: int = int(os.getenv("PURGE_MINUTE_UTC", "0"))

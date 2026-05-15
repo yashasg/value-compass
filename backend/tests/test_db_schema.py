@@ -88,7 +88,7 @@ def test_fresh_database_migration_reaches_head(migrated_session_factory) -> None
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
 
-    assert version == "0002_add_band_metrics"
+    assert version == "0003_add_portfolio_last_seen_at"
 
 
 def test_model_metadata_matches_migration_created_tables_and_columns(
@@ -123,6 +123,11 @@ def test_model_metadata_matches_migration_created_tables_and_columns(
         constraint["name"]
         for constraint in inspector.get_check_constraints("stock_cache")
     } == {"ck_stock_cache_job_status"}
+    # Index added by 0003_add_portfolio_last_seen_at so the daily purge
+    # sweep's range scan stays cheap as the population grows.
+    assert "ix_portfolios_last_seen_at" in {
+        index["name"] for index in inspector.get_indexes("portfolios")
+    }
 
 
 def test_portfolios_ma_window_check_constraint(migrated_session_factory) -> None:

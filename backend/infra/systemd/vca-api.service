@@ -8,5 +8,13 @@ WorkingDirectory=/opt/value-compass/backend
 ExecStart=/opt/value-compass/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000
 Restart=on-failure
 
+# Operational-log retention is enforced via the host journald drop-in at
+# /etc/systemd/journald.conf.d/vca-retention.conf (see
+# backend/infra/systemd/journald-vca-retention.conf). Per the schedule in
+# docs/legal/data-retention.md, application logs are retained for at most
+# 30 days. Deploy automation must copy that drop-in and run
+# ``systemctl restart systemd-journald`` so the retention floor is
+# enforced before this unit emits a single record.
+
 [Install]
 WantedBy=multi-user.target

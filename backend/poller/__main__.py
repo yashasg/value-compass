@@ -1,9 +1,14 @@
 """Entry point for ``python -m poller``.
 
 Boots an :class:`apscheduler.schedulers.blocking.BlockingScheduler` that
-fires :func:`poller.job.run_nightly_job` at 17:00 America/New_York on US
-trading days only (weekends and market holidays are skipped via
-:mod:`pandas_market_calendars`).
+fires:
+
+* :func:`poller.job.run_nightly_job` at 17:00 America/New_York on US
+  trading days only (weekends and market holidays are skipped via
+  :mod:`pandas_market_calendars`).
+* :func:`poller.purge.purge_inactive_portfolios` daily at the configured
+  UTC hour (default 03:00) to enforce the retention schedule documented
+  in ``docs/legal/data-retention.md``.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from common import config
 from poller.job import run_nightly_job
+from poller.purge import purge_inactive_portfolios
 
 log = logging.getLogger("vca.poller")
 
@@ -37,6 +43,22 @@ def build_scheduler() -> BlockingScheduler:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=60 * 30,  # 30 min — survive brief VM restarts
+    )
+    # Retention sweep — fires daily at PURGE_HOUR_UTC:PURGE_MINUTE_UTC in
+    # UTC, regardless of market calendar, because storage limitation
+    # under GDPR Art. 5(1)(e) is not contingent on the market being open.
+    scheduler.add_job(
+        purge_inactive_portfolios,
+        trigger=CronTrigger(
+            hour=config.PURGE_HOUR_UTC,
+            minute=config.PURGE_MINUTE_UTC,
+            timezone="UTC",
+        ),
+        id="vca-poller-retention-purge",
+        name="value-compass retention purge",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=60 * 60,  # 1 h — sweep is idempotent
     )
     return scheduler
 
