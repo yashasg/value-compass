@@ -63,6 +63,7 @@
 		A0000000000000000000B040 /* ContributionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F040 /* ContributionCalculator.swift */; };
 		A0000000000000000000B050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F050 /* Assets.xcassets */; };
 		A0000000000000000000B051 /* icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F051 /* icon.svg */; };
+		A0000000000000000000B0F1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0F1 /* PrivacyInfo.xcprivacy */; };
 		D0000000000000000000B001 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D001 /* ComposableArchitecture */; };
 		D0000000000000000000B002 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D002 /* ComposableArchitecture */; };
 		D0000000000000000000B003 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D003 /* Dependencies */; };
@@ -114,6 +115,7 @@
 		C0000000000000000000A00A /* VCATests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VCATests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0000000000000000000F001 /* VCAApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCAApp.swift; sourceTree = "<group>"; };
 		A0000000000000000000F000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A0000000000000000000F0F1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A0000000000000000000F002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0A0 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
@@ -268,6 +270,7 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000F000 /* Info.plist */,
+				A0000000000000000000F0F1 /* PrivacyInfo.xcprivacy */,
 				A0000000000000000000F001 /* VCAApp.swift */,
 				A0000000000000000000F002 /* AppDelegate.swift */,
 				A0000000000000000000F0A0 /* AppPreferences.swift */,
@@ -540,6 +543,7 @@
 				A0000000000000000000B036 /* openapi.json in Resources */,
 				A0000000000000000000B050 /* Assets.xcassets in Resources */,
 				A0000000000000000000B051 /* icon.svg in Resources */,
+				A0000000000000000000B0F1 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
