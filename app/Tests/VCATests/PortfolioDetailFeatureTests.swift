@@ -102,7 +102,7 @@ final class PortfolioDetailFeatureTests: XCTestCase {
 
   // MARK: - .editHoldingsTapped
 
-  func testEditHoldingsTappedEmitsOpenHoldingsEditorDelegate() async {
+  func testEditHoldingsTappedPresentsHoldingsEditorSheet() async {
     let portfolioID = UUID()
     let snapshot = Self.makeSnapshot(id: portfolioID, name: "Growth")
 
@@ -113,8 +113,53 @@ final class PortfolioDetailFeatureTests: XCTestCase {
       PortfolioDetailFeature()
     }
 
-    await store.send(.editHoldingsTapped)
-    await store.receive(\.delegate.openHoldingsEditor)
+    // HIG #229: editor is presented as a sheet on this reducer instead of
+    // pushed onto `MainFeature.path`, so the action populates the
+    // `@Presents` slot directly with no delegate emitted.
+    await store.send(.editHoldingsTapped) {
+      $0.holdingsEditor = HoldingsEditorFeature.State(portfolioID: portfolioID)
+    }
+  }
+
+  func testHoldingsEditorSavedDelegateDismissesSheetAndRefreshes() async throws {
+    let portfolioID = UUID()
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let snapshot = Self.makeSnapshot(id: portfolioID, name: "Growth")
+    var initialState = PortfolioDetailFeature.State(
+      portfolioID: portfolioID, snapshot: snapshot)
+    initialState.holdingsEditor = HoldingsEditorFeature.State(portfolioID: portfolioID)
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioDetailFeature()
+    } withDependencies: {
+      // No portfolio is persisted in this in-memory container, so the
+      // refreshing `.task` effect reads back `nil` and emits no
+      // `.snapshotChanged` follow-up. We disable exhaustivity to skip
+      // asserting on the unrelated refresh-effect lifecycle.
+      $0.modelContainer.container = { container }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.holdingsEditor(.presented(.delegate(.saved)))) {
+      $0.holdingsEditor = nil
+    }
+    await store.receive(\.task)
+  }
+
+  func testHoldingsEditorCanceledDelegateDismissesSheet() async {
+    let portfolioID = UUID()
+    let snapshot = Self.makeSnapshot(id: portfolioID, name: "Growth")
+    var initialState = PortfolioDetailFeature.State(
+      portfolioID: portfolioID, snapshot: snapshot)
+    initialState.holdingsEditor = HoldingsEditorFeature.State(portfolioID: portfolioID)
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioDetailFeature()
+    }
+
+    await store.send(.holdingsEditor(.presented(.delegate(.canceled)))) {
+      $0.holdingsEditor = nil
+    }
   }
 
   // MARK: - .calculateTapped

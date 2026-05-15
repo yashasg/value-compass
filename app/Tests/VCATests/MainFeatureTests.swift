@@ -34,7 +34,7 @@ final class MainFeatureTests: XCTestCase {
     initialState.detail = .portfolio(portfolioID)
     initialState.detailPortfolio = MainFeature.makeDetailState(id: portfolioID)
     initialState.path.append(
-      .holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID))
+      .contributionHistory(ContributionHistoryFeature.State(portfolioID: portfolioID))
     )
 
     let store = TestStore(initialState: initialState) { MainFeature() }
@@ -98,7 +98,7 @@ final class MainFeatureTests: XCTestCase {
     initialState.detail = .portfolio(portfolioID)
     initialState.detailPortfolio = MainFeature.makeDetailState(id: portfolioID)
     initialState.path.append(
-      .holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID))
+      .contributionHistory(ContributionHistoryFeature.State(portfolioID: portfolioID))
     )
 
     let store = TestStore(initialState: initialState) { MainFeature() }
@@ -115,7 +115,7 @@ final class MainFeatureTests: XCTestCase {
     initialState.detail = .portfolio(portfolioID)
     initialState.detailPortfolio = MainFeature.makeDetailState(id: portfolioID)
     initialState.path.append(
-      .holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID))
+      .contributionHistory(ContributionHistoryFeature.State(portfolioID: portfolioID))
     )
 
     let store = TestStore(initialState: initialState) { MainFeature() }
@@ -187,27 +187,6 @@ final class MainFeatureTests: XCTestCase {
 
   // MARK: - PortfolioDetail delegates from path
 
-  func testPortfolioDetailOpenHoldingsEditorFromPathAppendsHoldingsEditor() async {
-    let portfolioID = UUID()
-    var initialState = MainFeature.State()
-    initialState.shellKind = .stack
-    initialState.path.append(.portfolioDetail(MainFeature.makeDetailState(id: portfolioID)))
-    let elementID: StackElementID = 0
-
-    let store = TestStore(initialState: initialState) { MainFeature() }
-
-    await store.send(
-      .path(
-        .element(
-          id: elementID,
-          action: .portfolioDetail(.delegate(.openHoldingsEditor(portfolioID: portfolioID)))
-        )
-      )
-    ) {
-      $0.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID)))
-    }
-  }
-
   func testPortfolioDetailOpenCalculationResultFromPathAppendsContributionResult() async {
     let portfolioID = UUID()
     var initialState = MainFeature.State()
@@ -258,20 +237,6 @@ final class MainFeatureTests: XCTestCase {
   }
 
   // MARK: - PortfolioDetail delegates from detailPortfolio (iPad detail column)
-
-  func testPortfolioDetailOpenHoldingsEditorFromDetailPortfolioAppendsHoldingsEditor() async {
-    let portfolioID = UUID()
-    var initialState = MainFeature.State()
-    initialState.shellKind = .splitView
-    initialState.detail = .portfolio(portfolioID)
-    initialState.detailPortfolio = MainFeature.makeDetailState(id: portfolioID)
-
-    let store = TestStore(initialState: initialState) { MainFeature() }
-
-    await store.send(.detailPortfolio(.delegate(.openHoldingsEditor(portfolioID: portfolioID)))) {
-      $0.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID)))
-    }
-  }
 
   func testPortfolioDetailOpenCalculationResultFromDetailPortfolioAppendsContributionResult()
     async
@@ -395,46 +360,6 @@ final class MainFeatureTests: XCTestCase {
       )
     ) {
       $0.path.removeLast()
-      $0.path.removeLast()
-    }
-  }
-
-  // MARK: - HoldingsEditor delegate
-
-  func testHoldingsEditorSavedPopsTopWhenTopIsHoldingsEditor() async {
-    let portfolioID = UUID()
-    var initialState = MainFeature.State()
-    initialState.shellKind = .stack
-    initialState.path.append(.portfolioDetail(MainFeature.makeDetailState(id: portfolioID)))
-    initialState.path.append(
-      .holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID))
-    )
-    let editorID: StackElementID = 1
-
-    let store = TestStore(initialState: initialState) { MainFeature() }
-
-    await store.send(
-      .path(.element(id: editorID, action: .holdingsEditor(.delegate(.saved))))
-    ) {
-      $0.path.removeLast()
-    }
-  }
-
-  func testHoldingsEditorCanceledPopsTopWhenTopIsHoldingsEditor() async {
-    let portfolioID = UUID()
-    var initialState = MainFeature.State()
-    initialState.shellKind = .stack
-    initialState.path.append(.portfolioDetail(MainFeature.makeDetailState(id: portfolioID)))
-    initialState.path.append(
-      .holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID))
-    )
-    let editorID: StackElementID = 1
-
-    let store = TestStore(initialState: initialState) { MainFeature() }
-
-    await store.send(
-      .path(.element(id: editorID, action: .holdingsEditor(.delegate(.canceled))))
-    ) {
       $0.path.removeLast()
     }
   }

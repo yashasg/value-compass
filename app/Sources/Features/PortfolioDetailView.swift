@@ -8,7 +8,7 @@ import SwiftUI
 /// scope a `StoreOf<PortfolioDetailFeature>` from the parent and pass it
 /// in.
 struct PortfolioDetailView: View {
-  let store: StoreOf<PortfolioDetailFeature>
+  @Bindable var store: StoreOf<PortfolioDetailFeature>
 
   init(store: StoreOf<PortfolioDetailFeature>) {
     self.store = store
@@ -16,13 +16,18 @@ struct PortfolioDetailView: View {
 
   var body: some View {
     PortfolioDetailContent(store: store)
+      .sheet(
+        item: $store.scope(state: \.holdingsEditor, action: \.holdingsEditor)
+      ) { editorStore in
+        HoldingsEditorView(store: editorStore)
+      }
   }
 }
 
 /// TCA renderer for `PortfolioDetailFeature`. Used by the production app
 /// via `MainFeature.path` (wired in #159) and by previews / tests.
 private struct PortfolioDetailContent: View {
-  let store: StoreOf<PortfolioDetailFeature>
+  @Bindable var store: StoreOf<PortfolioDetailFeature>
 
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 

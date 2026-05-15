@@ -126,8 +126,6 @@ struct MainView: View {
     switch pathStore.case {
     case .portfolioDetail(let scoped):
       PortfolioDetailView(store: scoped)
-    case .holdingsEditor(let scoped):
-      HoldingsEditorView(store: scoped)
     case .contributionResult(let scoped):
       ContributionResultView(store: scoped)
     case .contributionHistory(let scoped):
