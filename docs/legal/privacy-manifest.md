@@ -1,34 +1,32 @@
-# Privacy manifest — `X-Device-UUID` identifier flow
+# Privacy manifest — collected data declarations
 
-This document explains the single
-`NSPrivacyCollectedDataTypeDeviceID` entry under
-`NSPrivacyCollectedDataTypes` in
-`app/Sources/App/PrivacyInfo.xcprivacy`, and how the engineering
+This document explains every entry under `NSPrivacyCollectedDataTypes`
+in `app/Sources/App/PrivacyInfo.xcprivacy`, and how each engineering
 declaration must be mirrored on the App Store Connect "App Privacy"
 nutrition label at submission time.
 
-> ⚠️ **Not legal advice.** This is an engineering record of the
-> identifier surface that exists in the codebase today. Final wording
-> on the App Store Connect nutrition label and the Privacy Policy
-> (#224) should be confirmed by qualified counsel before submission.
+> ⚠️ **Not legal advice.** This is an engineering record of the data
+> surface that exists in the codebase today. Final wording on the App
+> Store Connect nutrition label and the Privacy Policy (#224) should be
+> confirmed by qualified counsel before submission.
 
 ## What the manifest declares
 
-`PrivacyInfo.xcprivacy` lists exactly one collected data type:
+`PrivacyInfo.xcprivacy` lists three collected data types, every one of
+which is `Linked = true`, `Tracking = false`, and serves the
+`AppFunctionality` purpose:
 
-| Field | Value |
-|---|---|
-| `NSPrivacyCollectedDataType` | `NSPrivacyCollectedDataTypeDeviceID` |
-| `NSPrivacyCollectedDataTypeLinked` | `true` |
-| `NSPrivacyCollectedDataTypeTracking` | `false` |
-| `NSPrivacyCollectedDataTypePurposes` | `[NSPrivacyCollectedDataTypePurposeAppFunctionality]` |
+| `NSPrivacyCollectedDataType` | What flows through the network | App Store Connect label section |
+|---|---|---|
+| `NSPrivacyCollectedDataTypeDeviceID` | The `X-Device-UUID` header attached to every backend request (see *Where the identifier comes from* below). | *Identifiers → Device ID* |
+| `NSPrivacyCollectedDataTypeOtherFinancialInfo` | `BackendPortfolioPayload.monthlyBudget` and every `BackendHoldingPayload.weight` transmitted by `BackendSyncProjection.makePayload(for:deviceUUID:)`. | *Financial Info → Other Financial Info* |
+| `NSPrivacyCollectedDataTypeOtherUserContent` | `BackendPortfolioPayload.name` (the user-typed portfolio name) and the per-holding `BackendHoldingPayload.ticker` string. | *User Content → Other User Content* |
 
 The mapping between manifest field and the App Store Connect nutrition
-label is:
+label for every entry is:
 
 | Manifest field | App Store Connect label section |
 |---|---|
-| `NSPrivacyCollectedDataTypeDeviceID` | *Identifiers → Device ID* |
 | `NSPrivacyCollectedDataTypeLinked = true` | *Linked to the user* |
 | `NSPrivacyCollectedDataTypeTracking = false` | *Not used to track you* |
 | `NSPrivacyCollectedDataTypePurposeAppFunctionality` | *App Functionality* |
@@ -57,22 +55,40 @@ The backend (`backend/api/main.py`) accepts `device_uuid: UUID`
 and joins it onto `Portfolio` rows, which is what makes the manifest
 entry **linked** rather than unlinked.
 
+## Where the financial info and user content come from
+
+- `app/Sources/Backend/Networking/BackendSyncProjection.swift:8–15`
+  defines `BackendPortfolioPayload.{name, monthlyBudget, maWindow,
+  createdAt}` and `BackendHoldingPayload.{ticker, weight}`. The
+  `monthlyBudget` and per-holding `weight` decimals are user-supplied
+  financial figures derived from the portfolio editor (#125).
+- `BackendSyncProjection.makePayload(for:deviceUUID:)` assembles those
+  values from the live SwiftData `Portfolio` row before the projection
+  hands the payload to `APIClient`.
+- The payload then travels over TLS to `https://api.valuecompass.app`
+  alongside the `X-Device-UUID` header, which is why both new entries
+  carry `NSPrivacyCollectedDataTypeLinked = true` — the backend joins
+  every payload row to the per-installation identifier.
+
 ## Why these flag values are correct
 
-- **Linked = `true`:** the backend persists rows keyed by the UUID, so
-  on the server side the identifier is associated with user-generated
-  content (portfolios, contribution history). Apple's definition of
-  "linked" applies regardless of whether a human-readable user account
-  exists — server-side association by an installation-stable
-  identifier is sufficient.
-- **Tracking = `false`:** the identifier is never combined with data
-  from other apps or websites, never shared with data brokers, and
-  never used to target advertising. It is purely an installation
-  identifier for the value-compass backend.
-- **Purpose = `AppFunctionality`:** the backend uses the identifier
-  solely to scope a user's portfolios and to authorize subsequent
-  requests against those portfolios. There is no analytics, product
-  personalization, or third-party advertising flow today.
+- **Linked = `true`** (all three entries): the backend persists rows
+  keyed by the `X-Device-UUID`, so on the server side the device
+  identifier, the portfolio name, the monthly budget, and the holding
+  weights are all associated with one installation's user-generated
+  content. Apple's definition of "linked" applies regardless of whether
+  a human-readable user account exists — server-side association by an
+  installation-stable identifier is sufficient.
+- **Tracking = `false`** (all three entries): none of the collected
+  values are combined with data from other apps or websites, shared
+  with data brokers, or used to target advertising. The data flows
+  only to the value-compass backend.
+- **Purpose = `AppFunctionality`** (all three entries): the backend
+  uses the identifier to scope a user's portfolios and to authorize
+  subsequent requests, and uses the portfolio name / monthly budget /
+  ticker weights solely to compute the value-compass contribution
+  recommendation that is the app's core function. There is no
+  analytics, product personalization, or third-party advertising flow.
 
 If a future change broadens any of these (for example, if the
 identifier ever flows to a third-party SDK, or if it ever drives
@@ -83,7 +99,8 @@ nutrition label must be updated together, and a Privacy Policy update
 ## Out of scope
 
 - **Privacy Policy text and Settings link** (`#224`) — the human-readable
-  version of the same disclosure.
+  version of the same disclosure. Must cover transmission of the
+  portfolio name, monthly budget, and ticker allocations per #357.
 - **App Review submission notes** (`#254`) — financial-tool framing.
 - **`NSPrivacyAccessedAPITypes` (required-reason API)** — already
   shipped in commit `69af031` (PR #230 / closes #223) covering the
@@ -92,12 +109,12 @@ nutrition label must be updated together, and a Privacy Policy update
 
 ## How to update this declaration
 
-If the identifier surface changes:
+If the collected data surface changes:
 
 1. Edit `app/Sources/App/PrivacyInfo.xcprivacy` to add, remove, or
    reflag the relevant `NSPrivacyCollectedDataType` entry.
-2. Update this file with the new identifier, why it is collected, and
-   the linked/tracking/purpose flags chosen.
+2. Update this file with the new entry, what flows through the
+   network, and the linked/tracking/purpose flags chosen.
 3. Re-file the App Store Connect "App Privacy" nutrition label with
    the same flags **before** the next submission.
 4. Coordinate with #224 so the Privacy Policy text mirrors the new
