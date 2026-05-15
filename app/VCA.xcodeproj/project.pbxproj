@@ -109,6 +109,7 @@
 		C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */; };
 		C0000000000000000000B01B /* ContributionRecordInitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01B /* ContributionRecordInitTests.swift */; };
 		C0000000000000000000B01C /* APIClientDependencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01C /* APIClientDependencyTests.swift */; };
+		C0000000000000000000B01D /* AppBrandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01D /* AppBrandTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -216,6 +217,7 @@
 		C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClientTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01B /* ContributionRecordInitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionRecordInitTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01C /* APIClientDependencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientDependencyTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F01D /* AppBrandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrandTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -472,6 +474,7 @@
 				C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */,
 				C0000000000000000000F01B /* ContributionRecordInitTests.swift */,
 				C0000000000000000000F01C /* APIClientDependencyTests.swift */,
+				C0000000000000000000F01D /* AppBrandTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -695,6 +698,7 @@
 				C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */,
 				C0000000000000000000B01B /* ContributionRecordInitTests.swift in Sources */,
 				C0000000000000000000B01C /* APIClientDependencyTests.swift in Sources */,
+				C0000000000000000000B01D /* AppBrandTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

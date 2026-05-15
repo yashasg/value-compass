@@ -27,6 +27,15 @@ struct AppLogoMark: View {
     }
     .frame(width: size, height: size)
     .accessibilityHidden(true)
+    // Preserve the brand mark under Smart Invert (Settings → Accessibility →
+    // Display & Text Size → Smart Invert). `AppLogoMark` is the app's only
+    // custom-drawn (`Shape` + `LinearGradient`) brand vector; without this
+    // opt-out, Smart Invert flips both the rounded plate and the gradient
+    // because its heuristic only auto-excludes image/media content. Bundled
+    // SF Symbols elsewhere are unaffected. Do not remove without
+    // co-ordinating with the design system — every brand-color decision is
+    // silently overridden for Smart-Invert users on this view.
+    .accessibilityIgnoresInvertColors(true)
   }
 
   private var logoShape: some Shape {
