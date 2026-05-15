@@ -33,6 +33,7 @@
 		A0000000000000000000B031 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F031 /* AppVersion.swift */; };
 		A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F032 /* DeviceIDProvider.swift */; };
 		A0000000000000000000B033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F033 /* KeychainStore.swift */; };
+		A0000000000000000000B039 /* AppAttestProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F039 /* AppAttestProvider.swift */; };
 		A0000000000000000000B034 /* MassiveAPIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MassiveAPIKeyStore.swift */; };
 		A0000000000000000000B038 /* MassiveAPIKeyValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */; };
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
@@ -144,6 +145,7 @@
 		A0000000000000000000F031 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		A0000000000000000000F032 /* DeviceIDProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIDProvider.swift; sourceTree = "<group>"; };
 		A0000000000000000000F033 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		A0000000000000000000F039 /* AppAttestProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAttestProvider.swift; sourceTree = "<group>"; };
 		A0000000000000000000F034 /* MassiveAPIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidator.swift; sourceTree = "<group>"; };
 		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
@@ -376,6 +378,7 @@
 				A0000000000000000000F033 /* KeychainStore.swift */,
 				A0000000000000000000F034 /* MassiveAPIKeyStore.swift */,
 				A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */,
+				A0000000000000000000F039 /* AppAttestProvider.swift */,
 				A0000000000000000000F035 /* BackendSyncProjection.swift */,
 				A0000000000000000000F037 /* openapi-generator-config.yaml */,
 				A0000000000000000000F036 /* openapi.json */,
@@ -608,6 +611,7 @@
 				A0000000000000000000B033 /* KeychainStore.swift in Sources */,
 				A0000000000000000000B034 /* MassiveAPIKeyStore.swift in Sources */,
 				A0000000000000000000B038 /* MassiveAPIKeyValidator.swift in Sources */,
+				A0000000000000000000B039 /* AppAttestProvider.swift in Sources */,
 				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
 				A0000000000000000000B070 /* BackendContracts.swift in Sources */,
 				A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */,
