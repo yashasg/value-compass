@@ -714,11 +714,6 @@
         "responses": {
           "202": {
             "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "headers": {
               "Cache-Control": {
                 "description": "Cloudflare-cacheable max-age in seconds.",

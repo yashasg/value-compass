@@ -543,6 +543,72 @@ def test_portfolio_data_preserves_decimal_precision_in_monthly_budget(
     assert Decimal(body["monthly_budget"]) == Decimal("99.99")
 
 
+def test_add_holding_202_success_is_empty_body_in_spec_and_runtime(
+    client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Issue #303: POST /portfolio/holdings 202 must be empty on both sides.
+
+    The route returns ``Response(status_code=202)`` with no JSON payload, so
+    the published OpenAPI contract must not advertise ``application/json``
+    content for the 202 success — otherwise generated clients model a body
+    the server never sends. ``response_class=Response`` on the decorator
+    drives the spec side; this test pins both halves so a future re-add
+    of a JSON success body (decorator or runtime) fails contract tests.
+    """
+    schema = client.get("/openapi.json").json()
+    success = schema["paths"]["/portfolio/holdings"]["post"]["responses"]["202"]
+    assert "content" not in success, (
+        "POST /portfolio/holdings 202 advertises a body but the runtime "
+        "returns an empty Response — keep the contract empty (or add a "
+        "body to the route, but not just to the spec)."
+    )
+
+    device_uuid = uuid.uuid4()
+    db_session.add(
+        Portfolio(
+            id=uuid.uuid4(),
+            device_uuid=device_uuid,
+            name="P",
+            monthly_budget=Decimal("100"),
+            ma_window=200,
+            created_at=datetime.now(UTC),
+        )
+    )
+    db_session.add(
+        StockCache(
+            ticker="AAPL",
+            current_price=Decimal("190"),
+            sma_50=Decimal("189"),
+            sma_200=Decimal("188"),
+            last_modified=datetime.now(UTC),
+            next_modified=None,
+            job_status="success",
+        )
+    )
+    db_session.commit()
+
+    async def _fake_fetch(ticker):  # pragma: no cover - cached path
+        return None
+
+    monkeypatch.setattr("poller.polygon.fetch_and_cache_ticker", _fake_fetch)
+
+    resp = client.post(
+        "/portfolio/holdings",
+        json={
+            "device_uuid": str(device_uuid),
+            "ticker": "AAPL",
+            "weight": 0.5,
+        },
+        headers=ATTEST,
+    )
+    assert resp.status_code == 202
+    assert resp.content == b"", (
+        "POST /portfolio/holdings 202 runtime body drifted from the empty "
+        "contract — either update the spec to advertise the new body, or "
+        "drop the body from the route."
+    )
+
+
 def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(
     client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
