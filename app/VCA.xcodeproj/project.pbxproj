@@ -29,6 +29,8 @@
 		A0000000000000000000B031 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F031 /* AppVersion.swift */; };
 		A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F032 /* DeviceIDProvider.swift */; };
 		A0000000000000000000B033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F033 /* KeychainStore.swift */; };
+		A0000000000000000000B034 /* MassiveAPIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F034 /* MassiveAPIKeyStore.swift */; };
+		A0000000000000000000B038 /* MassiveAPIKeyValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */; };
 		A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F035 /* BackendSyncProjection.swift */; };
 		A0000000000000000000B070 /* BackendContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F070 /* BackendContracts.swift */; };
 		A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F080 /* UserDefaultsClient.swift */; };
@@ -40,6 +42,8 @@
 		A0000000000000000000B086 /* ModelContainerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F086 /* ModelContainerClient.swift */; };
 		A0000000000000000000B087 /* BundleInfoClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F087 /* BundleInfoClient.swift */; };
 		A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F088 /* ContributionCalculatorClient.swift */; };
+		A0000000000000000000B089 /* MassiveAPIKeyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F089 /* MassiveAPIKeyClient.swift */; };
+		A0000000000000000000B08A /* MassiveAPIKeyValidatorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */; };
 		A0000000000000000000B090 /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F090 /* AppFeature.swift */; };
 		A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F091 /* ForcedUpdateFeature.swift */; };
 		A0000000000000000000B092 /* OnboardingFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F092 /* OnboardingFeature.swift */; };
@@ -52,6 +56,7 @@
 		A0000000000000000000B099 /* ContributionResultFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F099 /* ContributionResultFeature.swift */; };
 		A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09A /* ContributionHistoryFeature.swift */; };
 		A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09B /* PortfolioEditorFeature.swift */; };
+		A0000000000000000000B09C /* SettingsFeature+APIKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09C /* SettingsFeature+APIKey.swift */; };
 		A0000000000000000000B017 /* PortfolioListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F017 /* PortfolioListView.swift */; };
 		A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F018 /* PortfolioEditorView.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
@@ -90,6 +95,8 @@
 		C0000000000000000000B013 /* HoldingsEditorFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */; };
 		C0000000000000000000B010 /* PortfolioListFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F010 /* PortfolioListFeatureTests.swift */; };
 		C0000000000000000000B011 /* PortfolioEditorFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */; };
+		C0000000000000000000B016 /* MassiveAPIKeyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */; };
+		C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -128,6 +135,8 @@
 		A0000000000000000000F031 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		A0000000000000000000F032 /* DeviceIDProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIDProvider.swift; sourceTree = "<group>"; };
 		A0000000000000000000F033 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		A0000000000000000000F034 /* MassiveAPIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyStore.swift; sourceTree = "<group>"; };
+		A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidator.swift; sourceTree = "<group>"; };
 		A0000000000000000000F035 /* BackendSyncProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSyncProjection.swift; sourceTree = "<group>"; };
 		A0000000000000000000F070 /* BackendContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendContracts.swift; sourceTree = "<group>"; };
 		A0000000000000000000F080 /* UserDefaultsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsClient.swift; sourceTree = "<group>"; };
@@ -139,6 +148,8 @@
 		A0000000000000000000F086 /* ModelContainerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelContainerClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F087 /* BundleInfoClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleInfoClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F088 /* ContributionCalculatorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F089 /* MassiveAPIKeyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidatorClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F090 /* AppFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F091 /* ForcedUpdateFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F092 /* OnboardingFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFeature.swift; sourceTree = "<group>"; };
@@ -151,6 +162,7 @@
 		A0000000000000000000F099 /* ContributionResultFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionResultFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F09A /* ContributionHistoryFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionHistoryFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F09B /* PortfolioEditorFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorFeature.swift; sourceTree = "<group>"; };
+		A0000000000000000000F09C /* SettingsFeature+APIKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsFeature+APIKey.swift"; sourceTree = "<group>"; };
 		A0000000000000000000F017 /* PortfolioListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F018 /* PortfolioEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
@@ -178,6 +190,8 @@
 		C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingsEditorFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F010 /* PortfolioListFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyStoreTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidatorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -276,6 +290,7 @@
 				A0000000000000000000F094 /* MainFeature+Shell.swift */,
 				A0000000000000000000F095 /* PortfolioListFeature.swift */,
 				A0000000000000000000F096 /* SettingsFeature.swift */,
+				A0000000000000000000F09C /* SettingsFeature+APIKey.swift */,
 				A0000000000000000000F097 /* PortfolioDetailFeature.swift */,
 				A0000000000000000000F098 /* HoldingsEditorFeature.swift */,
 				A0000000000000000000F099 /* ContributionResultFeature.swift */,
@@ -297,6 +312,8 @@
 				A0000000000000000000F086 /* ModelContainerClient.swift */,
 				A0000000000000000000F087 /* BundleInfoClient.swift */,
 				A0000000000000000000F088 /* ContributionCalculatorClient.swift */,
+				A0000000000000000000F089 /* MassiveAPIKeyClient.swift */,
+				A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */,
 			);
 			path = Dependencies;
 			sourceTree = "<group>";
@@ -335,6 +352,8 @@
 				A0000000000000000000F031 /* AppVersion.swift */,
 				A0000000000000000000F032 /* DeviceIDProvider.swift */,
 				A0000000000000000000F033 /* KeychainStore.swift */,
+				A0000000000000000000F034 /* MassiveAPIKeyStore.swift */,
+				A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */,
 				A0000000000000000000F035 /* BackendSyncProjection.swift */,
 				A0000000000000000000F037 /* openapi-generator-config.yaml */,
 				A0000000000000000000F036 /* openapi.json */,
@@ -407,6 +426,8 @@
 				C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */,
 				C0000000000000000000F010 /* PortfolioListFeatureTests.swift */,
 				C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */,
+				C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */,
+				C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -558,6 +579,8 @@
 				A0000000000000000000B031 /* AppVersion.swift in Sources */,
 				A0000000000000000000B032 /* DeviceIDProvider.swift in Sources */,
 				A0000000000000000000B033 /* KeychainStore.swift in Sources */,
+				A0000000000000000000B034 /* MassiveAPIKeyStore.swift in Sources */,
+				A0000000000000000000B038 /* MassiveAPIKeyValidator.swift in Sources */,
 				A0000000000000000000B035 /* BackendSyncProjection.swift in Sources */,
 				A0000000000000000000B070 /* BackendContracts.swift in Sources */,
 				A0000000000000000000B080 /* UserDefaultsClient.swift in Sources */,
@@ -569,6 +592,8 @@
 				A0000000000000000000B086 /* ModelContainerClient.swift in Sources */,
 				A0000000000000000000B087 /* BundleInfoClient.swift in Sources */,
 				A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */,
+				A0000000000000000000B089 /* MassiveAPIKeyClient.swift in Sources */,
+				A0000000000000000000B08A /* MassiveAPIKeyValidatorClient.swift in Sources */,
 				A0000000000000000000B090 /* AppFeature.swift in Sources */,
 				A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */,
 				A0000000000000000000B092 /* OnboardingFeature.swift in Sources */,
@@ -581,6 +606,7 @@
 				A0000000000000000000B099 /* ContributionResultFeature.swift in Sources */,
 				A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */,
 				A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */,
+				A0000000000000000000B09C /* SettingsFeature+APIKey.swift in Sources */,
 				A0000000000000000000B017 /* PortfolioListView.swift in Sources */,
 				A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,
@@ -611,6 +637,8 @@
 				C0000000000000000000B013 /* HoldingsEditorFeatureTests.swift in Sources */,
 				C0000000000000000000B010 /* PortfolioListFeatureTests.swift in Sources */,
 				C0000000000000000000B011 /* PortfolioEditorFeatureTests.swift in Sources */,
+				C0000000000000000000B016 /* MassiveAPIKeyStoreTests.swift in Sources */,
+				C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
