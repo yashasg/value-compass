@@ -81,6 +81,35 @@ struct PortfolioEditorView: View {
       } message: { message in
         Text(message)
       }
+      .confirmationDialog(
+        "Discard Changes?",
+        isPresented: Binding(
+          get: { store.pendingCancellation },
+          set: { newValue in
+            // The dialog drives `isPresented = false` on outside-tap or back
+            // gesture. Route that through `.keepEditing` so the reducer stays
+            // the single source of truth for `pendingCancellation` (#325).
+            if !newValue { store.send(.keepEditing) }
+          }
+        ),
+        titleVisibility: .visible
+      ) {
+        Button("Discard Changes", role: .destructive) {
+          store.send(.confirmDiscard)
+        }
+        .accessibilityIdentifier("portfolio.editor.discardConfirm")
+        Button("Keep Editing", role: .cancel) {
+          store.send(.keepEditing)
+        }
+        .accessibilityIdentifier("portfolio.editor.keepEditing")
+      } message: {
+        Text("Your unsaved edits will be lost.")
+      }
+      // HIG Sheets: block accidental swipe-down dismissal when there is
+      // unsaved content. The explicit Cancel button (above) remains the
+      // intentional dismiss path and runs through the same confirmation
+      // dialog when dirty (#325).
+      .interactiveDismissDisabled(store.hasUnsavedChanges)
     }
     .task { store.send(.task) }
   }

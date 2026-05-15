@@ -55,6 +55,7 @@ final class PortfolioEditorFeatureTests: XCTestCase {
     await store.send(.task)
     await store.receive(\.draftHydrated) {
       $0.draft = expectedDraft
+      $0.baseline = expectedDraft
     }
   }
 
@@ -224,10 +225,106 @@ final class PortfolioEditorFeatureTests: XCTestCase {
       $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
     }
 
+    // Clean state (draft == baseline): no discard dialog, straight delegate +
+    // dismiss. Pins the one-tap Cancel path that #325 preserves for the
+    // unmodified-draft case.
     await store.send(.cancelTapped)
     await store.receive(\.delegate.canceled)
 
     XCTAssertEqual(dismissCalls.value, 1)
+  }
+
+  func testCancelTappedWithUnsavedChangesOpensDiscardDialog() async {
+    let dismissCalls = LockIsolated(0)
+    // Pre-seed an edit-mode state, then mutate `draft` past `baseline` so
+    // `hasUnsavedChanges == true` at the moment of `.cancelTapped`.
+    var state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    state.draft.name = "Growth (edited)"
+
+    let store = TestStore(initialState: state) {
+      PortfolioEditorFeature()
+    } withDependencies: {
+      $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
+    }
+
+    await store.send(.cancelTapped) {
+      $0.pendingCancellation = true
+    }
+
+    XCTAssertEqual(
+      dismissCalls.value, 0,
+      "Cancel-when-dirty must not dismiss the sheet — the discard dialog drives the next step.")
+  }
+
+  func testConfirmDiscardEmitsDelegateAndDismisses() async {
+    let dismissCalls = LockIsolated(0)
+    var state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    state.draft.name = "Growth (edited)"
+    state.pendingCancellation = true
+
+    let store = TestStore(initialState: state) {
+      PortfolioEditorFeature()
+    } withDependencies: {
+      $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
+    }
+
+    await store.send(.confirmDiscard) {
+      $0.pendingCancellation = false
+    }
+    await store.receive(\.delegate.canceled)
+
+    XCTAssertEqual(dismissCalls.value, 1)
+  }
+
+  func testKeepEditingClearsPendingCancellationAndDoesNotDismiss() async {
+    let dismissCalls = LockIsolated(0)
+    var state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    state.draft.name = "Growth (edited)"
+    state.pendingCancellation = true
+
+    let store = TestStore(initialState: state) {
+      PortfolioEditorFeature()
+    } withDependencies: {
+      $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
+    }
+
+    await store.send(.keepEditing) {
+      $0.pendingCancellation = false
+    }
+
+    XCTAssertEqual(
+      dismissCalls.value, 0, "Keep Editing must keep the editor on screen.")
+  }
+
+  // MARK: - hasUnsavedChanges
+
+  func testHasUnsavedChangesIsFalseForUnmodifiedCreateState() {
+    let state = PortfolioEditorFeature.State(mode: .create)
+    XCTAssertFalse(state.hasUnsavedChanges)
+  }
+
+  func testHasUnsavedChangesIsFalseForPreSeededEditDraft() {
+    let state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    XCTAssertFalse(
+      state.hasUnsavedChanges,
+      "Pre-seeded baseline must match the initial draft so opening the edit sheet does not falsely warn."
+    )
+  }
+
+  func testHasUnsavedChangesFlipsTrueAfterDraftMutation() {
+    var state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    state.draft.monthlyBudgetText = "2000"
+    XCTAssertTrue(state.hasUnsavedChanges)
   }
 
   // MARK: - binding clears validation error

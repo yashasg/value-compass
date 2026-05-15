@@ -498,9 +498,20 @@ struct HoldingsEditorView: View {
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Cancel") {
-          store.send(.delegate(.canceled))
-          dismiss()
+          // Route through the reducer so dirty-state inspection + the
+          // discard-confirmation dialog stay testable from `TestStore`.
+          // When the draft matches `baseline` the reducer emits
+          // `.delegate(.canceled)` (clean dismiss); when dirty it sets
+          // `pendingCancellation = true` and the `.confirmationDialog`
+          // below takes over — see #325.
+          Task {
+            await store.send(.cancelTapped).finish()
+            if !store.pendingCancellation {
+              dismiss()
+            }
+          }
         }
+        .accessibilityIdentifier("holdings.editor.cancel")
       }
 
       if horizontalSizeClass != .regular {
@@ -545,6 +556,38 @@ struct HoldingsEditorView: View {
     } message: { message in
       Text(message)
     }
+    .confirmationDialog(
+      "Discard Changes?",
+      isPresented: Binding(
+        get: { store.pendingCancellation },
+        set: { newValue in
+          // The dialog drives `isPresented = false` on outside-tap or back
+          // gesture. Route that through `.keepEditing` so the reducer stays
+          // the single source of truth for `pendingCancellation` (#325).
+          if !newValue { store.send(.keepEditing) }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button("Discard Changes", role: .destructive) {
+        Task {
+          await store.send(.confirmDiscard).finish()
+          dismiss()
+        }
+      }
+      .accessibilityIdentifier("holdings.editor.discardConfirm")
+      Button("Keep Editing", role: .cancel) {
+        store.send(.keepEditing)
+      }
+      .accessibilityIdentifier("holdings.editor.keepEditing")
+    } message: {
+      Text("Your unsaved edits will be lost.")
+    }
+    // HIG Sheets: block accidental swipe-down dismissal when there is
+    // unsaved content. Currently HoldingsEditor is presented as a push so
+    // this is a no-op today, but pre-wires the modality fix for #229 when
+    // the screen flips to a sheet (#325 coordination note).
+    .interactiveDismissDisabled(store.hasUnsavedChanges)
     .task { await store.send(.task).finish() }
     .onAppear(perform: selectInitialCategoryIfNeeded)
     .onChange(of: store.draft.categories.map(\.id)) { _, _ in
