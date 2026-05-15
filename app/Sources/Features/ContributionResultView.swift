@@ -123,6 +123,12 @@ struct ContributionResultContent: View {
               .valueCompassTextStyle(.data)
               .foregroundStyle(Color.appContentPrimary)
           }
+          // #227: collapse the per-category header into a single
+          // VoiceOver element so the category name and its dollar total
+          // are spoken together instead of as two unrelated targets.
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel(FinancialRowAccessibility.label(forResultCategory: category))
+          .accessibilityValue(FinancialRowAccessibility.value(forResultCategory: category))
 
           ForEach(
             Array(
@@ -143,6 +149,16 @@ struct ContributionResultContent: View {
                 .foregroundStyle(Color.appContentSecondary)
             }
             .accessibilityIdentifier("contribution.result.ticker")
+            // #227: the per-ticker allocation row pairs a symbol with
+            // its dollar amount and percentage weight. Without an
+            // explicit grouping VoiceOver exposes those three texts as
+            // independent focus targets; the ignore + label/value
+            // combination collapses the row into one element whose
+            // spoken value carries the financial breakdown verbatim
+            // (composer pinned in `FinancialRowAccessibilityTests`).
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(FinancialRowAccessibility.label(forResultAllocation: allocation))
+            .accessibilityValue(FinancialRowAccessibility.value(forResultAllocation: allocation))
           }
         }
         .padding()
