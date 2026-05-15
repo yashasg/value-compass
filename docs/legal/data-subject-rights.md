@@ -42,18 +42,20 @@ implementation does not honor. This file is the map.
 | Right | Regulator clauses | Endpoint(s) | Issue | Status |
 |---|---|---|---|---|
 | Access / Portability | GDPR Art. 15, Art. 20; CCPA §1798.100, §1798.110, §1798.130(a)(3) | `GET /portfolio/export` | [#333](https://github.com/yashasg/value-compass/issues/333) | Shipped (PR #436) |
-| Rectification — scalar fields | GDPR Art. 16; CCPA §1798.106 | `PATCH /portfolio` | [#374](https://github.com/yashasg/value-compass/issues/374) | This PR |
-| Rectification — holding weight | GDPR Art. 16; CCPA §1798.106 | `PATCH /portfolio/holdings/{ticker}` | [#374](https://github.com/yashasg/value-compass/issues/374) | This PR |
-| Rectification — ticker typo | GDPR Art. 16; CCPA §1798.106 | `DELETE /portfolio/holdings/{ticker}` + `POST /portfolio/holdings` | [#374](https://github.com/yashasg/value-compass/issues/374) | This PR |
-| Erasure (row-scoped) | GDPR Art. 17; CCPA §1798.105 (partial) | `DELETE /portfolio/holdings/{ticker}` | #374 (row only); [#329](https://github.com/yashasg/value-compass/issues/329) (full-account) | Row-scoped DELETE: this PR. Full-account erasure: not yet shipped. |
-| Erasure (full account) | GDPR Art. 17; CCPA §1798.105; App Store §5.1.1(v) | _Backend endpoint pending in #329_ | [#329](https://github.com/yashasg/value-compass/issues/329) | **Open — gates Privacy Policy claim "you may request deletion at any time".** |
+| Rectification — scalar fields | GDPR Art. 16; CCPA §1798.106 | `PATCH /portfolio` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
+| Rectification — holding weight | GDPR Art. 16; CCPA §1798.106 | `PATCH /portfolio/holdings/{ticker}` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
+| Rectification — ticker typo | GDPR Art. 16; CCPA §1798.106 | `DELETE /portfolio/holdings/{ticker}` + `POST /portfolio/holdings` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
+| Erasure (row-scoped) | GDPR Art. 17; CCPA §1798.105 (partial) | `DELETE /portfolio/holdings/{ticker}` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
+| Erasure (full account, backend) | GDPR Art. 17; CCPA §1798.105 | `DELETE /portfolio` | [#450](https://github.com/yashasg/value-compass/issues/450) | This PR |
+| Erasure (full account, iOS surface) | GDPR Art. 17; CCPA §1798.105; App Store §5.1.1(v) | iOS Settings → "Erase All My Data" (calls `DELETE /portfolio` + rotates Keychain UUID) | [#329](https://github.com/yashasg/value-compass/issues/329) | Open — frontend Settings flow + UUID rotation still pending. |
 | Right to be informed | GDPR Art. 13; CCPA §1798.100(a) | The published Privacy Policy itself | [#224](https://github.com/yashasg/value-compass/issues/224) | Shipped (PR #417) |
 | Right to restrict / object | GDPR Art. 18 / Art. 21 | Settings → remove Massive API key + uninstall | n/a | Shipped |
 
-The PATCH/DELETE endpoints land via this PR; once issue #329 ships the
-companion full-account `DELETE /devices/{X-Device-UUID}` endpoint, this
-table is complete and the Privacy Policy's "all rights honorable in
-product" claim is fully backed by code.
+With `DELETE /portfolio` shipped by this PR, every endpoint in the
+DSR tripod (access/portability, rectification, erasure) has a live
+implementation. The remaining work in #329 is purely client-side —
+wiring the iOS Settings flow that calls the endpoint and rotating
+the Keychain `X-Device-UUID` post-success — not a backend deliverable.
 
 ## Per-right implementation notes
 
@@ -117,14 +119,40 @@ and leaves every other row, including the parent portfolio, untouched.
 It is **not** the broader full-account erasure mechanism tracked under
 issue #329.
 
-### Erasure — full account (issue #329, not yet shipped)
+### Erasure — full account (`DELETE /portfolio`)
 
-The companion `DELETE /devices/{X-Device-UUID}` endpoint that removes
-all server-side rows keyed to the caller is tracked under issue #329.
-Until that ships, the Privacy Policy's erasure section
-([`privacy-policy.md`](privacy-policy.md) §6 → "Right to erasure /
-deletion") gates the truthful claim on the "delete the app" path
-because nothing is yet transmitted off-device under the identifier.
+Removes every `X-Device-UUID`-linked row the backend stores for the
+caller in a single transaction. The model relationship cascade
+(`Portfolio.holdings` → `cascade="all, delete-orphan"`) plus the
+`Holding.portfolio_id` `ON DELETE CASCADE` FK guarantee that a
+`db.delete(portfolio)` removes the parent row AND every child
+`Holding`. Cache-only `StockCache` market data is **not** touched —
+ticker market data is shared across devices and is not personal
+data of the caller.
+
+Auth: App Attest + a `device_uuid` that resolves to an existing
+portfolio (404 `portfolioNotFound` otherwise). Returns `204 No
+Content` on success.
+
+Unlike every other authenticated endpoint, the erasure handler
+deliberately does **not** stamp `last_seen_at`. The row is being
+removed in the same transaction; a stamp would either no-op (if it
+runs first) or resurrect a freshly-deleted row (if it runs against
+an orphan reference). The retention-purge sweep documented in
+[`data-retention.md`](data-retention.md) does not need a stamp here
+— the row is gone, which is a strictly stronger outcome than a
+stamp could provide.
+
+Scoped strictly to the calling device's portfolio. A regression
+that drops the `where(device_uuid == ...)` filter is caught by
+`test_delete_portfolio_does_not_touch_other_devices` in
+`backend/tests/test_api.py`.
+
+The companion iOS Settings flow ("Erase All My Data" → calls this
+endpoint, rotates the Keychain UUID, re-fires onboarding) lives in
+issue [#329](https://github.com/yashasg/value-compass/issues/329) —
+the backend prerequisite is now shipped, so #329 is no longer
+gated on a missing endpoint.
 
 ### Right to be informed — published Privacy Policy
 

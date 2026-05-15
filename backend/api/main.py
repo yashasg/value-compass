@@ -17,6 +17,9 @@ original services spec:
 * ``DELETE /portfolio/holdings/{ticker}`` — remove a single holding
   (ticker-typo correction path; row-scoped, distinct from full-account
   erasure tracked under issue #329).
+* ``DELETE /portfolio`` — GDPR Art. 17 / CCPA §1798.105 full-account
+  erasure (issue #450). Cascade-deletes the calling device's
+  ``Portfolio`` and every ``Holding`` keyed to it.
 
 The app reads from Postgres only and **never** calls Polygon directly,
 with one explicit exception: ``POST /portfolio/holdings`` queues an
@@ -1160,6 +1163,74 @@ def delete_holding(
     db.delete(holding)
     portfolio.last_seen_at = datetime.now(UTC)
     _commit_or_503(db, "holding delete commit")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Right-to-erasure (GDPR Art. 17 / CCPA §1798.105) — see issue #450
+# ---------------------------------------------------------------------------
+@app.delete(
+    "/portfolio",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def delete_portfolio(
+    device_uuid: UUID,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> Response:
+    """Erase every ``X-Device-UUID``-linked row for the calling device.
+
+    Implements GDPR Art. 17 (right to erasure / right to be forgotten),
+    CCPA §1798.105 (right to delete), and the erasure commitment
+    referenced in ``docs/legal/privacy-policy.md`` §6 — the
+    backend-side prerequisite for the iOS Settings "Erase All My Data"
+    flow tracked under issue #329.
+
+    Cascade-deletes the resolved ``Portfolio`` row and, via the
+    ``Holding.portfolio_id`` FK ``ON DELETE CASCADE`` and the
+    ``Portfolio.holdings`` ``delete-orphan`` relationship cascade
+    (``backend/db/models.py``), every ``Holding`` keyed to it. The
+    cache-only ``StockCache`` table is **not** touched — ticker market
+    data is not personal data and is shared across devices.
+
+    Unlike every other authenticated endpoint, this handler
+    deliberately does **not** stamp ``last_seen_at``: the row is
+    being removed in the same transaction, and a stamp would either
+    no-op (if it runs first) or resurrect a freshly-deleted row (if
+    it runs against an orphan reference). The retention-purge sweep
+    documented in ``docs/legal/data-retention.md`` does not need a
+    stamp here — the row is gone, which is a strictly stronger
+    outcome than a stamp could provide.
+
+    Scoped strictly to the calling device — the ``device_uuid`` query
+    parameter is the only selector, and the row-scoped ``DELETE``
+    contract for holdings (#374) is preserved orthogonally: an
+    account-level erasure on device A cannot reach device B's rows.
+    """
+    portfolio = _load_portfolio_or_503(db, device_uuid)
+    if portfolio is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Portfolio not found for device.",
+        )
+
+    db.delete(portfolio)
+    _commit_or_503(db, "portfolio erasure commit")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
