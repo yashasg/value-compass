@@ -38,6 +38,7 @@ struct OnboardingView: View {
       Label("Important Disclaimer", systemImage: "exclamationmark.shield")
         .valueCompassTextStyle(.headlineMedium)
         .foregroundStyle(Color.appContentPrimary)
+        .accessibilityAddTraits(.isHeader)
 
       Text(Disclaimer.text)
         .valueCompassTextStyle(.bodyLarge)
@@ -65,6 +66,7 @@ struct OnboardingView: View {
       Text("Create your first portfolio")
         .valueCompassTextStyle(.headlineMedium)
         .foregroundStyle(Color.appContentPrimary)
+        .accessibilityAddTraits(.isHeader)
 
       Text(
         "Next you will create a local portfolio, choose a monthly budget, then add categories and tickers. Everything works offline, and you can edit details any time."
