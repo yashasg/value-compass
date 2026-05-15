@@ -240,16 +240,21 @@ final class ContributionRecord {
 
 /// Per-category breakdown row attached to a `ContributionRecord` snapshot.
 ///
-/// Identity contract: every row carries a stable `@Attribute(.unique) var id: UUID`
-/// to match the convention used by `Portfolio`, `Category`, `Ticker`, and
-/// `ContributionRecord`. The id is the persisted business key — it survives
-/// `.json` export, store rebuilds, and the future CloudKit sync path; the
-/// SwiftData-synthesized `PersistentIdentifier` is not stable across any of
-/// those (issue #249). The default `UUID()` initializer keeps construction
-/// backward compatible for existing call sites that did not specify an id.
+/// Identity contract: every row carries a stable
+/// `@Attribute(.unique) var id: UUID = UUID()` to match the convention used by
+/// `Portfolio`, `Category`, `Ticker`, and `ContributionRecord`. The id is the
+/// persisted business key — it survives `.json` export, store rebuilds, and
+/// the future CloudKit sync path; the SwiftData-synthesized
+/// `PersistentIdentifier` is not stable across any of those (issue #249).
+/// The inline `= UUID()` default is required so SwiftData's lightweight
+/// migration pass can backfill a fresh value per existing row when an older
+/// store that pre-dates this column is opened under the v2 schema; without
+/// it the schema bridge would fail before the v1→v2 `didMigrate` block ever
+/// ran. The matching initializer default keeps construction backward
+/// compatible for existing call sites that did not specify an id.
 @Model
 final class CategoryContribution {
-  @Attribute(.unique) var id: UUID
+  @Attribute(.unique) var id: UUID = UUID()
   var categoryName: String
   var amount: Decimal
   var allocatedWeight: Decimal
@@ -273,10 +278,12 @@ final class CategoryContribution {
 /// Per-ticker allocation row attached to a `ContributionRecord` snapshot.
 ///
 /// Identity contract matches `CategoryContribution` — see the doc comment
-/// above for the rationale (issue #249).
+/// above for the rationale (issue #249). The inline `= UUID()` default on
+/// `id` is what lets SwiftData's lightweight migration bridge backfill
+/// existing v1 rows when the store is reopened under v2.
 @Model
 final class TickerAllocation {
-  @Attribute(.unique) var id: UUID
+  @Attribute(.unique) var id: UUID = UUID()
   var tickerSymbol: String
   var categoryName: String
   var amount: Decimal
