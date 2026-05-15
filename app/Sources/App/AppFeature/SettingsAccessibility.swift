@@ -92,9 +92,15 @@ enum SettingsAccessibility {
   ///   Keychain-write failure reason so the user knows the key never
   ///   landed on disk and a retry (or a Keychain-lock check) is needed.
   /// - ``SettingsAPIKeyRequestStatus/savedSuccessfully``: returns the
-  ///   "API key saved." sentence verbatim from the inline status row so
-  ///   spoken text matches visible text and self-identifies the
-  ///   surface when posted without surrounding context.
+  ///   "Your API key is valid." sentence verbatim from the inline status
+  ///   row so spoken text matches visible text and self-identifies the
+  ///   surface when posted without surrounding context. The reducer
+  ///   funnels both the Save path (`apiKeyValidationCompleted` after a
+  ///   successful Keychain write) and the Re-validate path
+  ///   (`apiKeyRevalidationCompleted(.valid)`, which performs no write)
+  ///   into `.savedSuccessfully`, so the announcement describes the
+  ///   observable outcome ("Massive accepts the stored key right now")
+  ///   rather than the path ("we just wrote it") — see #493.
   static func transitionAnnouncement(
     forAPIKeyRequest status: SettingsAPIKeyRequestStatus
   ) -> String? {
@@ -110,7 +116,7 @@ enum SettingsAccessibility {
     case .storeError(let reason):
       return "Could not save your API key: \(reason)"
     case .savedSuccessfully:
-      return "API key saved."
+      return "Your API key is valid."
     }
   }
 }
