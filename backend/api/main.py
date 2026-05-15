@@ -29,6 +29,7 @@ ticker — see the New Ticker Flow in the README.
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -183,6 +184,14 @@ def custom_openapi() -> dict[str, Any]:
     backend rejects every protected route when it is absent — so we fix up
     the spec here. ``/health`` does not declare the parameter and is left
     untouched.
+
+    Additionally prunes the FastAPI auto-generated ``HTTPValidationError`` /
+    ``ValidationError`` component schemas. Every operation that can emit a
+    ``422`` explicitly declares :class:`ErrorEnvelope` via
+    ``ERROR_RESPONSES`` (the global ``validation_error_handler`` returns the
+    public envelope), so the legacy schemas are never referenced from any
+    operation. Leaving the stale shapes in ``components.schemas`` would let
+    generated clients model the wrong validation payload (issue #302).
     """
     if app.openapi_schema:
         return app.openapi_schema
@@ -225,8 +234,38 @@ def custom_openapi() -> dict[str, Any]:
                                 schema.pop("anyOf", None)
                                 schema.update(non_null[0])
 
+    _prune_legacy_validation_schemas(openapi_schema)
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
+
+_LEGACY_VALIDATION_SCHEMAS = ("HTTPValidationError", "ValidationError")
+
+
+def _prune_legacy_validation_schemas(openapi_schema: dict[str, Any]) -> None:
+    """Remove FastAPI's auto ``HTTPValidationError``/``ValidationError`` schemas.
+
+    Every ``422`` response is documented as :class:`ErrorEnvelope` (see
+    ``ERROR_RESPONSES``), so the legacy schemas are dead refs that would
+    otherwise leak into generated clients. Refuses to prune if any operation
+    still references the legacy shapes — a regression that warrants a hard
+    failure rather than silent surgery.
+    """
+    components = openapi_schema.get("components", {})
+    schemas = components.get("schemas", {})
+    if not any(name in schemas for name in _LEGACY_VALIDATION_SCHEMAS):
+        return
+
+    document_text = json.dumps(openapi_schema.get("paths", {}))
+    for name in _LEGACY_VALIDATION_SCHEMAS:
+        ref = f"#/components/schemas/{name}"
+        if ref in document_text:
+            raise RuntimeError(
+                f"Operation still references legacy validation schema {name!r}; "
+                "declare 422 responses with ErrorEnvelope via ERROR_RESPONSES."
+            )
+        schemas.pop(name, None)
 
 
 app.openapi = custom_openapi
@@ -614,7 +653,10 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
     responses={
         status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
             status.HTTP_401_UNAUTHORIZED
-        ]
+        ],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
     },
 )
 def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionResponse:
@@ -628,6 +670,9 @@ def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionRespons
     responses={
         status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
             status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
         ],
         status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
             status.HTTP_503_SERVICE_UNAVAILABLE
