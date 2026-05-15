@@ -89,9 +89,17 @@ struct SettingsView: View {
   /// new / replacement key plus a status row that adapts to whether a key is
   /// already stored. The raw key never appears in `apiKeyMaskedDisplay`; the
   /// reducer only forwards a bullet-prefixed suffix.
+  ///
+  /// A `Section` footer plus two `Link` rows surface Massive's Terms of
+  /// Service and Privacy Policy so the user can review the third-party data
+  /// flow that the saved key triggers (issue #294 — App Store Review
+  /// Guideline §5.2.3, GDPR Art. 13(1)(e), and Cal. Civ. Code §1798.130).
+  /// Saving a key POSTs it to `https://api.massive.com` under the user's
+  /// `Authorization: Bearer` header; the disclosure must therefore be
+  /// reachable before the Save action.
   @ViewBuilder
   private var apiKeySection: some View {
-    Section("Massive API Key") {
+    Section {
       apiKeyStatusRow
       apiKeyEntryRow
       apiKeyRequestStatusRow
@@ -102,6 +110,41 @@ struct SettingsView: View {
           .foregroundStyle(Color.appNegative)
           .accessibilityIdentifier("settings.apiKey.loadError")
       }
+
+      Link(destination: LegalLinks.massiveTermsOfService) {
+        HStack {
+          Text("Massive Terms of Service")
+          Spacer()
+          Image(systemName: "arrow.up.right.square")
+            .foregroundStyle(Color.appContentSecondary)
+            .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+      }
+      .accessibilityIdentifier("settings.apiKey.massiveTerms.link")
+      .accessibilityHint("Opens Massive's Terms of Service in your browser.")
+
+      Link(destination: LegalLinks.massivePrivacyPolicy) {
+        HStack {
+          Text("Massive Privacy Policy")
+          Spacer()
+          Image(systemName: "arrow.up.right.square")
+            .foregroundStyle(Color.appContentSecondary)
+            .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+      }
+      .accessibilityIdentifier("settings.apiKey.massivePrivacy.link")
+      .accessibilityHint("Opens Massive's Privacy Policy in your browser.")
+    } header: {
+      Text("Massive API Key")
+    } footer: {
+      Text(
+        "Your key is sent to Massive (api.massive.com) to authenticate "
+          + "market-data requests. Your use of the key is governed by "
+          + "Massive's Terms of Service and Privacy Policy, linked below."
+      )
+      .accessibilityIdentifier("settings.apiKey.thirdPartyDisclosure")
     }
   }
 

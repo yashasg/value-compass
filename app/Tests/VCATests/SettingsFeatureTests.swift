@@ -504,4 +504,43 @@ final class SettingsFeatureTests: XCTestCase {
   func testPrivacyPolicyLinkUsesHTTPS() {
     XCTAssertEqual(LegalLinks.privacyPolicy.scheme, "https")
   }
+
+  // MARK: - Massive third-party legal links (issue #294)
+
+  /// Pins the Massive Terms of Service URL surfaced inside the API-key
+  /// entry section. The register and re-verification trigger live in
+  /// `docs/legal/third-party-services.md`; rotate both together if
+  /// Massive renames the page.
+  func testMassiveTermsOfServiceLinkPointsAtCanonicalURL() {
+    XCTAssertEqual(
+      LegalLinks.massiveTermsOfService,
+      URL(string: "https://massive.com/legal/terms")
+    )
+  }
+
+  /// Pins the Massive Privacy Policy URL surfaced inside the API-key
+  /// entry section. Same re-verification trigger as the Terms link.
+  func testMassivePrivacyPolicyLinkPointsAtCanonicalURL() {
+    XCTAssertEqual(
+      LegalLinks.massivePrivacyPolicy,
+      URL(string: "https://massive.com/legal/privacy")
+    )
+  }
+
+  /// Both Massive legal links must use `https` so iOS hands them to
+  /// Safari without an App Transport Security exception and so no
+  /// custom-scheme handler can intercept them.
+  func testMassiveLegalLinksUseHTTPS() {
+    XCTAssertEqual(LegalLinks.massiveTermsOfService.scheme, "https")
+    XCTAssertEqual(LegalLinks.massivePrivacyPolicy.scheme, "https")
+  }
+
+  /// The Massive legal links must point at `massive.com` — not at the API
+  /// host `api.massive.com`, and not at any unrelated domain — so the
+  /// in-app disclosure surfaces the operator's published policy pages
+  /// rather than the API endpoint that the saved key authenticates to.
+  func testMassiveLegalLinksPointAtMassiveDotCom() {
+    XCTAssertEqual(LegalLinks.massiveTermsOfService.host, "massive.com")
+    XCTAssertEqual(LegalLinks.massivePrivacyPolicy.host, "massive.com")
+  }
 }

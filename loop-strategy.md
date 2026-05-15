@@ -84,3 +84,4 @@ still accurate.
 | Document | Owner | Trigger files |
 |---|---|---|
 | [`docs/legal/privacy-policy.md`](docs/legal/privacy-policy.md) (issue #224) | Reuben | `app/Sources/Backend/Networking/APIClient.swift`, `app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`, `app/Sources/Backend/Networking/DeviceIDProvider.swift`, `app/Sources/App/PrivacyInfo.xcprivacy`, `app/Sources/App/AppFeature/SettingsFeature.swift` |
+| [`docs/legal/third-party-services.md`](docs/legal/third-party-services.md) (issue #294) | Reuben | `app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`, `app/Sources/Backend/Networking/MassiveAPIKeyStore.swift`, `app/Sources/Backend/Models/Disclaimer.swift`, `app/Sources/Features/SettingsView.swift` |
