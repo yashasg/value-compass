@@ -2,6 +2,33 @@
 
 ## Active Decisions
 
+### 2026-05-15T16:46:00Z: v1.0 App Store subtitle locks to `No Sign-Up · Free · VCA Calc` under Stance A primacy
+**By:** Saul (Market Researcher) | **Status:** Adopted (default-active pending Danny primacy confirmation) | **Issue:** #399 | **PR:** TBD
+
+The 28-character composite `No Sign-Up · Free · VCA Calc` is the locked
+v1.0 subtitle, with the four-axis contention narrowed to three composited
+axes (`user-control` · `free-first` · `qualified-methodology`) and the
+fourth (`tier-anchor`, #296) body-distributed by design to peer-set
+screenshot composition rather than first-person subtitle claim.
+
+The full decision artifact lives at
+[`docs/aso/subtitle-positioning.md`](../docs/aso/subtitle-positioning.md):
+character-budget validation, four-axis composition matrix, cross-issue
+coherence audit across 16 open Saul issues, Reuben gate clearance for
+"Free" + "No Sign-Up" claims at v1.0, pivot fallbacks if Danny signals a
+methodology-led primacy change before #220 storefront-SoT freeze, and
+six honest evidence ceilings (heuristic limits, partial competitor
+scan, PPO post-launch validatability).
+
+This closes Frank's #377 acceptance criterion #1 with a structural
+framework rather than a binary verdict, supersedes the #220 baseline
+`Value Cost Averaging` (single-axis, 20 chars), and references — but
+does not block — Frank-side execution on #220 / #245 / #342 / #390.
+
+**Revisit trigger:** the "Free" claim is time-bounded by the absence of
+any IAP entitlement at v1.0. The moment v1.x adds a paid tier, this
+subtitle and the Reuben gate clearance must be re-evaluated.
+
 ### 2026-05-15T16:07:00Z: Data retention is an eighth pre-submission sync surface, gated on counsel sign-off of the 540 / 30-day windows
 **By:** Squad loop (compliance stream) | **Status:** Adopted | **Issue:** #339 | **PR:** TBD
 
