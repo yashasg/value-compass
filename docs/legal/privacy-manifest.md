@@ -106,6 +106,15 @@ nutrition label must be updated together, and a Privacy Policy update
   shipped in commit `69af031` (PR #230 / closes #223) covering the
   one `UserDefaults` use site. No additional required-reason APIs
   are present in `app/Sources` as of the audit recorded in #271.
+- **Sub-processor DPAs and international-transfer mechanisms** — every
+  third party in the request path (Cloudflare, Supabase, the VM host,
+  APNs) is registered, with its GDPR Art. 28 DPA reference and Art. 46
+  transfer mechanism, in
+  [`docs/legal/data-processing-agreements.md`](data-processing-agreements.md)
+  and [`docs/legal/processor-register.csv`](processor-register.csv).
+  This manifest only describes the **app-side** declaration; the
+  processor-side accountability gate is enforced via the TestFlight
+  readiness checklist (#391).
 
 ## How to update this declaration
 
