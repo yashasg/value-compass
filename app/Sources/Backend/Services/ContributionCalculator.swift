@@ -191,32 +191,58 @@ struct MarketDataSnapshot: Equatable {
     self.init(quotesBySymbol: quotesBySymbol)
   }
 
-  /// MVP-path factory (issue #359). Walks `[Holding]` rows and projects
-  /// their indicator fields into a ``MarketDataSnapshot``.
+  /// MVP-path factory (issue #359, completed by issue #356). Walks
+  /// `[Holding]` rows and projects their indicator fields
+  /// (`currentPrice` / moving average / `bandPosition`) into a
+  /// ``MarketDataSnapshot``. Holdings whose indicator columns are all
+  /// `nil` (e.g. a freshly inserted row that has not been synced from
+  /// `GET /portfolio/data` yet) are skipped so calculators receive a
+  /// `.missingMarketData(symbol)` from the shared validator instead of
+  /// a quote with three `nil` legs.
   ///
-  /// The MVP `Holding` schema does **not** yet carry indicator fields
-  /// (`currentPrice`, `movingAverage`, `bandPosition`); those values move
-  /// from `Ticker` to a shared `MarketDataBar` source (keyed by symbol)
-  /// only once issue #356 lands. Until then this initializer is a stub
-  /// that returns an empty snapshot — call sites can wire the seam ahead
-  /// of the data becoming available, and the snapshot starts carrying
-  /// quotes the moment #356 populates the source fields.
-  ///
-  /// Callers that need a non-empty snapshot before #356 lands (today's
-  /// reducers and tests) must build a ``MarketDataSnapshot`` directly via
-  /// ``init(quotesBySymbol:)`` and supply it to
-  /// ``ContributionInput/init(holdings:monthlyBudget:marketDataSnapshot:minMultiplier:maxMultiplier:)``.
+  /// **Moving-average resolution.** ``Holding`` carries both `sma50`
+  /// and `sma200`. Without a portfolio context this initializer cannot
+  /// pick between them, so it defaults to the V1 wire default
+  /// (`sma50`) — matching ``Portfolio/init(maWindow:)`` and the
+  /// ``MarketDataQuote/movingAverage`` legacy contract from
+  /// ``Ticker``. Callers that have a portfolio in hand should use
+  /// ``init(holdings:maWindow:)`` to select the correct window
+  /// explicitly.
   init(holdings: [Holding]) {
-    // No indicator fields on `Holding` yet — see #356. Today this is a
-    // stub that returns an empty snapshot; once #356 adds indicator
-    // fields (or wires a shared `MarketDataBar` lookup keyed by symbol)
-    // this initializer becomes the canonical MVP factory and call sites
-    // begin receiving real quotes without further plumbing changes.
-    // Until then, callers that need a non-empty snapshot must build one
-    // via `init(quotesBySymbol:)` and supply it explicitly to
-    // `ContributionInput.init(holdings:monthlyBudget:marketDataSnapshot:...)`.
-    _ = holdings
-    self.init(quotesBySymbol: [:])
+    self.init(holdings: holdings, maWindow: 50)
+  }
+
+  /// MVP-path factory variant that selects the moving-average column on
+  /// each ``Holding`` matching the supplied `maWindow`. Defers to
+  /// ``Holding/movingAverage(forWindow:)`` so an unsupported window
+  /// returns `nil` for every quote and surfaces as
+  /// `.missingMarketData(symbol)` at the validator gate.
+  init(holdings: [Holding], maWindow: Int) {
+    var quotesBySymbol: [String: MarketDataQuote] = [:]
+    for holding in holdings {
+      let symbol = holding.normalizedSymbol
+      guard !symbol.isEmpty else { continue }
+
+      let currentPrice = holding.currentPrice
+      let movingAverage = holding.movingAverage(forWindow: maWindow)
+      let bandPosition = holding.bandPosition
+
+      // Skip holdings with no indicator coverage at all — the shared
+      // validator would gate them as `.missingMarketData(symbol)`
+      // anyway, and emitting a quote with three `nil` legs is
+      // indistinguishable in callers from "no quote at all" yet would
+      // silently disable the validator's structural check.
+      guard currentPrice != nil || movingAverage != nil || bandPosition != nil else {
+        continue
+      }
+
+      quotesBySymbol[symbol] = MarketDataQuote(
+        currentPrice: currentPrice,
+        movingAverage: movingAverage,
+        bandPosition: bandPosition
+      )
+    }
+    self.init(quotesBySymbol: quotesBySymbol)
   }
 
   func quote(for symbol: String) -> MarketDataQuote? {

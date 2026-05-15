@@ -19,12 +19,13 @@ enum ContributionRecordSnapshotError: LocalizedError, Equatable {
   }
 }
 
-// The `@Model` types below are nested inside ``LocalSchemaV2`` so the live
-// app-facing classes are the v2 frozen snapshot — `LocalSchemaV1` cannot be
-// retroactively mutated by edits here (issue #337). Module-scope
-// `typealias` declarations in `LocalSchemaVersions.swift` keep call sites
-// referring to `Portfolio`, `Category`, … without a `LocalSchemaV2.` prefix.
-extension LocalSchemaV2 {
+// The `@Model` types below are nested inside ``LocalSchemaV3`` so the live
+// app-facing classes are the v3 frozen snapshot — ``LocalSchemaV1`` and
+// ``LocalSchemaV2`` cannot be retroactively mutated by edits here (issues
+// #337 and #356). Module-scope `typealias` declarations in
+// `LocalSchemaVersions.swift` keep call sites referring to `Portfolio`,
+// `Category`, … without a `LocalSchemaV3.` prefix.
+extension LocalSchemaV3 {
 
   @Model
   final class Portfolio {

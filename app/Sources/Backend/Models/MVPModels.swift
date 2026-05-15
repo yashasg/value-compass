@@ -19,12 +19,21 @@ import SwiftData
 // directly via `ModelContext.delete` will *not* cascade to MVP rows. The
 // `MVPModelsPersistenceTests` suite asserts this contract end-to-end.
 //
-// ## Frozen-snapshot contract (issue #337)
-// The `@Model` types below are nested inside ``LocalSchemaV2`` so the live
-// app-facing classes are the v2 frozen snapshot — `LocalSchemaV1` cannot be
-// retroactively mutated by edits here. Module-scope `typealias` declarations
-// in `LocalSchemaVersions.swift` keep call sites referring to `Holding`,
-// `TickerMetadata`, … without a `LocalSchemaV2.` prefix.
+// ## Frozen-snapshot contract (issues #337 and #356)
+// The `@Model` types below are nested inside ``LocalSchemaV3`` so the live
+// app-facing classes are the v3 frozen snapshot — ``LocalSchemaV1`` and
+// ``LocalSchemaV2`` cannot be retroactively mutated by edits here. Module-
+// scope `typealias` declarations in `LocalSchemaVersions.swift` keep call
+// sites referring to `Holding`, `TickerMetadata`, … without a
+// `LocalSchemaV3.` prefix.
+//
+// ## V2 → V3 delta (issue #356)
+// ``LocalSchemaV3/Holding`` adds eight optional indicator columns
+// (`currentPrice`, `sma50`, `sma200`, `midline`, `atr`, `upperBand`,
+// `lowerBand`, `bandPosition`) so the server-computed indicator fields
+// returned by `Components.Schemas.HoldingOut` have an in-app persistence
+// target. Every other V3 entity is bit-identical to its
+// ``LocalSchemaV2`` counterpart.
 
 /// Decoded form of `InvestSnapshot.compositionJSON`. Captures the
 /// portfolio composition (categories, weights, member symbols) at snapshot
@@ -39,9 +48,9 @@ import SwiftData
 /// refactors.
 ///
 /// `CategorySnapshotInput` lives at module scope (outside the
-/// ``LocalSchemaV2`` enum) because it is not a SwiftData entity — it is the
+/// ``LocalSchemaV3`` enum) because it is not a SwiftData entity — it is the
 /// in-memory shape of the JSON blob persisted in
-/// ``LocalSchemaV2/InvestSnapshot/compositionJSON``. Future versioned
+/// ``LocalSchemaV3/InvestSnapshot/compositionJSON``. Future versioned
 /// schemas re-use the same struct as long as the on-disk JSON keys don't
 /// change.
 struct CategorySnapshotInput: Codable, Equatable {
@@ -54,12 +63,24 @@ struct CategorySnapshotInput: Codable, Equatable {
   }
 }
 
-extension LocalSchemaV2 {
+extension LocalSchemaV3 {
 
   /// One symbol-only line item inside a `Portfolio`. The MVP holding drops the
   /// derived indicator outputs (`currentPrice` / `movingAverage` /
   /// `bandPosition`) that live on the legacy `Ticker` — those outputs belong
   /// on the shared `MarketDataBar` rows once the Massive client (#128) lands.
+  ///
+  /// **V3 indicator fields (issue #356).** The eight optional `Decimal?`
+  /// indicator columns below mirror the wire shape of
+  /// `Components.Schemas.HoldingOut` on `GET /portfolio/data` — they exist so
+  /// the server-computed indicator values now have an in-app persistence
+  /// target. Each column defaults to `nil`; populated values flow through
+  /// ``MarketDataSnapshot/init(holdings:)`` into the
+  /// ``ContributionCalculating`` conformers (including
+  /// `BandAdjustedContributionCalculator`, which gates on `bandPosition`).
+  /// The V2 → V3 migration is lightweight because each new column is
+  /// nullable — SwiftData's lightweight bridge populates existing rows with
+  /// `nil` without a custom `didMigrate` block.
   @Model
   final class Holding {
     @Attribute(.unique) var id: UUID
@@ -70,6 +91,18 @@ extension LocalSchemaV2 {
     var sortOrder: Int
     var createdAt: Date
 
+    // Indicator fields — mirror `Components.Schemas.HoldingOut` (issue #356).
+    // All optional so older rows migrated from V2 carry `nil` until the next
+    // backend sync populates them.
+    var currentPrice: Decimal?
+    var sma50: Decimal?
+    var sma200: Decimal?
+    var midline: Decimal?
+    var atr: Decimal?
+    var upperBand: Decimal?
+    var lowerBand: Decimal?
+    var bandPosition: Decimal?
+
     init(
       id: UUID = UUID(),
       portfolioId: UUID,
@@ -77,7 +110,15 @@ extension LocalSchemaV2 {
       costBasis: Decimal = 0,
       shares: Decimal = 0,
       sortOrder: Int = 0,
-      createdAt: Date = Date()
+      createdAt: Date = Date(),
+      currentPrice: Decimal? = nil,
+      sma50: Decimal? = nil,
+      sma200: Decimal? = nil,
+      midline: Decimal? = nil,
+      atr: Decimal? = nil,
+      upperBand: Decimal? = nil,
+      lowerBand: Decimal? = nil,
+      bandPosition: Decimal? = nil
     ) {
       self.id = id
       self.portfolioId = portfolioId
@@ -86,6 +127,14 @@ extension LocalSchemaV2 {
       self.shares = shares
       self.sortOrder = sortOrder
       self.createdAt = createdAt
+      self.currentPrice = currentPrice
+      self.sma50 = sma50
+      self.sma200 = sma200
+      self.midline = midline
+      self.atr = atr
+      self.upperBand = upperBand
+      self.lowerBand = lowerBand
+      self.bandPosition = bandPosition
     }
 
     var normalizedSymbol: String {
@@ -94,6 +143,19 @@ extension LocalSchemaV2 {
 
     static func normalize(symbol: String) -> String {
       symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
+    /// Picks the moving-average column matching the supplied window. Returns
+    /// `nil` for any window not in ``Portfolio/allowedMAWindows`` so callers
+    /// surface a missing-data warning instead of silently substituting a
+    /// different MA. The two supported windows match the
+    /// ``Portfolio/allowedMAWindows`` set (50 / 200).
+    func movingAverage(forWindow window: Int) -> Decimal? {
+      switch window {
+      case 50: return sma50
+      case 200: return sma200
+      default: return nil
+      }
     }
   }
 

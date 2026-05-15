@@ -16,10 +16,13 @@ import XCTest
 ///
 /// These tests verify that:
 ///
-/// 1. `MarketDataSnapshot(holdings:)` exists today as a stub factory that
-///    returns an empty snapshot until #356 adds indicator fields to
-///    `LocalSchemaV2.Holding`. The factory's signature is the contract
-///    seam — call sites can wire it ahead of the data becoming available.
+/// 1. `MarketDataSnapshot(holdings:)` projects the indicator fields landed
+///    on `LocalSchemaV3.Holding` by issue #356 (`currentPrice`, `sma50` /
+///    `sma200`, `bandPosition`). Holdings whose indicator columns are all
+///    `nil` (a freshly-inserted, not-yet-synced row) are skipped so the
+///    shared validator can surface `.missingMarketData(symbol)`. An
+///    `init(holdings:maWindow:)` overload selects between `sma50` and
+///    `sma200` deterministically.
 /// 2. `ContributionInput(holdings:monthlyBudget:marketDataSnapshot:…)`
 ///    carries the supplied snapshot and budget end-to-end, so reducer
 ///    and test code driving the seam never has to construct a `Ticker`
@@ -42,9 +45,14 @@ import XCTest
 @MainActor
 final class ContributionCalculatorMVPHoldingsSeamTests: XCTestCase {
 
-  // MARK: - AC1: MarketDataSnapshot(holdings:) is a stub today
+  // MARK: - AC1: MarketDataSnapshot(holdings:) projects Holding indicator fields
 
-  func testMarketDataSnapshotFromHoldingsIsEmptyUntilIssue356LandsIndicatorFields() {
+  func testMarketDataSnapshotFromHoldingsReturnsEmptyWhenIndicatorFieldsAreNil() {
+    // Holdings without any indicator coverage (the freshly-inserted row
+    // shape) still produce an empty snapshot — the factory skips entries
+    // with no `currentPrice` / moving average / `bandPosition` so the
+    // shared validator can surface `.missingMarketData(symbol)` instead
+    // of a quote with three `nil` legs.
     let holdings = [
       Self.makeHolding(symbol: "VTI", sortOrder: 0),
       Self.makeHolding(symbol: "BND", sortOrder: 1),
@@ -52,14 +60,62 @@ final class ContributionCalculatorMVPHoldingsSeamTests: XCTestCase {
 
     let snapshot = MarketDataSnapshot(holdings: holdings)
 
-    XCTAssertTrue(
-      snapshot.quotesBySymbol.isEmpty,
-      "`MarketDataSnapshot(holdings:)` must return an empty snapshot until #356 "
-        + "adds indicator fields to `LocalSchemaV2.Holding`. A non-empty result "
-        + "here means the stub silently started carrying quotes from a source "
-        + "this test wasn't aware of — re-pin the factory before promoting it.")
+    XCTAssertTrue(snapshot.quotesBySymbol.isEmpty)
     XCTAssertNil(snapshot.quote(for: "VTI"))
     XCTAssertNil(snapshot.quote(for: "BND"))
+  }
+
+  func testMarketDataSnapshotFromHoldingsProjectsIndicatorFieldsWhenPresent() {
+    // Issue #356 acceptance pin: once `Holding` carries indicator
+    // fields, `MarketDataSnapshot(holdings:)` must surface them as
+    // `MarketDataQuote` entries — driving `BandAdjustedContribution
+    // Calculator` past `.missingMarketData(symbol)` on the MVP path
+    // without any explicit snapshot wiring at the call site.
+    let holdings = [
+      Self.makeHolding(
+        symbol: "VTI",
+        sortOrder: 0,
+        currentPrice: Decimal(250),
+        sma50: Decimal(245),
+        bandPosition: Decimal(string: "0.5")
+      ),
+      Self.makeHolding(
+        symbol: "BND",
+        sortOrder: 1,
+        currentPrice: Decimal(75),
+        sma50: Decimal(74),
+        bandPosition: Decimal(string: "0.6")
+      ),
+    ]
+
+    let snapshot = MarketDataSnapshot(holdings: holdings)
+
+    XCTAssertEqual(snapshot.quote(for: "VTI")?.currentPrice, Decimal(250))
+    XCTAssertEqual(snapshot.quote(for: "VTI")?.movingAverage, Decimal(245))
+    XCTAssertEqual(snapshot.quote(for: "VTI")?.bandPosition, Decimal(string: "0.5"))
+    XCTAssertEqual(snapshot.quote(for: "BND")?.currentPrice, Decimal(75))
+    XCTAssertEqual(snapshot.quote(for: "BND")?.movingAverage, Decimal(74))
+    XCTAssertEqual(snapshot.quote(for: "BND")?.bandPosition, Decimal(string: "0.6"))
+  }
+
+  func testMarketDataSnapshotFromHoldingsSelectsSMAByExplicitWindow() {
+    // The MA-window overload picks `sma50` vs `sma200` deterministically
+    // so a portfolio configured for the 200-day window does not silently
+    // get the 50-day value through the seam.
+    let holding = Self.makeHolding(
+      symbol: "VTI",
+      sortOrder: 0,
+      currentPrice: Decimal(250),
+      sma50: Decimal(245),
+      sma200: Decimal(230),
+      bandPosition: Decimal(string: "0.5")
+    )
+
+    let fiftyDay = MarketDataSnapshot(holdings: [holding], maWindow: 50)
+    let twoHundredDay = MarketDataSnapshot(holdings: [holding], maWindow: 200)
+
+    XCTAssertEqual(fiftyDay.quote(for: "VTI")?.movingAverage, Decimal(245))
+    XCTAssertEqual(twoHundredDay.quote(for: "VTI")?.movingAverage, Decimal(230))
   }
 
   // MARK: - AC2: ContributionInput(holdings:…) carries the supplied snapshot + budget
@@ -203,13 +259,24 @@ final class ContributionCalculatorMVPHoldingsSeamTests: XCTestCase {
 
   // MARK: - Helpers
 
-  private static func makeHolding(symbol: String, sortOrder: Int) -> Holding {
+  private static func makeHolding(
+    symbol: String,
+    sortOrder: Int,
+    currentPrice: Decimal? = nil,
+    sma50: Decimal? = nil,
+    sma200: Decimal? = nil,
+    bandPosition: Decimal? = nil
+  ) -> Holding {
     Holding(
       portfolioId: UUID(),
       symbol: symbol,
       costBasis: 0,
       shares: 0,
-      sortOrder: sortOrder
+      sortOrder: sortOrder,
+      currentPrice: currentPrice,
+      sma50: sma50,
+      sma200: sma200,
+      bandPosition: bandPosition
     )
   }
 }

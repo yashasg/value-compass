@@ -2,13 +2,14 @@ import ConcurrencyExtras
 import SwiftData
 
 enum LocalPersistence {
-  /// On-disk schema for the v2 store. Sourced from ``LocalSchemaV2`` so the
+  /// On-disk schema for the v3 store. Sourced from ``LocalSchemaV3`` so the
   /// in-memory schema and the versioned migration baseline stay in lockstep
-  /// (issues #235 and #249). Add or modify `@Model` types by introducing a
-  /// new `VersionedSchema` and updating ``LocalSchemaMigrationPlan`` — never
-  /// by editing the `models` list on a prior schema in place.
+  /// (issues #235, #249, and #356). Add or modify `@Model` types by
+  /// introducing a new `VersionedSchema` and updating
+  /// ``LocalSchemaMigrationPlan`` — never by editing the `models` list on a
+  /// prior schema in place.
   static var schema: Schema {
-    Schema(versionedSchema: LocalSchemaV2.self)
+    Schema(versionedSchema: LocalSchemaV3.self)
   }
 
   /// Process-wide cache for the disk-backed `ModelContainer`. `VCAApp`
