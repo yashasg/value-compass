@@ -203,6 +203,15 @@ private struct ContributionHistoryDetailContent: View {
               .foregroundStyle(Color.appContentSecondary)
           }
           .accessibilityIdentifier("contribution.history.detail.ticker")
+          // #227: the saved-result ticker breakdown row pairs a symbol
+          // with its dollar amount and a category footer line; without
+          // explicit grouping VoiceOver exposes those three texts as
+          // independent focus targets. Collapse the whole VStack into
+          // one element with label=symbol and value=amount/category
+          // (composer pinned in `FinancialRowAccessibilityTests`).
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel(FinancialRowAccessibility.label(forHistoryAllocation: allocation))
+          .accessibilityValue(FinancialRowAccessibility.value(forHistoryAllocation: allocation))
         }
       }
 

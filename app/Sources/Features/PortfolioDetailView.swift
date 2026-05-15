@@ -183,6 +183,15 @@ private struct PortfolioDetailContent: View {
           .frame(width: 88, alignment: .trailing)
       }
       .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+      // #227: the regular-width 4-column ticker market-data row splits
+      // into four unrelated VoiceOver focus targets by default. Collapse
+      // it into one element with label=symbol and value=readable
+      // price/MA/status sentence (composer pinned in
+      // `FinancialRowAccessibilityTests`).
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(FinancialRowAccessibility.label(forTicker: ticker))
+      .accessibilityValue(
+        FinancialRowAccessibility.value(forTicker: ticker, maWindow: store.snapshot.maWindow))
     } else {
       HStack {
         Text(ticker.normalizedSymbol)
@@ -195,6 +204,14 @@ private struct PortfolioDetailContent: View {
             ticker.hasCompleteMarketData ? Color.appContentSecondary : Color.appWarning)
       }
       .accessibilityIdentifier("portfolio.detail.tickerMarketData")
+      // #227: the compact (iPhone) two-cell variant pairs symbol with
+      // an opaque "Price X | MA Y" summary; collapse to the same
+      // spoken contract as the regular-width row so screen-reader
+      // users hear identical content regardless of size class.
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(FinancialRowAccessibility.label(forTicker: ticker))
+      .accessibilityValue(
+        FinancialRowAccessibility.value(forTicker: ticker, maWindow: store.snapshot.maWindow))
     }
   }
 
