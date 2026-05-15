@@ -1848,7 +1848,9 @@
           "weight": {
             "type": "string",
             "format": "decimal",
-            "title": "Weight"
+            "title": "Weight",
+            "exclusiveMinimum": 0,
+            "maximum": 1
           }
         },
         "type": "object",
@@ -1896,7 +1898,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "format": "decimal"
+                "format": "decimal",
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
