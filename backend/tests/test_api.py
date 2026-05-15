@@ -304,6 +304,8 @@ def test_portfolio_data_returns_holdings(
     assert resp.status_code == 200
     body = resp.json()
     assert body["name"] == "Main"
+    assert isinstance(body["monthly_budget"], str)
+    assert Decimal(body["monthly_budget"]) == Decimal("1000")
     assert body["ma_window"] == 50
     assert len(body["holdings"]) == 1
     h = body["holdings"][0]
@@ -314,6 +316,40 @@ def test_portfolio_data_returns_holdings(
     assert h["upper_band"] == 155.075
     assert h["lower_band"] == 143.925
     assert h["band_position"] == 0.5448430493
+
+
+def test_portfolio_data_preserves_decimal_precision_in_monthly_budget(
+    client: TestClient, db_session: Session
+) -> None:
+    """Sub-cent monthly_budget values must round-trip without IEEE-754 loss.
+
+    Regression for #392: serialising via ``float()`` converted exact Postgres
+    Numeric values into ``Double``, so $99.99 arrived on the wire as
+    ``99.98999999999999488...``.
+    """
+    device_uuid = uuid.uuid4()
+    db_session.add(
+        Portfolio(
+            id=uuid.uuid4(),
+            device_uuid=device_uuid,
+            name="Lossy",
+            monthly_budget=Decimal("99.99"),
+            ma_window=50,
+            created_at=datetime.now(UTC),
+        )
+    )
+    db_session.commit()
+
+    resp = client.get(
+        "/portfolio/data",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert isinstance(body["monthly_budget"], str)
+    assert Decimal(body["monthly_budget"]) == Decimal("99.99")
 
 
 def test_add_holding_returns_202_and_does_not_call_polygon_when_cached(

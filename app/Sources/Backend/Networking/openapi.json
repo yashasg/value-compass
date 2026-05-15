@@ -914,7 +914,8 @@
             "title": "Name"
           },
           "monthly_budget": {
-            "type": "number",
+            "type": "string",
+            "format": "decimal",
             "title": "Monthly Budget"
           },
           "ma_window": {
