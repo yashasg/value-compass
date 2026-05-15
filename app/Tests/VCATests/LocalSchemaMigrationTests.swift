@@ -269,10 +269,9 @@ final class LocalSchemaMigrationTests: XCTestCase {
       symbol: "VTI",
       name: "Vanguard Total Stock Market",
       exchange: "NYSE",
-      assetClass: "ETF"
+      assetClass: .etf
     )
     let marketDataBar = MarketDataBar(
-      id: "VTI-\(referenceDate.timeIntervalSince1970)",
       symbol: "VTI",
       date: referenceDate,
       open: Decimal(string: "100.00")!,
@@ -295,7 +294,7 @@ final class LocalSchemaMigrationTests: XCTestCase {
     )
     let appSettings = AppSettings(
       id: appSettingsID,
-      themePreference: "system"
+      themePreference: .system
     )
 
     coldContext.insert(portfolio)
