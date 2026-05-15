@@ -63,6 +63,19 @@ struct SettingsView: View {
             .accessibilityIdentifier("settings.disclaimer")
         }
         .accessibilityIdentifier("settings.disclaimer.toggle")
+
+        Link(destination: LegalLinks.privacyPolicy) {
+          HStack {
+            Text("Privacy Policy")
+            Spacer()
+            Image(systemName: "arrow.up.right.square")
+              .foregroundStyle(Color.appContentSecondary)
+              .accessibilityHidden(true)
+          }
+          .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier("settings.privacyPolicy.link")
+        .accessibilityHint("Opens the Investrum Privacy Policy in your browser.")
       }
     }
     .navigationTitle("Settings")

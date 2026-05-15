@@ -71,3 +71,16 @@ Be concise and architecture-first. Use bullets, cite file paths, and separate fa
 - Prefer root-cause fixes over local patches.
 - Don't propose architecture changes unless drift is proven.
 - Keep this loop exclusive to the six specialist members listed above.
+
+## Re-validation hooks
+
+Some specialists own documents whose accuracy depends on code surfaces that
+ship in this repository. When those code surfaces change, the linked
+specialist must re-verify the document before the change merges. Hooks are
+keyed on file paths (case-sensitive). A change to any path in the trigger
+column requires a touch (commit or PR comment) confirming the document is
+still accurate.
+
+| Document | Owner | Trigger files |
+|---|---|---|
+| [`docs/legal/privacy-policy.md`](docs/legal/privacy-policy.md) (issue #224) | Reuben | `app/Sources/Backend/Networking/APIClient.swift`, `app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`, `app/Sources/Backend/Networking/DeviceIDProvider.swift`, `app/Sources/App/PrivacyInfo.xcprivacy`, `app/Sources/App/AppFeature/SettingsFeature.swift` |
