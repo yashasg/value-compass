@@ -129,3 +129,64 @@ Landed trailing artifacts from the team-restructure work-stream: 7 new agent cha
 3. Coordinator should pre-stage config files before spinning Scribe
 
 **Outcome:** Clean release; Coordinator should restart session post-merge (routing.json, team.md, config.json affect agent model selection and routing behavior).
+
+### 2026-05-15T02:22:30-07:00: Cleanup — Untrack Runtime Logs (Commit 98ea5bc, PR #216)
+
+**Commit SHA:** `98ea5bc`
+**PR:** #216 — appended cleanup commit on top of squad restructure
+
+**The problem:** `.gitignore` lines 17–22 declare these paths as runtime-only (never tracked):
+```
+.squad/orchestration-log/
+.squad/log/
+.squad/decisions/inbox/
+.squad/sessions/
+.squad/.scratch/
+```
+
+Scribe's commit `1ad9c32` (member onboarding) bypassed this ignore by using explicit `git add -- <path>`. Once a file is tracked in git, `.gitignore` no longer blocks it — gitignore only applies to the *untracked* set during `git add .` or `git add <untracked-path>`.
+
+**Impact:** 7 runtime files were committed:
+- `.squad/log/2026-05-15T09:03:46Z-strategy-compliance-onboarding.md`
+- `.squad/orchestration-log/2026-05-15T09:03:4[0-5]Z-{frank,saul,turk,yen,reuben,nagel}.md`
+
+**Action taken:** Used `git rm --cached -- <file>` (7 commands, one per file) to untrack them while keeping the files on disk. Files are now untracked and respect `.gitignore`.
+
+**Root cause:** Scribe's protocol is to stage files that Scribe wrote in this session via `git add -- <path>`. This assumes files in `.squad/` are intentional commits, but it bypasses gitignore. The contract states: runtime logs (orchestration-log/, log/, decisions/inbox/) are never committed, yet the explicit stage gate skipped the ignore check.
+
+**Protocol fix (for future Scribe spawns):** Before staging any file under `.squad/`, Scribe should:
+```bash
+git check-ignore -v <path>
+```
+If the path matches a gitignore rule, skip the stage (or require explicit override flag) unless the rule is intentionally waived. This prevents runtime/intent contract drift.
+
+**Verification:** Post-push, `git ls-files .squad/orchestration-log/ .squad/log/` returns empty (untracked); 37 files still on disk in orchestration-log/. PR #216 shows 7 deletions for the untrack commit.
+
+### 2026-05-15T02:25:00-07:00: PR Cleanup — Rebase yashasg/subsquad to Drop 74e3ace (Massive API Key)
+
+**Context:** PR #216 was built on `yashasg/subsquad`, which already had an unrelated commit `74e3ace` (feat: Massive API key validation + Keychain storage) from an earlier Squad Bot session. The commit was staged on a separate branch `users/squad/massive-api-key-keychain` with its own PR #215, but got bundled into #216 by accident when we started stacking commits.
+
+**Goal:** Rebase `yashasg/subsquad` onto `main` directly, dropping `74e3ace`, so PR #216 shows only the 5 squad-restructure commits.
+
+**Operation:**
+```bash
+git tag squad-pre-rebase-2026-05-15 yashasg/subsquad  # backup
+git fetch origin main --quiet
+git rebase --onto origin/main 74e3ace yashasg/subsquad
+# replays: 7790594, 1ad9c32, 18bbfe3, 1ba637f, 98ea5bc (5 commits)
+git push --force-with-lease origin yashasg/subsquad
+```
+
+**Result:**
+- PR #216 now shows 5 commits, no 74e3ace (confirmed via `gh pr view 216`)
+- PR #215 remains OPEN on `users/squad/massive-api-key-keychain` with only `74e3ace`
+- New HEAD: `fc45f9d` (Squad: untrack runtime logs)
+- All commit SHAs changed due to rebase; PR #216 body updated to note this
+
+**Lesson for Squad:** When a session starts on a branch that already has unrelated commits, the Coordinator should **check `git log main..HEAD` BEFORE the first spawn** to either branch off cleanly or warn Scribe. Bundling unrelated commits into a PR is easy to miss until code review. The recovery pattern — tag-before-rebase + `--force-with-lease` — is safe and reversible but adds friction.
+
+**Protocol fix:** Pre-session checklist for Coordinator:
+1. If `git log main..HEAD` shows commits not authored in this session, offer to branch off or rebase first
+2. If those commits have their own PR/branch, mention it explicitly in the session context to avoid accidental bundling
+
+**Safety net:** The tag `squad-pre-rebase-2026-05-15` pointed to the old HEAD; deleted after verification. `users/squad/massive-api-key-keychain` remains untouched on origin — `74e3ace` is always recoverable.
