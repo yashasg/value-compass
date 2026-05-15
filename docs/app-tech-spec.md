@@ -51,8 +51,8 @@ V1 is a hybrid/offline-first app: local SwiftData remains the primary runtime so
 
 Defaults:
 - iOS/iPadOS Simulator version: `26.4`
-- iPhone device: `iPhone 17`
-- iPad device: `iPad (A16)`
+- iPhone device: `iPhone 17 Pro Max` (6.9" Display — App Store Connect required master upload slot; canonical 1320×2868)
+- iPad device: `iPad Pro 13-inch (M4)` (13" Display — App Store Connect required master upload slot; canonical 2064×2752)
 - Platform mode: `both` (build and test on both iPhone and iPad)
 
 Env overrides: `IOS_VERSION`, `IPADOS_VERSION`, `IPHONE_DEVICE`, `IPAD_DEVICE`, `PLATFORM_MODE` (iphone|ipad|both), `SCHEME`, `PROJECT_PATH`, `WORKSPACE_PATH`.
