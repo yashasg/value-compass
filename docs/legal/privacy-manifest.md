@@ -101,6 +101,14 @@ nutrition label must be updated together, and a Privacy Policy update
 - **Privacy Policy text and Settings link** (`#224`) — the human-readable
   version of the same disclosure. Must cover transmission of the
   portfolio name, monthly budget, and ticker allocations per #357.
+- **Third-party services the app surfaces at the point of user
+  consent** — every external service the app exercises, the published
+  ToS/Privacy URLs surfaced in-app at the consent surface, and the
+  re-verification trigger, are registered in
+  [`docs/legal/third-party-services.md`](third-party-services.md) per
+  App Store Review Guideline §5.2.3 and GDPR Art. 13(1)(e) (issue
+  #294). This manifest declares **collection**; the third-party
+  register declares **disclosure of recipients**.
 - **App Review submission notes** (`#254`) — financial-tool framing.
 - **`NSPrivacyAccessedAPITypes` (required-reason API)** — already
   shipped in commit `69af031` (PR #230 / closes #223) covering the
