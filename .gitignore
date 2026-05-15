@@ -25,6 +25,12 @@ venv/
 
 # Generated build artifacts
 build/
+# SwiftPM / Xcode derived data emitted by app/build.sh and app/run.sh
+# (kept locally for caching; never committed). Note: distinct from `build/`
+# above — `.build` (leading dot) is what SwiftPM and Xcode-from-`app/`
+# create, and the literal `build/` rule does not match it.
+app/.build/
+**/.build/
 
 # iOS / Xcode user-local files
 # Xcode .pbxuser, .perspectivev3 user-specific files
