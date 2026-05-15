@@ -593,7 +593,10 @@ def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionRespons
     responses={
         status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
             status.HTTP_401_UNAUTHORIZED
-        ]
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
     },
 )
 def portfolio_status(
@@ -602,13 +605,27 @@ def portfolio_status(
 ) -> PortfolioStatusResponse:
     """Return the freshest ``last_modified`` / ``next_modified``.
 
-    The cache response is lightweight and Cloudflare-cacheable.
+    The cache response is lightweight and Cloudflare-cacheable. A
+    SQLAlchemy failure is surfaced as the documented ``syncUnavailable``
+    503 envelope (matching ``/portfolio/data`` and ``/health``) so the
+    iOS client sees a decodable retry signal instead of FastAPI's default
+    500 body when the DB is unreachable (issue #439).
     """
-    row = db.execute(
-        select(StockCache.last_modified, StockCache.next_modified)
-        .order_by(StockCache.last_modified.desc())
-        .limit(1)
-    ).first()
+    try:
+        row = db.execute(
+            select(StockCache.last_modified, StockCache.next_modified)
+            .order_by(StockCache.last_modified.desc())
+            .limit(1)
+        ).first()
+    except SQLAlchemyError as exc:
+        log.warning("portfolio status lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
     if row is None:
         return PortfolioStatusResponse(last_modified=None, next_modified=None)
     return PortfolioStatusResponse(last_modified=row[0], next_modified=row[1])
