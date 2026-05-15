@@ -540,6 +540,30 @@ class PortfolioExportResponse(BaseModel):
     backwards-incompatible field change.
     """
 
+    # ``format_version`` is always populated by the server (Pydantic v2
+    # emits fields with defaults in ``model_dump(mode="json")``) and is
+    # therefore declared ``required`` in the generated OpenAPI schema —
+    # same pattern as :class:`HealthResponse` (see issue #381). The
+    # ``Field(default=1)`` default is preserved as documentation of the
+    # canonical value; ``portfolio_export`` never omits it at runtime.
+    # ``json_schema_extra`` is merged into the model schema and *replaces*
+    # the auto-generated ``required`` array (dict-update semantics), so
+    # every required field must be listed explicitly here — re-stating
+    # ``generated_at``/``device_uuid``/``portfolio`` keeps them required
+    # while promoting ``format_version`` so generated clients (including
+    # the iOS SwiftOpenAPIGenerator client) decode it as non-optional and
+    # can branch deterministically when the format is bumped (issue #463).
+    model_config = ConfigDict(
+        json_schema_extra={
+            "required": [
+                "format_version",
+                "generated_at",
+                "device_uuid",
+                "portfolio",
+            ]
+        }
+    )
+
     format_version: int = Field(default=1, ge=1)
     generated_at: datetime
     device_uuid: UUID
