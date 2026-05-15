@@ -174,6 +174,179 @@ final class LocalSchemaMigrationTests: XCTestCase {
     XCTAssertEqual(portfolios.first?.name, "Reopen")
   }
 
+  /// Compatibility test (#337): a disk-backed store created with the *current*
+  /// v2 model graph (which now lives under nested `LocalSchemaV2.*` types) can
+  /// be reopened by the same `LocalSchemaMigrationPlan` without losing any of
+  /// the 11 v2 entities. This guards against the failure mode flagged on the
+  /// schema-freeze PR — namely, that renaming v2 model classes from
+  /// module-scope to nested types could (in theory) change the on-disk class
+  /// identity SwiftData keys entities by, even while the `versionIdentifier`
+  /// stays at 2.0.0. If that ever broke, this round-trip would either throw
+  /// at warm reopen or come back with empty fetches.
+  func testV2DiskContainerRoundTripsEveryEntityAcrossReopens() throws {
+    let storeURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("vca-mig-v2-\(UUID().uuidString).store")
+    addTeardownBlock {
+      try? FileManager.default.removeItem(at: storeURL)
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
+      try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("wal"))
+    }
+
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let tickerID = UUID()
+    let recordID = UUID()
+    let categoryContributionID = UUID()
+    let tickerAllocationID = UUID()
+    let holdingID = UUID()
+    let snapshotID = UUID()
+    let appSettingsID = UUID()
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+    // Cold open: fresh store at `storeURL`, write one row of every v2 entity.
+    let coldConfiguration = ModelConfiguration(
+      schema: LocalPersistence.schema,
+      url: storeURL
+    )
+    let coldContainer = try ModelContainer(
+      for: LocalPersistence.schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [coldConfiguration]
+    )
+    let coldContext = ModelContext(coldContainer)
+
+    let portfolio = Portfolio(
+      id: portfolioID,
+      name: "Roundtrip",
+      monthlyBudget: Decimal(500),
+      createdAt: referenceDate
+    )
+    let category = Category(
+      id: categoryID,
+      name: "Equities",
+      weight: Decimal(1),
+      sortOrder: 0,
+      portfolio: portfolio
+    )
+    let ticker = Ticker(
+      id: tickerID,
+      symbol: "VTI",
+      sortOrder: 0,
+      category: category
+    )
+    let record = ContributionRecord(
+      id: recordID,
+      portfolioId: portfolioID,
+      date: referenceDate,
+      totalAmount: Decimal(500),
+      portfolio: portfolio
+    )
+    let categoryContribution = CategoryContribution(
+      id: categoryContributionID,
+      categoryName: "Equities",
+      amount: Decimal(500),
+      allocatedWeight: Decimal(1),
+      record: record
+    )
+    let tickerAllocation = TickerAllocation(
+      id: tickerAllocationID,
+      tickerSymbol: "VTI",
+      categoryName: "Equities",
+      amount: Decimal(500),
+      allocatedWeight: Decimal(1),
+      record: record
+    )
+    let holding = Holding(
+      id: holdingID,
+      portfolioId: portfolioID,
+      symbol: "VTI",
+      costBasis: Decimal(100),
+      shares: Decimal(5),
+      sortOrder: 0,
+      createdAt: referenceDate
+    )
+    let tickerMetadata = TickerMetadata(
+      symbol: "VTI",
+      name: "Vanguard Total Stock Market",
+      exchange: "NYSE",
+      assetClass: .etf
+    )
+    let marketDataBar = MarketDataBar(
+      symbol: "VTI",
+      date: referenceDate,
+      open: Decimal(string: "100.00")!,
+      high: Decimal(string: "101.00")!,
+      low: Decimal(string: "99.00")!,
+      close: Decimal(string: "100.50")!,
+      volume: 1_000,
+      fetchedAt: referenceDate
+    )
+    let investSnapshot = InvestSnapshot(
+      id: snapshotID,
+      portfolioId: portfolioID,
+      capturedAt: referenceDate,
+      capitalAmount: Decimal(500),
+      maWindow: 50,
+      marketDataWindowStart: referenceDate,
+      marketDataWindowEnd: referenceDate,
+      compositionJSON: "[]",
+      warningsJSON: "[]"
+    )
+    let appSettings = AppSettings(
+      id: appSettingsID,
+      themePreference: .system
+    )
+
+    coldContext.insert(portfolio)
+    coldContext.insert(category)
+    coldContext.insert(ticker)
+    coldContext.insert(record)
+    coldContext.insert(categoryContribution)
+    coldContext.insert(tickerAllocation)
+    coldContext.insert(holding)
+    coldContext.insert(tickerMetadata)
+    coldContext.insert(marketDataBar)
+    coldContext.insert(investSnapshot)
+    coldContext.insert(appSettings)
+    try coldContext.save()
+
+    // Warm reopen: same URL, same schema + migration plan. Confirms the v2
+    // shape stored under the nested `LocalSchemaV2.*` class identities is
+    // still readable on a subsequent process boot.
+    let warmConfiguration = ModelConfiguration(
+      schema: LocalPersistence.schema,
+      url: storeURL
+    )
+    let warmContainer = try ModelContainer(
+      for: LocalPersistence.schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [warmConfiguration]
+    )
+    let warmContext = ModelContext(warmContainer)
+
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Portfolio>()).first?.id, portfolioID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<LocalSchemaV2.Category>()).first?.id, categoryID)
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Ticker>()).first?.id, tickerID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<ContributionRecord>()).first?.id, recordID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<CategoryContribution>()).first?.id,
+      categoryContributionID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<TickerAllocation>()).first?.id,
+      tickerAllocationID)
+    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Holding>()).first?.id, holdingID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<TickerMetadata>()).first?.symbol, "VTI")
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<MarketDataBar>()).first?.symbol, "VTI")
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<InvestSnapshot>()).first?.id, snapshotID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<AppSettings>()).first?.id, appSettingsID)
+  }
+
   // MARK: - v2 identity contract (#249)
 
   func testCategoryContributionDefaultInitAssignsAUniqueID() {
