@@ -114,6 +114,7 @@
 		C0000000000000000000B01C /* APIClientDependencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01C /* APIClientDependencyTests.swift */; };
 		C0000000000000000000B01D /* AppBrandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01D /* AppBrandTests.swift */; };
 		C0000000000000000000B01E /* PortfolioDetailAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */; };
+		C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -226,6 +227,7 @@
 		C0000000000000000000F01C /* APIClientDependencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientDependencyTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01D /* AppBrandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrandTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailAccessibilityTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAccessibilityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -487,6 +489,7 @@
 				C0000000000000000000F01C /* APIClientDependencyTests.swift */,
 				C0000000000000000000F01D /* AppBrandTests.swift */,
 				C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */,
+				C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -715,6 +718,7 @@
 				C0000000000000000000B01C /* APIClientDependencyTests.swift in Sources */,
 				C0000000000000000000B01D /* AppBrandTests.swift in Sources */,
 				C0000000000000000000B01E /* PortfolioDetailAccessibilityTests.swift in Sources */,
+				C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
