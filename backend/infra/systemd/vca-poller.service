@@ -8,5 +8,15 @@ WorkingDirectory=/opt/value-compass/backend
 ExecStart=/opt/value-compass/.venv/bin/python -m poller
 Restart=on-failure
 
+# This unit also runs the retention-purge sweep declared in
+# backend/poller/__main__.py (see docs/legal/data-retention.md): the
+# scheduler fires it daily at PURGE_HOUR_UTC, enforcing GDPR Art. 5(1)(e)
+# storage limitation without depending on the market calendar.
+#
+# Operational-log retention is enforced via the host journald drop-in at
+# /etc/systemd/journald.conf.d/vca-retention.conf (see
+# backend/infra/systemd/journald-vca-retention.conf). Application logs
+# are retained for at most 30 days per the same schedule.
+
 [Install]
 WantedBy=multi-user.target

@@ -115,6 +115,14 @@ nutrition label must be updated together, and a Privacy Policy update
   This manifest only describes the **app-side** declaration; the
   processor-side accountability gate is enforced via the TestFlight
   readiness checklist (#391).
+- **Per-data-category retention windows** — `PrivacyInfo.xcprivacy`
+  does not carry a retention-period field, but the App Store Connect
+  *App Privacy → Data Retention* answer set for every entry above must
+  be filed verbatim from [`docs/legal/data-retention.md`](data-retention.md).
+  That document is also the source of truth for the
+  `portfolios.last_seen_at` purge schedule, the journald retention
+  floor, and the Cloudflare access-log posture that GDPR Art. 5(1)(e)
+  and CCPA §1798.100(a)(3) require us to publish to data subjects.
 
 ## How to update this declaration
 

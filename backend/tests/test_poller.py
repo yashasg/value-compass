@@ -162,13 +162,30 @@ def test_failure_path_does_not_update_modified(
 def test_scheduler_has_5pm_et_trigger() -> None:
     scheduler = build_scheduler()
     jobs = scheduler.get_jobs()
-    assert len(jobs) == 1
-    trigger = jobs[0].trigger
+    nightly = next(j for j in jobs if j.id == "vca-poller-nightly")
+    trigger = nightly.trigger
     fields = {f.name: str(f) for f in trigger.fields}
     assert fields["hour"] == "17"
     assert fields["minute"] == "0"
     assert fields["day_of_week"] == "mon-fri"
     assert str(trigger.timezone) == "America/New_York"
+
+
+def test_scheduler_has_daily_retention_purge_job() -> None:
+    """The retention sweep documented in docs/legal/data-retention.md must wire in."""
+    scheduler = build_scheduler()
+    job_ids = {j.id for j in scheduler.get_jobs()}
+    assert "vca-poller-retention-purge" in job_ids
+
+    purge_job = next(
+        j for j in scheduler.get_jobs() if j.id == "vca-poller-retention-purge"
+    )
+    fields = {f.name: str(f) for f in purge_job.trigger.fields}
+    # Every day-of-week / day-of-month — storage limitation does not
+    # depend on the market calendar.
+    assert fields["day_of_week"] == "*"
+    assert fields["day"] == "*"
+    assert str(purge_job.trigger.timezone) == "UTC"
 
 
 def test_compute_band_metrics_uses_latest_22_bars() -> None:

@@ -18,7 +18,7 @@ import pytest
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy import create_engine, select  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
@@ -436,3 +436,128 @@ def test_add_holding_404_for_unknown_device(client: TestClient) -> None:
     )
     assert resp.status_code == 404
     assert resp.json()["code"] == "portfolioNotFound"
+
+
+def test_portfolio_data_stamps_last_seen_at_on_authenticated_touch(
+    client: TestClient, db_session: Session
+) -> None:
+    """``GET /portfolio/data`` records activity for the retention sweep.
+
+    The stamp is what keeps an active device's portfolio out of the
+    daily purge documented in ``docs/legal/data-retention.md``.
+    """
+    device_uuid = uuid.uuid4()
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    db_session.add(
+        Portfolio(
+            id=uuid.uuid4(),
+            device_uuid=device_uuid,
+            name="Touchable",
+            monthly_budget=Decimal("123"),
+            ma_window=50,
+            created_at=stale,
+            last_seen_at=stale,
+        )
+    )
+    db_session.commit()
+
+    before = datetime.now(UTC)
+    resp = client.get(
+        "/portfolio/data",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 200
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    # SQLite drops the timezone; compare in UTC-naive form so the
+    # assertion passes on both SQLite and Postgres.
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_add_holding_stamps_last_seen_at_on_success(
+    client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    device_uuid = uuid.uuid4()
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    db_session.add(
+        Portfolio(
+            id=uuid.uuid4(),
+            device_uuid=device_uuid,
+            name="P",
+            monthly_budget=Decimal("100"),
+            ma_window=200,
+            created_at=stale,
+            last_seen_at=stale,
+        )
+    )
+    db_session.add(
+        StockCache(
+            ticker="MSFT",
+            current_price=Decimal("400"),
+            sma_50=Decimal("399"),
+            sma_200=Decimal("398"),
+            last_modified=datetime.now(UTC),
+            next_modified=None,
+            job_status="success",
+        )
+    )
+    db_session.commit()
+
+    before = datetime.now(UTC)
+    resp = client.post(
+        "/portfolio/holdings",
+        json={"device_uuid": str(device_uuid), "ticker": "MSFT", "weight": 0.25},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 202
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_add_holding_duplicate_does_not_stamp_last_seen_at(
+    client: TestClient, db_session: Session
+) -> None:
+    """A 409 conflict means no holding was added, so no activity stamp."""
+    device_uuid = uuid.uuid4()
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="P",
+        monthly_budget=Decimal("100"),
+        ma_window=200,
+        created_at=stale,
+        last_seen_at=stale,
+    )
+    portfolio.holdings.append(
+        Holding(id=uuid.uuid4(), ticker="MSFT", weight=Decimal("0.25"))
+    )
+    db_session.add(portfolio)
+    db_session.commit()
+
+    resp = client.post(
+        "/portfolio/holdings",
+        json={"device_uuid": str(device_uuid), "ticker": "MSFT", "weight": 0.25},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 409
+
+    untouched = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    # SQLite strips the timezone on round-trip; compare in naive UTC form.
+    assert untouched.last_seen_at.replace(tzinfo=None) == stale.replace(
+        tzinfo=None
+    )

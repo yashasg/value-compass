@@ -44,6 +44,14 @@ class Portfolio(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    # Activity timestamp used by the retention-purge job. Stamped on every
+    # authenticated request that resolves a Portfolio by device_uuid (see
+    # ``backend/api/main.py`` and the schedule documented in
+    # ``docs/legal/data-retention.md``). Nullable so legacy rows can be
+    # backfilled or treated by ``created_at`` until the first request hits.
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     holdings: Mapped[list[Holding]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"

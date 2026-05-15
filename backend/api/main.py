@@ -236,6 +236,28 @@ def get_db() -> Session:  # pragma: no cover
         yield session
 
 
+def _stamp_activity(db: Session, portfolio: Portfolio) -> None:
+    """Record an authenticated touch on ``portfolio.last_seen_at``.
+
+    Called whenever a protected endpoint resolves a ``Portfolio`` by its
+    ``device_uuid``. The timestamp is the basis for the retention-purge
+    sweep (see ``backend/poller/purge.py`` and the schedule in
+    ``docs/legal/data-retention.md``), so writing it here keeps the
+    retention window in lock-step with real device activity rather than
+    schema-creation time.
+
+    Commit failures are logged but never raised — a stamp miss only
+    causes the row to be purged sooner on the next sweep, which is
+    strictly safer than failing the user-facing request.
+    """
+    portfolio.last_seen_at = datetime.now(UTC)
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        log.warning("portfolio activity stamp failed: %s", exc)
+
+
 async def require_app_attest(
     x_app_attest: str | None = Header(default=None, alias="X-App-Attest"),
 ) -> str:
@@ -497,13 +519,15 @@ def portfolio_data(
                 ),
             )
         )
-    return PortfolioDataResponse(
+    response = PortfolioDataResponse(
         portfolio_id=portfolio.id,
         name=portfolio.name,
         monthly_budget=portfolio.monthly_budget,
         ma_window=portfolio.ma_window,
         holdings=holdings_out,
     )
+    _stamp_activity(db, portfolio)
+    return response
 
 
 @app.post(
@@ -587,6 +611,7 @@ def add_holding(
             weight=payload.weight,
         )
     )
+    portfolio.last_seen_at = datetime.now(UTC)
     try:
         db.commit()
     except SQLAlchemyError as exc:
