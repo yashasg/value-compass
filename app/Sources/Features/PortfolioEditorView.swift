@@ -6,6 +6,11 @@ import SwiftUI
 /// `PortfolioEditorFeature`.
 struct PortfolioEditorView: View {
   @Bindable var store: StoreOf<PortfolioEditorFeature>
+  /// Tracks whether the monthly-budget `.decimalPad` field is the
+  /// first responder so the keyboard toolbar's Done button can resign it.
+  /// `.decimalPad` has no Return key, so HIG Inputs → Virtual Keyboards
+  /// requires an input-accessory affordance to dismiss it (issue #283).
+  @FocusState private var isBudgetFocused: Bool
 
   init(store: StoreOf<PortfolioEditorFeature>) {
     self.store = store
@@ -21,6 +26,7 @@ struct PortfolioEditorView: View {
 
           TextField("Monthly budget", text: $store.draft.monthlyBudgetText)
             .keyboardType(.decimalPad)
+            .focused($isBudgetFocused)
             .accessibilityIdentifier("portfolio.editor.budget")
         }
 
@@ -53,6 +59,12 @@ struct PortfolioEditorView: View {
             store.send(.saveTapped)
           }
           .accessibilityIdentifier("portfolio.editor.save")
+        }
+
+        ToolbarItemGroup(placement: .keyboard) {
+          Spacer()
+          Button("Done") { isBudgetFocused = false }
+            .accessibilityIdentifier("portfolio.editor.budget.doneButton")
         }
       }
       .alert(
