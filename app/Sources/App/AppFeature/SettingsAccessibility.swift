@@ -29,10 +29,17 @@ enum SettingsAccessibility {
   ///   pipeline (backend `DELETE /portfolio` → SwiftData wipe → Keychain
   ///   wipe → device-UUID rotation → onboarding-gate reset) is running
   ///   and the now-disabled button has not silently failed.
-  /// - ``SettingsAccountErasureStatus/erased``: returns the
-  ///   relaunch-instruction sentence verbatim from the inline status row
-  ///   so spoken text matches visible text. This is the legally-
-  ///   significant terminal state; the user must hear it.
+  /// - ``SettingsAccountErasureStatus/erased``: returns the pair of
+  ///   inline status-row sentences ("Your data has been erased."
+  ///   followed by "Returning to the welcome screen…") joined with a
+  ///   single ASCII space so spoken text matches visible text. This is
+  ///   the legally-significant terminal state; the user must hear the
+  ///   completion sentence and the in-process auto-return so they do
+  ///   not retry the now-disabled button or assume the flow stalled.
+  ///   Post-#471 / PR #475: the previous "force-quit … App Switcher"
+  ///   instruction is no longer required because ``AppFeature`` swaps
+  ///   the destination back to onboarding in-process (HIG → Launching →
+  ///   Quitting forbids quit/relaunch instructions).
   /// - ``SettingsAccountErasureStatus/failed(reason:)``: forwards the
   ///   reducer-supplied failure reason. The reasons are already
   ///   user-facing sentences (e.g., "Could not reach the server: …. Your
@@ -47,9 +54,7 @@ enum SettingsAccessibility {
     case .erasing:
       return "Erasing your data. This may take a few seconds."
     case .erased:
-      return
-        "Your data has been erased. Please force-quit Investrum from the App "
-        + "Switcher and reopen it to complete the reset."
+      return "Your data has been erased. Returning to the welcome screen\u{2026}"
     case .failed(let reason):
       return reason
     }
