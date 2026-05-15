@@ -79,6 +79,7 @@
 		C0000000000000000000B009 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F009 /* DesignSystemTests.swift */; };
 		C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00A /* MinAppVersionClientTests.swift */; };
 		C0000000000000000000B00B /* ForcedUpdateFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */; };
+		C0000000000000000000B00D /* SettingsFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00D /* SettingsFeatureTests.swift */; };
 		C0000000000000000000B00E /* AppFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00E /* AppFeatureTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -158,6 +159,7 @@
 		C0000000000000000000F009 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00A /* MinAppVersionClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionClientTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F00D /* SettingsFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00E /* AppFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -377,6 +379,7 @@
 				C0000000000000000000F009 /* DesignSystemTests.swift */,
 				C0000000000000000000F00A /* MinAppVersionClientTests.swift */,
 				C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */,
+				C0000000000000000000F00D /* SettingsFeatureTests.swift */,
 				C0000000000000000000F00E /* AppFeatureTests.swift */,
 			);
 			path = VCATests;
@@ -571,6 +574,7 @@
 				C0000000000000000000B009 /* DesignSystemTests.swift in Sources */,
 				C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */,
 				C0000000000000000000B00B /* ForcedUpdateFeatureTests.swift in Sources */,
+				C0000000000000000000B00D /* SettingsFeatureTests.swift in Sources */,
 				C0000000000000000000B00E /* AppFeatureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
