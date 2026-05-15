@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import (
@@ -36,7 +37,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer, WithJsonSchema
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -281,6 +282,19 @@ async def add_standard_headers(request: Request, call_next):
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
+# Monetary fields carry exact decimal values end-to-end. Pydantic's default
+# JSON schema for ``Decimal`` is ``{"anyOf": [{"type": "number"}, {"type":
+# "string"}]}``, which the SwiftOpenAPIGenerator decodes as a union; bare
+# ``number`` decodes as ``Double`` and discards precision. We pin the wire
+# representation to ``string`` so generated clients can round-trip the value
+# through ``Decimal(string:)`` without IEEE-754 loss. See issues #317, #392.
+DecimalString = Annotated[
+    Decimal,
+    PlainSerializer(str, return_type=str, when_used="json"),
+    WithJsonSchema({"type": "string", "format": "decimal"}),
+]
+
+
 class HealthResponse(BaseModel):
     """Health-check response body."""
 
@@ -321,7 +335,7 @@ class PortfolioDataResponse(BaseModel):
 
     portfolio_id: UUID
     name: str
-    monthly_budget: float
+    monthly_budget: DecimalString
     ma_window: int
     holdings: list[HoldingOut]
 
@@ -486,7 +500,7 @@ def portfolio_data(
     return PortfolioDataResponse(
         portfolio_id=portfolio.id,
         name=portfolio.name,
-        monthly_budget=float(portfolio.monthly_budget),
+        monthly_budget=portfolio.monthly_budget,
         ma_window=portfolio.ma_window,
         holdings=holdings_out,
     )
