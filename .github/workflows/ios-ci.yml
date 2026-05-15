@@ -62,3 +62,14 @@ jobs:
         # full compile pass without surfacing findings the CodeQL job does
         # not already cover. See issue #206.
         run: PLATFORM_MODE=iphone RUN_ANALYZE=false ./app/build.sh
+
+      - name: Upload xcresult bundles on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/app/xcode-derived-data/Logs/Test/*.xcresult
+            build/app/xcode-derived-data/Logs/Build/*.xcactivitylog
+          if-no-files-found: warn
+          retention-days: 14
