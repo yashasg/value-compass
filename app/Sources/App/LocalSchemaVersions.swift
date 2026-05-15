@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 /// Versioned baseline for the v1 SwiftData on-disk schema.
