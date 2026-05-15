@@ -488,6 +488,7 @@ struct HoldingsEditorView: View {
     NavigationStack {
       compactEditor(store: store)
         .navigationTitle("Edit Holdings")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
           ToolbarItem(placement: .cancellationAction) {
             Button("Cancel") {

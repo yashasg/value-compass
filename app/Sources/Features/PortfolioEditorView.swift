@@ -47,6 +47,7 @@ struct PortfolioEditorView: View {
         }
       }
       .navigationTitle(store.navigationTitle)
+      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") {
