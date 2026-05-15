@@ -279,6 +279,39 @@ def test_portfolio_status_returns_latest(
     assert body["next_modified"] is not None
 
 
+def test_portfolio_status_db_unreachable_returns_sync_unavailable() -> None:
+    """A failing DB session surfaces the documented 503 envelope.
+
+    Regression guard for issue #439: ``/portfolio/status`` previously
+    leaked an undocumented FastAPI 500 body when ``db.execute`` raised
+    a ``SQLAlchemyError``, asymmetric vs ``/portfolio/data``,
+    ``/health``, and ``/portfolio/holdings``. The 503 path now matches
+    the documented ``syncUnavailable`` envelope with
+    ``retry_after_seconds=60``.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    def _broken_db():
+        class _BrokenSession:
+            def execute(self, *_args, **_kwargs):  # noqa: ANN001
+                raise OperationalError("SELECT 1", {}, Exception("db down"))
+
+        yield _BrokenSession()
+
+    app.dependency_overrides[get_db] = _broken_db
+    try:
+        resp = TestClient(app).get("/portfolio/status", headers=ATTEST)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 503
+    assert resp.json() == {
+        "code": "syncUnavailable",
+        "message": "Database is unreachable.",
+        "retry_after_seconds": 60,
+    }
+
+
 def test_portfolio_data_404_for_unknown_device(client: TestClient) -> None:
     resp = client.get(
         "/portfolio/data",
