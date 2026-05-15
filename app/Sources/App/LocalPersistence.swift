@@ -2,25 +2,13 @@ import ConcurrencyExtras
 import SwiftData
 
 enum LocalPersistence {
+  /// On-disk schema for the v1 store. Sourced from ``LocalSchemaV1`` so the
+  /// in-memory schema and the versioned migration baseline stay in lockstep
+  /// (issue #235). Add or modify `@Model` types by introducing a new
+  /// `VersionedSchema` and updating ``LocalSchemaMigrationPlan`` — never by
+  /// editing the `models` list on `LocalSchemaV1` in place.
   static var schema: Schema {
-    Schema([
-      // Legacy contribution-history models. Removed in the follow-up that
-      // closes #123 once every feature reducer has migrated to the MVP shape.
-      Portfolio.self,
-      Category.self,
-      Ticker.self,
-      ContributionRecord.self,
-      CategoryContribution.self,
-      TickerAllocation.self,
-      // Additive MVP models (foundation for #123 / #128 / #131 / #133).
-      // Owned by the `Backend/Models/MVPModels.swift` file and the
-      // `Backend/Persistence/` repository seams.
-      Holding.self,
-      TickerMetadata.self,
-      MarketDataBar.self,
-      InvestSnapshot.self,
-      AppSettings.self,
-    ])
+    Schema(versionedSchema: LocalSchemaV1.self)
   }
 
   /// Process-wide cache for the disk-backed `ModelContainer`. `VCAApp`
@@ -53,6 +41,10 @@ enum LocalPersistence {
       schema: schema,
       isStoredInMemoryOnly: isStoredInMemoryOnly
     )
-    return try ModelContainer(for: schema, configurations: [configuration])
+    return try ModelContainer(
+      for: schema,
+      migrationPlan: LocalSchemaMigrationPlan.self,
+      configurations: [configuration]
+    )
   }
 }
