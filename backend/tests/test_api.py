@@ -176,6 +176,87 @@ def test_no_operation_advertises_fastapi_validation_error(client: TestClient) ->
         assert ref == envelope_ref
 
 
+def test_holding_weight_range_constraint_is_symmetric(client: TestClient) -> None:
+    """Issue #461: every surface touching ``Holding.weight`` advertises 0 < w ≤ 1.
+
+    The runtime invariant is enforced on POST /portfolio/holdings (where
+    ``weight: float`` carries ``Field(gt=0, le=1)``) and on PATCH
+    /portfolio/holdings/{ticker} (where ``weight: DecimalString`` carries
+    the same ``Field`` metadata). ``DecimalString``'s ``WithJsonSchema``
+    override silently stripped the PATCH bound from the wire spec.
+    ``custom_openapi()`` re-merges the bounds; assert the three surfaces
+    agree so a future ``WithJsonSchema`` regression fails contract tests.
+    """
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+
+    add_weight = components["AddHoldingRequest"]["properties"]["weight"]
+    patch_weight = components["PatchHoldingRequest"]["properties"]["weight"]
+
+    # POST writes ``float``; PATCH writes ``DecimalString`` (``string`` /
+    # ``format: decimal``). Both must advertise the same numeric range.
+    assert add_weight["exclusiveMinimum"] == 0
+    assert add_weight["maximum"] == 1
+    assert patch_weight["exclusiveMinimum"] == 0
+    assert patch_weight["maximum"] == 1
+    assert patch_weight["type"] == "string"
+    assert patch_weight["format"] == "decimal"
+
+
+def test_portfolio_monthly_budget_lower_bound_is_advertised(
+    client: TestClient,
+) -> None:
+    """Issue #461: PATCH /portfolio.monthly_budget advertises ``> 0``.
+
+    ``PatchPortfolioRequest.monthly_budget`` is the nullable variant of
+    the ``DecimalString`` alias. The bound must land on the non-null
+    branch of ``anyOf`` so clients applying schema validators reject
+    ``"0"`` / negative values pre-flight rather than on the round-trip.
+    """
+    schema = client.get("/openapi.json").json()
+    monthly_budget = schema["components"]["schemas"][
+        "PatchPortfolioRequest"
+    ]["properties"]["monthly_budget"]
+
+    decimal_branches = [
+        option
+        for option in monthly_budget["anyOf"]
+        if option.get("type") == "string"
+        and option.get("format") == "decimal"
+    ]
+    assert len(decimal_branches) == 1
+    assert decimal_branches[0]["exclusiveMinimum"] == 0
+
+
+def test_decimal_string_bounds_runtime_enforced(client: TestClient) -> None:
+    """Issue #461: runtime keeps rejecting out-of-range DecimalString values.
+
+    The spec re-advertises the bounds but the Pydantic validators were
+    never touched. PATCH /portfolio/holdings/{ticker} with ``weight=0``
+    or ``weight=1.5`` must still 422 with ``schemaUnsupported`` so the
+    contract correction does not become decorative.
+    """
+    for invalid_weight in ("0", "1.5", "-0.1"):
+        response = client.patch(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": str(uuid.uuid4())},
+            headers=ATTEST,
+            json={"weight": invalid_weight},
+        )
+        assert response.status_code == 422
+        assert response.json()["code"] == "schemaUnsupported"
+
+    for invalid_budget in ("0", "-1.00"):
+        response = client.patch(
+            "/portfolio",
+            params={"device_uuid": str(uuid.uuid4())},
+            headers=ATTEST,
+            json={"monthly_budget": invalid_budget},
+        )
+        assert response.status_code == 422
+        assert response.json()["code"] == "schemaUnsupported"
+
+
 PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
     ("/schema/version", "get"),
     ("/portfolio/status", "get"),

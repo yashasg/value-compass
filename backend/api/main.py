@@ -192,6 +192,15 @@ def custom_openapi() -> dict[str, Any]:
     public envelope), so the legacy schemas are never referenced from any
     operation. Leaving the stale shapes in ``components.schemas`` would let
     generated clients model the wrong validation payload (issue #302).
+
+    Finally re-merges numeric range constraints onto ``DecimalString``
+    request fields: Pydantic's ``WithJsonSchema`` override blanks any
+    ``Field(gt=..., le=...)`` metadata, so ``PatchHoldingRequest.weight``
+    and ``PatchPortfolioRequest.monthly_budget`` shipped without the
+    invariants enforced at runtime. Re-emitting them keeps the three
+    surfaces touching ``Holding.weight`` (POST, PATCH /holdings/{ticker},
+    PATCH /portfolio) symmetric and stops the spec from silently drifting
+    against the runtime guard (issue #461).
     """
     if app.openapi_schema:
         return app.openapi_schema
@@ -235,6 +244,7 @@ def custom_openapi() -> dict[str, Any]:
                                 schema.update(non_null[0])
 
     _prune_legacy_validation_schemas(openapi_schema)
+    _apply_decimal_string_bounds(openapi_schema)
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -266,6 +276,85 @@ def _prune_legacy_validation_schemas(openapi_schema: dict[str, Any]) -> None:
                 "declare 422 responses with ErrorEnvelope via ERROR_RESPONSES."
             )
         schemas.pop(name, None)
+
+
+# Numeric range constraints that the ``DecimalString`` ``WithJsonSchema``
+# override strips off ``Field(gt=..., le=...)`` metadata. Mirror the
+# Pydantic-enforced runtime invariants so generated clients receive the
+# same constraint advertisement on every surface that touches the same
+# database column (issue #461). Keep number-encoded bounds so the contract
+# matches ``AddHoldingRequest.weight`` (POST /portfolio/holdings) verbatim.
+_DECIMAL_STRING_BOUNDS: dict[str, dict[str, dict[str, float]]] = {
+    "PatchHoldingRequest": {
+        "weight": {"exclusiveMinimum": 0, "maximum": 1},
+    },
+    "PatchPortfolioRequest": {
+        "monthly_budget": {"exclusiveMinimum": 0},
+    },
+}
+
+
+def _apply_decimal_string_bounds(openapi_schema: dict[str, Any]) -> None:
+    """Re-emit ``gt``/``le`` bounds stripped by ``DecimalString``.
+
+    Walks the registry and merges each constraint into the matching field
+    schema. Handles nullable fields by locating the non-``null`` branch of
+    the field's ``anyOf`` so the bound applies to the value type, not the
+    null sentinel. Raises if a registered schema or field is missing so a
+    rename does not silently re-introduce the contract drift this fix
+    closes (issue #461).
+    """
+    schemas = openapi_schema.get("components", {}).get("schemas", {})
+    for schema_name, fields in _DECIMAL_STRING_BOUNDS.items():
+        component_schema = schemas.get(schema_name)
+        if component_schema is None:
+            raise RuntimeError(
+                f"DecimalString bounds registry references unknown schema "
+                f"{schema_name!r}; update _DECIMAL_STRING_BOUNDS to match."
+            )
+        properties = component_schema.get("properties", {})
+        for field_name, bounds in fields.items():
+            field_schema = properties.get(field_name)
+            if field_schema is None:
+                raise RuntimeError(
+                    f"DecimalString bounds registry references unknown field "
+                    f"{schema_name}.{field_name!r}; "
+                    "update _DECIMAL_STRING_BOUNDS to match."
+                )
+            target = _decimal_string_target(field_schema)
+            if target is None:
+                raise RuntimeError(
+                    f"{schema_name}.{field_name!r} is not a DecimalString "
+                    "field; remove it from _DECIMAL_STRING_BOUNDS or stop "
+                    "overriding its JSON schema."
+                )
+            target.update(bounds)
+
+
+def _decimal_string_target(field_schema: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the ``string``/``format=decimal`` branch of a field schema.
+
+    For non-nullable fields the field schema itself is the target. For
+    nullable fields (``anyOf: [{type: string, format: decimal}, {type:
+    null}]``) the non-null branch is the target. Returns ``None`` when the
+    field is not the expected DecimalString shape.
+    """
+    if (
+        field_schema.get("type") == "string"
+        and field_schema.get("format") == "decimal"
+    ):
+        return field_schema
+
+    any_of = field_schema.get("anyOf")
+    if isinstance(any_of, list):
+        for option in any_of:
+            if (
+                isinstance(option, dict)
+                and option.get("type") == "string"
+                and option.get("format") == "decimal"
+            ):
+                return option
+    return None
 
 
 app.openapi = custom_openapi
