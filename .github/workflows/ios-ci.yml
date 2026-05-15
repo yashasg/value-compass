@@ -53,7 +53,12 @@ jobs:
             ${{ runner.os }}-xcode-ios-ci-
             ${{ runner.os }}-xcode-
 
-      - name: Analyze, build, and test (no signing)
+      - name: Build and test (no signing)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
-        run: PLATFORM_MODE=iphone RUN_ANALYZE=true ./app/build.sh
+        # RUN_ANALYZE is intentionally false here. Static analysis is owned by
+        # the dedicated CodeQL workflow (codeql-ios.yml). Re-running
+        # `xcodebuild analyze` in this PR gate adds a redundant 1-2 minute
+        # full compile pass without surfacing findings the CodeQL job does
+        # not already cover. See issue #206.
+        run: PLATFORM_MODE=iphone RUN_ANALYZE=false ./app/build.sh
