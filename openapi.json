@@ -153,11 +153,11 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Request uses an unsupported contract or market-data option.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -262,8 +262,8 @@
               }
             }
           },
-          "503": {
-            "description": "Service, sync, or market data is temporarily unavailable.",
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
             "content": {
               "application/json": {
                 "schema": {
@@ -292,12 +292,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -1713,19 +1713,6 @@
         "title": "ErrorEnvelope",
         "description": "Structured HTTP error body decoded by iOS clients."
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -2161,39 +2148,6 @@
         ],
         "title": "SchemaVersionResponse",
         "description": "API schema-version response body.\n\nThe minimum supported iOS app version is carried exclusively on the\n``X-Min-App-Version`` response header \u2014 declared on every operation by\n:func:`add_standard_headers` and consumed by\n``MinAppVersionClient.observe`` on the iOS side. The body intentionally\ndoes **not** duplicate that value: a dual-source contract (body field +\nresponse header from the same ``config.MIN_APP_VERSION``) has no defined\nprecedence rule, and shipping both invites future consumers to fork on\nwhich channel they trust. See issue #402."
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       }
     }
   }

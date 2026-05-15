@@ -130,6 +130,52 @@ def test_checked_in_openapi_artifacts_match_fastapi() -> None:
         assert path.read_text(encoding="utf-8") == contract
 
 
+def test_no_operation_advertises_fastapi_validation_error(client: TestClient) -> None:
+    """Issue #302: every 422 must be ErrorEnvelope, never HTTPValidationError.
+
+    The global ``validation_error_handler`` returns the public
+    :class:`ErrorEnvelope`, so any operation advertising FastAPI's default
+    ``HTTPValidationError`` body would let generated clients model a payload
+    they will never receive. Specifically guards ``GET /schema/version`` and
+    ``GET /portfolio/status``, which historically inherited the FastAPI
+    default and silently drifted from every other protected route.
+    """
+    schema = client.get("/openapi.json").json()
+
+    legacy_schemas = ("HTTPValidationError", "ValidationError")
+    components = schema.get("components", {}).get("schemas", {})
+    for legacy in legacy_schemas:
+        assert legacy not in components, (
+            f"Legacy validation schema {legacy!r} must be pruned from "
+            "components.schemas; declare 422 responses with ErrorEnvelope."
+        )
+
+    envelope_ref = "#/components/schemas/ErrorEnvelope"
+    for path, operations in schema["paths"].items():
+        for method, operation in operations.items():
+            if not isinstance(operation, dict):
+                continue
+            response_422 = operation.get("responses", {}).get("422")
+            if response_422 is None:
+                continue
+            response_schema = (
+                response_422.get("content", {})
+                .get("application/json", {})
+                .get("schema", {})
+            )
+            assert response_schema.get("$ref") == envelope_ref, (
+                f"{method.upper()} {path}: 422 must reference ErrorEnvelope, "
+                f"got {response_schema!r}"
+            )
+
+    # Concrete regression pins for the two routes that drifted (issue #302).
+    for path in ("/schema/version", "/portfolio/status"):
+        ref = schema["paths"][path]["get"]["responses"]["422"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        assert ref == envelope_ref
+
+
 PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
     ("/schema/version", "get"),
     ("/portfolio/status", "get"),
