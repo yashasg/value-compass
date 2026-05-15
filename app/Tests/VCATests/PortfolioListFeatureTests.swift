@@ -141,9 +141,51 @@ final class PortfolioListFeatureTests: XCTestCase {
     }
   }
 
-  // MARK: - .deleteTapped
+  // MARK: - .deleteTapped + confirmation (#232)
 
-  func testDeleteTappedRemovesPortfolioAndReloads() async throws {
+  func testDeleteTappedStagesPendingDeletionWithoutTouchingTheStore() async throws {
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = container.mainContext
+
+    let deletedID = UUID()
+    let deletedDate = Date(timeIntervalSince1970: 1_000_000)
+    context.insert(
+      Portfolio(
+        id: deletedID, name: "Delete me", monthlyBudget: Decimal(100), maWindow: 50,
+        createdAt: deletedDate))
+    try context.save()
+
+    let snapshot = PortfolioSnapshot(
+      id: deletedID, name: "Delete me", monthlyBudget: Decimal(100), maWindow: 50,
+      createdAt: deletedDate, categoryCount: 0)
+
+    var initialState = PortfolioListFeature.State()
+    initialState.portfolios = [snapshot]
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioListFeature()
+    } withDependencies: {
+      $0.modelContainer.container = { container }
+    }
+
+    await store.send(.deleteTapped(id: deletedID)) {
+      $0.pendingDeletion = snapshot
+    }
+
+    // SwiftData store untouched until the user confirms.
+    let remaining = try context.fetch(FetchDescriptor<Portfolio>())
+    XCTAssertEqual(remaining.count, 1)
+  }
+
+  func testDeleteTappedIsANoOpWhenSnapshotIsNotLoaded() async {
+    let store = TestStore(initialState: PortfolioListFeature.State()) {
+      PortfolioListFeature()
+    }
+
+    await store.send(.deleteTapped(id: UUID()))
+  }
+
+  func testConfirmDeleteRemovesPortfolioAndReloads() async throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = container.mainContext
 
@@ -162,19 +204,91 @@ final class PortfolioListFeatureTests: XCTestCase {
         createdAt: keptDate))
     try context.save()
 
+    let deletedSnap = PortfolioSnapshot(
+      id: deletedID, name: "Delete me", monthlyBudget: Decimal(100), maWindow: 50,
+      createdAt: deletedDate, categoryCount: 0)
     let keptSnap = PortfolioSnapshot(
       id: keptID, name: "Keep me", monthlyBudget: Decimal(200), maWindow: 200,
       createdAt: keptDate, categoryCount: 0)
 
-    let store = TestStore(initialState: PortfolioListFeature.State()) {
+    var initialState = PortfolioListFeature.State()
+    initialState.portfolios = [deletedSnap, keptSnap]
+    initialState.pendingDeletion = deletedSnap
+
+    let store = TestStore(initialState: initialState) {
       PortfolioListFeature()
     } withDependencies: {
       $0.modelContainer.container = { container }
     }
 
-    await store.send(.deleteTapped(id: deletedID))
+    await store.send(.confirmDelete) {
+      $0.pendingDeletion = nil
+    }
     await store.receive(\.portfoliosLoaded) {
       $0.portfolios = [keptSnap]
+    }
+  }
+
+  func testConfirmDeleteWithoutPendingDeletionIsANoOp() async {
+    let store = TestStore(initialState: PortfolioListFeature.State()) {
+      PortfolioListFeature()
+    }
+
+    await store.send(.confirmDelete)
+  }
+
+  func testCancelDeleteClearsPendingDeletionWithoutTouchingTheStore() async throws {
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = container.mainContext
+
+    let portfolioID = UUID()
+    let portfolioDate = Date(timeIntervalSince1970: 1_000_000)
+    context.insert(
+      Portfolio(
+        id: portfolioID, name: "Keep me", monthlyBudget: Decimal(100), maWindow: 50,
+        createdAt: portfolioDate))
+    try context.save()
+
+    let snapshot = PortfolioSnapshot(
+      id: portfolioID, name: "Keep me", monthlyBudget: Decimal(100), maWindow: 50,
+      createdAt: portfolioDate, categoryCount: 0)
+
+    var initialState = PortfolioListFeature.State()
+    initialState.portfolios = [snapshot]
+    initialState.pendingDeletion = snapshot
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioListFeature()
+    } withDependencies: {
+      $0.modelContainer.container = { container }
+    }
+
+    await store.send(.cancelDelete) {
+      $0.pendingDeletion = nil
+    }
+
+    let remaining = try context.fetch(FetchDescriptor<Portfolio>())
+    XCTAssertEqual(remaining.count, 1)
+  }
+
+  func testPortfoliosLoadedClearsStalePendingDeletionWhenSnapshotIsGone() async {
+    let staleID = UUID()
+    let staleDate = Date(timeIntervalSince1970: 1_000_000)
+    let staleSnap = PortfolioSnapshot(
+      id: staleID, name: "Stale", monthlyBudget: Decimal(100), maWindow: 50,
+      createdAt: staleDate, categoryCount: 0)
+
+    var initialState = PortfolioListFeature.State()
+    initialState.portfolios = [staleSnap]
+    initialState.pendingDeletion = staleSnap
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioListFeature()
+    }
+
+    await store.send(.portfoliosLoaded([])) {
+      $0.portfolios = []
+      $0.pendingDeletion = nil
     }
   }
 
