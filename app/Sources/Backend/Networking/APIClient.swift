@@ -4,9 +4,8 @@ import Foundation
 ///
 /// Responsibilities:
 /// - Uses HTTP/2 by default (URLSession negotiates this automatically over TLS).
-/// - Attaches the device UUID and current app version on every request so the
-///   backend can identify the install and decide whether to emit
-///   `X-Min-App-Version`.
+/// - Attaches the device UUID on every request so the backend can identify
+///   the install without requiring an account.
 /// - Attaches the `X-App-Attest` header on every request that targets a
 ///   protected backend route (everything except `/health`) so the
 ///   `require_app_attest` dependency in `backend/api/main.py` does not
@@ -14,9 +13,12 @@ import Foundation
 ///   `AppAttestProvider.currentToken()` — see that type for the MVP
 ///   placeholder vs. real `DCAppAttestService` plan.
 /// - Forwards every response to `MinAppVersionClient.observe(response:)` so
-///   the forced-update screen can be triggered. Phase 2 (#158) replaced the
-///   former `MinAppVersionMonitor.shared` singleton with this client-static
-///   bridge.
+///   the forced-update screen can be triggered. The backend signals the
+///   minimum supported build via the response-only `X-Min-App-Version`
+///   header (declared in `openapi.json`); the client does not transmit its
+///   own build version because the backend does not negotiate on it.
+///   Phase 2 (#158) replaced the former `MinAppVersionMonitor.shared`
+///   singleton with this client-static bridge.
 ///
 /// The generated SwiftOpenAPIGenerator client is configured to use this
 /// session as its underlying transport — see `Sources/Backend/Networking/openapi-generator-config.yaml`
@@ -91,17 +93,18 @@ final class APIClient {
   /// Pulled out of `send(_:)` so reducers and tests can verify exactly which
   /// headers the live transport attaches without spinning up a real
   /// `URLSession`.
+  ///
+  /// Note: the client does not attach `X-App-Version`. Version negotiation
+  /// is server-driven via the response-only `X-Min-App-Version` header
+  /// (`MinAppVersionClient.observe(response:)`); there is no request-side
+  /// app-version channel in the OpenAPI contract. See issue #429.
   static func makeOutgoingRequest(
     from request: URLRequest,
     deviceID: String,
-    appVersion: String?,
     appAttestToken: String?
   ) -> URLRequest {
     var req = request
     req.setValue(deviceID, forHTTPHeaderField: "X-Device-UUID")
-    if let appVersion {
-      req.setValue(appVersion, forHTTPHeaderField: "X-App-Version")
-    }
     if let appAttestToken {
       req.setValue(appAttestToken, forHTTPHeaderField: "X-App-Attest")
     }
@@ -113,13 +116,11 @@ final class APIClient {
   /// to the caller, regardless of HTTP status, so a 4xx with a min-version
   /// header still triggers the forced-update flow.
   func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
     let appAttestToken: String? =
       Self.appAttestRequired(for: request) ? AppAttestProvider.currentToken() : nil
     let req = Self.makeOutgoingRequest(
       from: request,
       deviceID: DeviceIDProvider.deviceID(),
-      appVersion: appVersion,
       appAttestToken: appAttestToken
     )
 
