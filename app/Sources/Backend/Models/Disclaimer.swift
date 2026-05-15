@@ -12,3 +12,23 @@ enum Disclaimer {
     decisions.
     """
 }
+
+/// Single source of truth for outbound legal-document links surfaced in
+/// `SettingsView`'s `Legal` section (issue #224).
+///
+/// Until a hosted Privacy Policy URL is published to App Store Connect's
+/// "App Privacy Policy URL" field, the in-app link points to the canonical
+/// markdown source in this repository so users and App Review reviewers can
+/// inspect the policy text that matches the shipping build. The URL is
+/// expressed as a literal so the compiler-verified `URL(string:)!`
+/// force-unwrap stays static; updating the URL after a public hosting
+/// location exists requires changing only this constant and re-running the
+/// re-validation hook recorded in `loop-strategy.md`.
+enum LegalLinks {
+  /// Canonical privacy-policy location (markdown source-of-truth in the
+  /// public repository). Replace with the hosted-policy URL once the
+  /// publisher confirms the App Store Connect "Privacy Policy URL" field.
+  static let privacyPolicy: URL = URL(
+    string: "https://github.com/yashasg/value-compass/blob/main/docs/legal/privacy-policy.md"
+  )!
+}

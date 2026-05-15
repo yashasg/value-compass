@@ -481,4 +481,27 @@ final class SettingsFeatureTests: XCTestCase {
 
     await store.send(.revalidateStoredKeyTapped)
   }
+
+  // MARK: - Legal links (issue #224)
+
+  /// Pins the canonical in-app Privacy Policy URL. The published policy
+  /// lives under `docs/legal/privacy-policy.md` until the publisher hosts a
+  /// production policy page; rotating this URL requires updating the
+  /// matching reference in `docs/legal/privacy-policy.md` §10 and the
+  /// re-validation hook in `loop-strategy.md`.
+  func testPrivacyPolicyLinkPointsAtCanonicalSourceOfTruth() {
+    XCTAssertEqual(
+      LegalLinks.privacyPolicy,
+      URL(
+        string: "https://github.com/yashasg/value-compass/blob/main/docs/legal/privacy-policy.md"
+      )
+    )
+  }
+
+  /// The in-app legal link must resolve to an `https` scheme so iOS
+  /// happily hands it to Safari (no App Transport Security warning) and so
+  /// no in-process credential exchange can hide behind a custom scheme.
+  func testPrivacyPolicyLinkUsesHTTPS() {
+    XCTAssertEqual(LegalLinks.privacyPolicy.scheme, "https")
+  }
 }
