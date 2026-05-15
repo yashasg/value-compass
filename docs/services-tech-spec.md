@@ -46,26 +46,45 @@ validation after the call, and persistence of accepted results. The algorithm
 implementation behind the seam is not specified here.
 
 ```swift
-protocol ContributionCalculating {
-    func calculate(for portfolio: Portfolio) throws -> [TickerAllocation]
+protocol ContributionCalculating: Sendable {
+    func calculate(input: ContributionInput) -> ContributionOutput
 }
 ```
 
 Expected contract:
 
-- Input is a fully populated local `Portfolio` including categories, tickers,
-  monthly budget, MA window, current prices, and moving-average values.
-- Return value is one allocation per investable ticker, expressed as currency
-  amounts rounded or roundable to cents by the app layer.
-- Returned allocations must be non-negative and must sum to the portfolio monthly
-  budget within the app's cent-level tolerance.
-- Throws are used for contract failures, not for ordinary UI validation that can
-  be caught before the call.
+- Input is a fully populated local `Portfolio` projected onto a
+  `ContributionInput` value (categories, tickers, monthly budget, MA window,
+  current prices, moving-average values, and a `MarketDataSnapshot` of
+  per-symbol quotes).
+- `ContributionInputValidator.validate(_:)` runs first under
+  `ContributionCalculationService.calculate(...)`; conformers reached through
+  the orchestrator can rely on a non-nil portfolio, `monthlyBudget > 0`, a
+  non-empty category set with weights summing to `1`, non-empty ticker sets,
+  and non-nil/positive `currentPrice` and `movingAverage` for every ticker.
+- `MarketDataQuote.bandPosition` is **not** validator-checked. Any band-style
+  conformer that depends on it must guard locally and return
+  `.failure(.missingBandPosition(symbol))`.
+- Return value is a `ContributionOutput` whose `totalAmount` matches
+  `input.monthlyBudget` and whose `allocations` sum to that total (within a
+  0.01 cent tolerance enforced by `ContributionOutputValidator`).
+- Returned allocations must be non-negative.
+- The protocol is intentionally non-throwing. Failures travel through
+  `ContributionOutput.error: LocalizedError?` (use
+  `ContributionOutput.failure(_:)`); callers downcast via
+  `as? ContributionCalculationError`.
+- Post-validator invariants **must not** be enforced with `preconditionFailure`,
+  `fatalError`, or force-unwraps. Return `.failure(...)` so that conformers
+  remain safe to call directly outside the orchestrator (tests, future call
+  sites, user-swappable algorithms).
 
-V1 ships with a placeholder/manual-friendly implementation only so the app flow
-can be tested end-to-end. The placeholder may allocate by category weight and
-equal ticker split, but it must not claim to implement the real VCA/moving-average
-algorithm.
+V1 ships with three built-in conformers (`MovingAverageContributionCalculator`
+— the live default; `BandAdjustedContributionCalculator`;
+`ProportionalSplitContributionCalculator`). Authoring a user-swappable
+calculator is a supported v1 surface — see the doc-comment on the
+`ContributionCalculating` protocol in
+`app/Sources/Backend/Services/ContributionCalculator.swift` for the
+authoritative pre-/post-condition list.
 
 Current placeholder/local policy: the band-adjusted implementation computes
 each ticker's raw multiplier as `1 + (0.5 - bandPosition)`. Because normalized
@@ -237,19 +256,33 @@ Swift networking surface.
 
 ### 8.1 Calculation errors
 
-Calculation-facing errors should be narrow and user-actionable:
+Calculation-facing errors are exposed on `ContributionOutput.error` as values
+of the `ContributionCalculationError` enum. Conformers must not `throw`; they
+must build a failed output via `ContributionOutput.failure(_:)`.
 
 | Error | Meaning | User handling |
 |---|---|---|
-| `missingMarketData(ticker)` | Price or moving average is absent for a ticker. | Show the ticker and prompt for manual entry. |
-| `invalidWeights` | Category weights do not sum to 100%. | Keep calculation disabled and focus the editor. |
-| `zeroBudget` | Monthly budget is missing or non-positive. | Show inline budget validation. |
-| `emptyTickerSet` | No investable tickers are available. | Prompt user to add at least one ticker. |
-| `invalidOutput` | Implementation returned negative, duplicate, or non-summing allocations. | Block save and show a generic calculation-contract error. |
+| `missingPortfolio` | `ContributionInput.portfolio` is `nil`. | Block calculation; UI must hold a selected portfolio before invoking. |
+| `invalidBudget` | `ContributionInput.monthlyBudget` is `≤ 0`. | Inline budget validation in the portfolio editor. |
+| `noCategories` | The portfolio has no categories. | Prompt user to add at least one category. |
+| `categoryWeightsDoNotSumTo100` | Category weights do not sum to exactly `1`. | Keep calculation disabled and focus the editor. |
+| `categoryHasNoTickers(name)` | A category has zero tickers. | Surface the category name and prompt for tickers. |
+| `missingMarketData(symbol)` | Either `currentPrice` or `movingAverage` is `nil` for the ticker. | Show the ticker symbol and prompt for manual entry. |
+| `missingBandPosition(symbol)` | A band-style conformer received a `nil` `bandPosition`. | Prompt for manual band-position entry; only emitted by `BandAdjustedContributionCalculator` (not validator-checked). |
+| `invalidMarketData(symbol)` | Either `currentPrice` or `movingAverage` is `≤ 0`. | Prompt for corrected manual entry. |
+| `negativeAllocation(symbol)` | Conformer produced a negative `amount` for the ticker. | Block save and surface a generic calculation-contract error. |
+| `allocationTotalMismatch(expected, actual)` | Allocations do not sum to `ContributionOutput.totalAmount` (0.01 tolerance). | Block save and surface a generic calculation-contract error. |
+| `outputTotalMismatch(expected, actual)` | `ContributionOutput.totalAmount` does not equal `input.monthlyBudget` (0.01 tolerance). | Block save and surface a generic calculation-contract error. |
 
-The app should catch predictable input states before invoking
-`ContributionCalculating`. Throws remain a defensive contract for implementations
-and future integrations.
+`ContributionInputValidator.validate(_:)` runs before every conformer reached
+through `ContributionCalculationService.calculate(...)` and short-circuits
+with the first matching error from `missingPortfolio`, `invalidBudget`,
+`noCategories`, `categoryWeightsDoNotSumTo100`, `categoryHasNoTickers`,
+`missingMarketData`, or `invalidMarketData`. `ContributionOutputValidator.validate(_:expectedTotal:)`
+runs after every conformer and is the sole source of `negativeAllocation`,
+`allocationTotalMismatch`, and `outputTotalMismatch`. `missingBandPosition`
+is emitted only by `BandAdjustedContributionCalculator` (the validator does
+not assert `bandPosition`).
 
 ### 8.2 Market-data errors
 

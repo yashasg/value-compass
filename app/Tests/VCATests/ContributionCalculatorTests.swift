@@ -300,6 +300,51 @@ final class ContributionCalculatorTests: XCTestCase {
     )
   }
 
+  func testMovingAverageCalculatorReturnsFailureOnValidatorGuaranteedInvariants() {
+    XCTAssertEqual(
+      MovingAverageContributionCalculator().calculate(
+        input: ContributionInput(portfolio: nil)
+      ).error as? ContributionCalculationError,
+      .missingPortfolio
+    )
+
+    let missingMarketData = Portfolio(
+      name: "Missing Data",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "VTI", currentPrice: nil, movingAverage: 1, sortOrder: 0)
+          ])
+      ]
+    )
+    XCTAssertEqual(
+      MovingAverageContributionCalculator().calculate(
+        input: ContributionInput(portfolio: missingMarketData)
+      ).error as? ContributionCalculationError,
+      .missingMarketData("VTI")
+    )
+
+    let missingMovingAverage = Portfolio(
+      name: "Missing MA",
+      monthlyBudget: Decimal(100),
+      categories: [
+        Category(
+          name: "Equity", weight: 1, sortOrder: 0,
+          tickers: [
+            Ticker(symbol: "VTI", currentPrice: 1, movingAverage: nil, sortOrder: 0)
+          ])
+      ]
+    )
+    XCTAssertEqual(
+      MovingAverageContributionCalculator().calculate(
+        input: ContributionInput(portfolio: missingMovingAverage)
+      ).error as? ContributionCalculationError,
+      .missingMarketData("VTI")
+    )
+  }
+
   func testServiceRejectsInvalidOutputContract() {
     let portfolio = makeValidPortfolio(monthlyBudget: Decimal(100))
     let negativeOutput = ContributionOutput(
