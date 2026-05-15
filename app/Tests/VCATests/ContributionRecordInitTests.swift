@@ -80,4 +80,64 @@ final class ContributionRecordInitTests: XCTestCase {
     XCTAssertEqual(record.tickerAllocations.count, 1)
     XCTAssertEqual(record.tickerAllocations.first?.tickerSymbol, "VTI")
   }
+
+  // MARK: - portfolioId ↔ portfolio invariant (#250)
+
+  func testInitWithPortfolioRequiresMatchingPortfolioId() {
+    let portfolio = Portfolio(name: "Income", monthlyBudget: Decimal(500), maWindow: 50)
+
+    let record = ContributionRecord(
+      portfolioId: portfolio.id,
+      totalAmount: Decimal(500),
+      portfolio: portfolio
+    )
+
+    XCTAssertEqual(record.portfolioId, portfolio.id)
+    XCTAssertEqual(record.portfolio?.id, portfolio.id)
+    XCTAssertEqual(
+      record.portfolioId, record.portfolio?.id,
+      "portfolioId must remain a denormalization of portfolio.id (issue #250).")
+  }
+
+  func testInitWithoutPortfolioAcceptsAnyPortfolioId() {
+    let portfolioID = UUID()
+
+    let record = ContributionRecord(
+      portfolioId: portfolioID,
+      totalAmount: Decimal(120),
+      portfolio: nil
+    )
+
+    XCTAssertEqual(record.portfolioId, portfolioID)
+    XCTAssertNil(
+      record.portfolio,
+      "Sync/migration fixtures may carry the parent UUID without a hydrated relationship.")
+  }
+
+  func testSnapshotInitDerivesPortfolioIdFromRelationship() throws {
+    let portfolio = Portfolio(name: "Core", monthlyBudget: Decimal(800), maWindow: 200)
+    let output = ContributionOutput(
+      totalAmount: Decimal(800),
+      categoryBreakdown: [
+        CategoryContributionResult(
+          categoryName: "Equities",
+          amount: Decimal(800),
+          allocatedWeight: Decimal(string: "1.0")!)
+      ],
+      allocations: [
+        TickerContributionAllocation(
+          tickerSymbol: "VTI",
+          categoryName: "Equities",
+          amount: Decimal(800),
+          allocatedWeight: Decimal(string: "1.0")!)
+      ]
+    )
+
+    let record = try ContributionRecord(snapshotFor: portfolio, output: output)
+
+    XCTAssertEqual(
+      record.portfolioId, portfolio.id,
+      "snapshotFor: must always wire portfolioId to portfolio.id (issue #250).")
+    XCTAssertEqual(record.portfolio?.id, portfolio.id)
+  }
 }

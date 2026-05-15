@@ -2,6 +2,40 @@
 
 ## Active Decisions
 
+### 2026-05-15T06:30-07:00: ContributionRecord.portfolioId ↔ portfolio invariant — Option C-precondition
+**By:** Squad loop (backend stream) | **Status:** Adopted | **Issue:** #250 | **PR:** TBD
+
+`ContributionRecord` keeps both the denormalized `portfolioId: UUID` scalar **and**
+the SwiftData `portfolio: Portfolio?` relationship. Of the three options Nagel
+listed in #250, the squad adopts **Option C-precondition** for v1:
+
+- Keep both fields — no schema bump. The denormalized scalar still exists
+  because the future CloudKit/sync wire format and background `ModelActor`
+  reads need a UUID even when the relationship faults out.
+- The relationship is the **authoritative** source. The scalar is documented
+  as a derived denormalization of `portfolio.id`.
+- The designated init enforces `portfolio?.id == portfolioId` via a Swift
+  `precondition` so the only way to construct a `ContributionRecord` whose
+  scalar and relationship disagree is to pass `portfolio: nil` — the
+  intentional sync/migration shape used by tests and any future decode path.
+- The production write path (`init(snapshotFor:output:date:)`) already
+  derives `portfolioId` from `portfolio.id`, so the invariant holds at every
+  insert site we ship today.
+
+**Why not Option A (drop the scalar):** preferred long-term but requires a
+`LocalSchemaV3` migration with a custom stage and the sync wire format is not
+locked yet. We do not pay a schema bump cost for a refactor that the sync
+work will revisit when it picks a wire format.
+
+**Why not Option B (drop the relationship):** loses
+`@Relationship(deleteRule: .cascade)`, would require a
+`PortfolioCascadeDeleter`-style manual sweep, and breaks every reducer that
+fetches `portfolio.contributionRecords` today.
+
+**Follow-up:** when sync work begins post-MVP, revisit and migrate to Option A.
+
+---
+
 ### 2026-05-14: Folder Rename — `frontend/` → `app/`
 **By:** Squad loop | **Status:** Adopted | **Issue:** #138
 

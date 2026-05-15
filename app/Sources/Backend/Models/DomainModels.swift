@@ -174,9 +174,33 @@ final class Ticker {
   }
 }
 
+/// Append-only contribution snapshot for a single calculation result.
+///
+/// **Invariant: `portfolioId == portfolio?.id` whenever `portfolio` is non-nil.**
+/// `portfolioId` is the persisted denormalization of the parent's primary
+/// key — it is what the future CloudKit/sync wire format keys off, and it is
+/// what survives when the `portfolio` relationship faults out on a background
+/// `ModelActor`. The SwiftData `portfolio` relationship is the live, cascade-
+/// authoritative reference. When both are supplied at construction time they
+/// must agree; this is enforced by a `precondition` in the designated init so
+/// the mismatch surfaces at insert time instead of corrupting reads against a
+/// hydrated-then-faulted relationship later (issue #250). Sync/migration
+/// fixtures that only know the parent UUID may still pass `portfolio: nil`;
+/// the production path through `init(snapshotFor:output:date:)` always wires
+/// both with the relationship's identity as the source of truth.
+///
+/// Cascade contract: `Portfolio.contributionRecords` declares
+/// `@Relationship(deleteRule: .cascade, inverse: \ContributionRecord.portfolio)`.
+/// SwiftData cascades on the relationship, not on `portfolioId`. Because the
+/// invariant pins the scalar to the relationship's id, a deleted parent's
+/// rows cannot become orphans whose `portfolioId` references a row that no
+/// longer exists in the store.
 @Model
 final class ContributionRecord {
   @Attribute(.unique) var id: UUID
+  /// Persisted denormalization of `portfolio?.id`. See the type-level
+  /// invariant — this scalar must equal `portfolio.id` whenever `portfolio`
+  /// is non-nil at construction time.
   var portfolioId: UUID
   var date: Date
   var totalAmount: Decimal
@@ -193,6 +217,16 @@ final class ContributionRecord {
   /// preserved as a deprecated convenience overload below; it forwards into
   /// `tickerAllocations:` and exists solely so in-flight call sites compile
   /// while they migrate. New call sites must use `tickerAllocations:`.
+  ///
+  /// - Precondition: when `portfolio` is non-nil, `portfolioId` must equal
+  ///   `portfolio.id`. Mismatched arguments are a programmer error (the
+  ///   denormalized scalar is meant to be derived from the relationship, not
+  ///   to disagree with it) and are caught here so the inconsistency cannot
+  ///   reach `ModelContext.insert(_:)` and silently corrupt cascade-delete
+  ///   semantics. Sync/migration fixtures that have only the parent UUID
+  ///   should pass `portfolio: nil` — they are free to set the relationship
+  ///   later via `portfolio.contributionRecords.append(record)` once the
+  ///   `Portfolio` is hydrated.
   init(
     id: UUID = UUID(),
     portfolioId: UUID,
@@ -202,6 +236,18 @@ final class ContributionRecord {
     categoryBreakdown: [CategoryContribution] = [],
     tickerAllocations: [TickerAllocation] = []
   ) {
+    if let portfolio {
+      precondition(
+        portfolio.id == portfolioId,
+        """
+        ContributionRecord invariant violated: portfolioId (\(portfolioId)) \
+        must equal portfolio.id (\(portfolio.id)) when both are supplied. \
+        portfolioId is the persisted denormalization of the relationship's \
+        primary key (issue #250) — derive it from `portfolio.id` instead of \
+        passing it independently.
+        """
+      )
+    }
     self.id = id
     self.portfolioId = portfolioId
     self.date = date
