@@ -11,6 +11,7 @@
 		A0000000000000000000B002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F002 /* AppDelegate.swift */; };
 		A0000000000000000000B0A0 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A0 /* AppPreferences.swift */; };
 		A0000000000000000000B005 /* LocalPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F005 /* LocalPersistence.swift */; };
+		A0000000000000000000B008 /* LocalSchemaVersions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F008 /* LocalSchemaVersions.swift */; };
 		A0000000000000000000B006 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F006 /* AppBrand.swift */; };
 		A0000000000000000000B007 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F007 /* DesignSystem.swift */; };
 		A0000000000000000000B010 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F010 /* RootView.swift */; };
@@ -104,6 +105,7 @@
 		C0000000000000000000B016 /* MassiveAPIKeyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */; };
 		C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */; };
 		C0000000000000000000B018 /* MVPModelsPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */; };
+		C0000000000000000000B019 /* LocalSchemaMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */; };
 		C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -126,6 +128,7 @@
 		A0000000000000000000F002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0A0 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
+		A0000000000000000000F008 /* LocalSchemaVersions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSchemaVersions.swift; sourceTree = "<group>"; };
 		A0000000000000000000F006 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
 		A0000000000000000000F007 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		A0000000000000000000F010 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -207,6 +210,7 @@
 		C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyStoreTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidatorTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MVPModelsPersistenceTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSchemaMigrationTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -300,6 +304,7 @@
 				A0000000000000000000F002 /* AppDelegate.swift */,
 				A0000000000000000000F0A0 /* AppPreferences.swift */,
 				A0000000000000000000F005 /* LocalPersistence.swift */,
+				A0000000000000000000F008 /* LocalSchemaVersions.swift */,
 				A0000000000000000000F006 /* AppBrand.swift */,
 				A0000000000000000000F007 /* DesignSystem.swift */,
 				A0000000000000000000A080 /* Dependencies */,
@@ -459,6 +464,7 @@
 				C0000000000000000000F016 /* MassiveAPIKeyStoreTests.swift */,
 				C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */,
 				C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */,
+				C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */,
 				C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */,
 			);
 			path = VCATests;
@@ -594,6 +600,7 @@
 				A0000000000000000000B002 /* AppDelegate.swift in Sources */,
 				A0000000000000000000B0A0 /* AppPreferences.swift in Sources */,
 				A0000000000000000000B005 /* LocalPersistence.swift in Sources */,
+				A0000000000000000000B008 /* LocalSchemaVersions.swift in Sources */,
 				A0000000000000000000B006 /* AppBrand.swift in Sources */,
 				A0000000000000000000B007 /* DesignSystem.swift in Sources */,
 				A0000000000000000000B010 /* RootView.swift in Sources */,
@@ -678,6 +685,7 @@
 				C0000000000000000000B016 /* MassiveAPIKeyStoreTests.swift in Sources */,
 				C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */,
 				C0000000000000000000B018 /* MVPModelsPersistenceTests.swift in Sources */,
+				C0000000000000000000B019 /* LocalSchemaMigrationTests.swift in Sources */,
 				C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -36,6 +36,13 @@ struct SettingsFeature {
     /// key is stored. Reducer state never holds the raw key — the masked
     /// string is the only thing crossing the View boundary.
     var apiKeyMaskedDisplay: String?
+    /// VoiceOver-friendly label for the masked-display row (e.g.
+    /// "Saved API key ending in W X Y Z"). Computed alongside
+    /// `apiKeyMaskedDisplay` so the View layer can attach a single
+    /// `.accessibilityLabel` to the masked-key row instead of letting
+    /// VoiceOver read the literal `•` bullets verbatim. `nil` whenever
+    /// `apiKeyMaskedDisplay` is `nil`.
+    var apiKeyMaskedAccessibilityLabel: String?
     /// User input from the API key text field. Cleared after a successful
     /// save so we never round-trip the raw key through `@ObservableState`
     /// for longer than the form keeps it.
@@ -93,14 +100,18 @@ struct SettingsFeature {
           if let storedKey = try massiveAPIKey.load() {
             state.apiKeyStatus = .storedAndValid
             state.apiKeyMaskedDisplay = MassiveAPIKeyMask.mask(storedKey)
+            state.apiKeyMaskedAccessibilityLabel =
+              MassiveAPIKeyMask.accessibilityLabel(for: storedKey)
           } else {
             state.apiKeyStatus = .noStoredKey
             state.apiKeyMaskedDisplay = nil
+            state.apiKeyMaskedAccessibilityLabel = nil
           }
           state.apiKeyLoadError = nil
         } catch {
           state.apiKeyStatus = .noStoredKey
           state.apiKeyMaskedDisplay = nil
+          state.apiKeyMaskedAccessibilityLabel = nil
           state.apiKeyLoadError = String(describing: error)
         }
         return .none
@@ -135,6 +146,8 @@ struct SettingsFeature {
             try massiveAPIKey.save(persistedKey)
             state.apiKeyStatus = .storedAndValid
             state.apiKeyMaskedDisplay = MassiveAPIKeyMask.mask(persistedKey)
+            state.apiKeyMaskedAccessibilityLabel =
+              MassiveAPIKeyMask.accessibilityLabel(for: persistedKey)
             state.apiKeyDraft = ""
             state.apiKeyRequestStatus = .savedSuccessfully
             state.apiKeyLoadError = nil
@@ -156,6 +169,7 @@ struct SettingsFeature {
           try massiveAPIKey.delete()
           state.apiKeyStatus = .noStoredKey
           state.apiKeyMaskedDisplay = nil
+          state.apiKeyMaskedAccessibilityLabel = nil
           state.apiKeyDraft = ""
           state.apiKeyRequestStatus = .idle
           state.apiKeyLoadError = nil
@@ -184,6 +198,7 @@ struct SettingsFeature {
         guard let key = storedKey else {
           state.apiKeyStatus = .noStoredKey
           state.apiKeyMaskedDisplay = nil
+          state.apiKeyMaskedAccessibilityLabel = nil
           return .none
         }
         state.apiKeyRequestStatus = .validating
