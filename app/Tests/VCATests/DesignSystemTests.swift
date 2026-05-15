@@ -61,6 +61,38 @@ final class DesignSystemTests: XCTestCase {
     }
   }
 
+  // #236 regression guard: `appNegative` / `appWarning` are rendered as
+  // foreground text on both `AppSurface` (#FFFFFF in light) and
+  // `AppSurfaceElevated` (#E2E8F0 in light) — the latter is what shipped
+  // failing WCAG AA in PR #281 / pre-fix builds (4.07:1 against elevated).
+  // Pin both tokens at >=4.5:1 against both surfaces in both appearances
+  // so any future token drift trips a deterministic test rather than
+  // silently regressing the warning-on-elevated-card defect.
+  func testWarningAndNegativeTokensMeetWCAGAAOnAllSurfacesInLightAndDarkMode() {
+    let warningOrNegativeTokens: [AppColorToken] = [.negative, .warning]
+    let surfaceTokens: [AppColorToken] = [.surface, .surfaceElevated]
+
+    for token in warningOrNegativeTokens {
+      for surface in surfaceTokens {
+        let lightText = resolvedRGB(token, style: .light)
+        let lightSurface = resolvedRGB(surface, style: .light)
+        let darkText = resolvedRGB(token, style: .dark)
+        let darkSurface = resolvedRGB(surface, style: .dark)
+
+        XCTAssertGreaterThanOrEqual(
+          lightText.contrastRatio(against: lightSurface),
+          4.5,
+          "\(token.assetName) must meet small-text contrast against \(surface.assetName) in light mode (#236)"
+        )
+        XCTAssertGreaterThanOrEqual(
+          darkText.contrastRatio(against: darkSurface),
+          4.5,
+          "\(token.assetName) must meet small-text contrast against \(surface.assetName) in dark mode (#236)"
+        )
+      }
+    }
+  }
+
   func testInputTokensHaveReadableTextAndDisabledContrast() {
     XCTAssertGreaterThanOrEqual(
       resolvedRGB(.contentPrimary, style: .light).contrastRatio(
