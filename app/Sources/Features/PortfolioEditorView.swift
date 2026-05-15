@@ -110,6 +110,19 @@ struct PortfolioEditorView: View {
       // intentional dismiss path and runs through the same confirmation
       // dialog when dirty (#325).
       .interactiveDismissDisabled(store.hasUnsavedChanges)
+      // WCAG 2.2 SC 2.1.1 — Provide a keyboard- and AT-reachable dismiss
+      // path. `interactiveDismissDisabled` above absorbs the VoiceOver
+      // two-finger Z-scrub (also the Full Keyboard Access Escape key and
+      // the Switch Control "Escape" menu item) whenever the draft is
+      // dirty, stranding AT users on the sheet with no auditory cue.
+      // Routing through `.cancelTapped` keeps the dirty-vs-clean branch
+      // from #325: clean drafts fall through to `.delegate(.canceled)` +
+      // `await dismiss()` (reducer-driven); dirty drafts flip
+      // `pendingCancellation = true` and the discard `.confirmationDialog`
+      // (above) takes over (#421).
+      .accessibilityAction(.escape) {
+        store.send(.cancelTapped)
+      }
       // WCAG 2.2 SC 4.1.3 — Status Messages. The inline `Text` above is
       // inserted silently when `validationError` transitions to non-nil,
       // so VoiceOver users tapping Save have no auditory cue that the

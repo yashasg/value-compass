@@ -580,6 +580,24 @@ struct HoldingsEditorView: View {
         // `PortfolioDetailFeature` (#229), so this finally engages the
         // interactive-dismissal gate that was pre-wired in #325.
         .interactiveDismissDisabled(store.hasUnsavedChanges)
+        // WCAG 2.2 SC 2.1.1 — Provide a keyboard- and AT-reachable dismiss
+        // path. `interactiveDismissDisabled` above absorbs the VoiceOver
+        // two-finger Z-scrub (also the Full Keyboard Access Escape key and
+        // the Switch Control "Escape" menu item) whenever the draft is
+        // dirty, stranding AT users on the sheet with no auditory cue.
+        // Routing through `.cancelTapped` keeps the dirty-vs-clean branch
+        // from #325: clean drafts fall through to `.delegate(.canceled)` +
+        // `dismiss()`; dirty drafts flip `pendingCancellation = true` and
+        // the discard `.confirmationDialog` (above) takes over, exactly as
+        // the toolbar Cancel button does (#421).
+        .accessibilityAction(.escape) {
+          Task {
+            await store.send(.cancelTapped).finish()
+            if !store.pendingCancellation {
+              dismiss()
+            }
+          }
+        }
         // WCAG 2.2 SC 4.1.3 — Status Messages. `validationSection` is
         // inserted silently when `store.issues` flips from empty to
         // non-empty as the user types; VoiceOver focus stays on the
