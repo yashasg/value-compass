@@ -55,29 +55,43 @@ final class SettingsAccessibilityTests: XCTestCase {
       forAccountErasure: .erased
     )
 
+    // Byte-for-byte match against the two visible `Text` nodes in
+    // `SettingsView.accountErasureStatusRow` (`.erased` case), joined
+    // with a single ASCII space. The trailing ellipsis is U+2026 to
+    // match the visible copy verbatim. If either visible string is
+    // edited without this composer being updated, this assertion trips
+    // and re-pins spoken-text == visible-text on the legally-
+    // significant GDPR Art. 17 / CCPA §1798.105 terminal state.
     XCTAssertEqual(
       announcement,
-      "Your data has been erased. Please force-quit Investrum from the App "
-        + "Switcher and reopen it to complete the reset."
+      "Your data has been erased. Returning to the welcome screen\u{2026}"
     )
   }
 
-  func testTransitionAnnouncementForErasedNamesTheRelaunchInstruction() {
-    // The legally-significant terminal state. The user must hear the
-    // force-quit instruction so they know to relaunch (and so they do
-    // not retry the disabled button); pin the substring coupling.
+  func testTransitionAnnouncementForErasedAnnouncesAutomaticReturn() {
+    // The legally-significant terminal state. Post-#471 / PR #475 the
+    // user is auto-routed back to onboarding in-process (HIG →
+    // Launching → Quitting forbids quit/relaunch instructions), so the
+    // spoken announcement must name the welcome screen return — never
+    // the previous "force-quit … App Switcher" copy that violates HIG
+    // and contradicts the in-process route swap firing underneath the
+    // announcement.
     let announcement = SettingsAccessibility.transitionAnnouncement(
       forAccountErasure: .erased
     )
 
     XCTAssertNotNil(announcement)
     XCTAssertTrue(
-      announcement?.contains("force-quit") ?? false,
-      "Erased-state announcement should instruct the user to force-quit Investrum."
+      announcement?.contains("welcome screen") ?? false,
+      "Erased-state announcement should name the welcome-screen return so AT users hear what's happening on-screen."
     )
-    XCTAssertTrue(
-      announcement?.contains("App Switcher") ?? false,
-      "Erased-state announcement should reference the App Switcher so the relaunch step is unambiguous."
+    XCTAssertFalse(
+      announcement?.contains("force-quit") ?? true,
+      "Erased-state announcement must not instruct the user to force-quit — HIG → Launching → Quitting forbids this; PR #475 removed it from the visible copy."
+    )
+    XCTAssertFalse(
+      announcement?.contains("App Switcher") ?? true,
+      "Erased-state announcement must not reference the App Switcher — the in-process route swap (PR #475) makes the instruction factually wrong."
     )
   }
 
