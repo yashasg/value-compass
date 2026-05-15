@@ -48,27 +48,59 @@ final class APIClientTests: XCTestCase {
     let outgoing = APIClient.makeOutgoingRequest(
       from: base,
       deviceID: "device-1",
-      appVersion: "1.2.3",
       appAttestToken: "token-abc"
     )
 
     XCTAssertEqual(outgoing.value(forHTTPHeaderField: "X-Device-UUID"), "device-1")
-    XCTAssertEqual(outgoing.value(forHTTPHeaderField: "X-App-Version"), "1.2.3")
     XCTAssertEqual(outgoing.value(forHTTPHeaderField: "X-App-Attest"), "token-abc")
   }
 
-  func testMakeOutgoingRequestOmitsAppAttestAndAppVersionWhenNil() {
+  func testMakeOutgoingRequestOmitsAppAttestWhenNil() {
     let base = URLRequest(url: URL(string: "https://api.valuecompass.app/health")!)
     let outgoing = APIClient.makeOutgoingRequest(
       from: base,
       deviceID: "device-1",
-      appVersion: nil,
       appAttestToken: nil
     )
 
     XCTAssertEqual(outgoing.value(forHTTPHeaderField: "X-Device-UUID"), "device-1")
-    XCTAssertNil(outgoing.value(forHTTPHeaderField: "X-App-Version"))
     XCTAssertNil(outgoing.value(forHTTPHeaderField: "X-App-Attest"))
+  }
+
+  // Regression for #429: client must not transmit `X-App-Version` because the
+  // OpenAPI contract declares only the response-only `X-Min-App-Version`
+  // channel and the backend never reads a request app-version header.
+  func testMakeOutgoingRequestNeverAttachesXAppVersion() {
+    let base = URLRequest(url: URL(string: "https://api.valuecompass.app/schema/version")!)
+    let outgoing = APIClient.makeOutgoingRequest(
+      from: base,
+      deviceID: "device-1",
+      appAttestToken: "token-abc"
+    )
+
+    XCTAssertNil(outgoing.value(forHTTPHeaderField: "X-App-Version"))
+  }
+
+  func testSendDoesNotAttachXAppVersionThroughLiveTransport() async throws {
+    HeaderCapturingURLProtocol.reset()
+    HeaderCapturingURLProtocol.stubbedStatusCode = 200
+
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [HeaderCapturingURLProtocol.self]
+    let session = URLSession(configuration: config)
+
+    let client = APIClient(
+      baseURL: URL(string: "https://api.valuecompass.app")!,
+      session: session
+    )
+    let request = URLRequest(
+      url: URL(string: "https://api.valuecompass.app/schema/version")!
+    )
+
+    _ = try await client.send(request)
+
+    let captured = try XCTUnwrap(HeaderCapturingURLProtocol.lastRequest)
+    XCTAssertNil(captured.value(forHTTPHeaderField: "X-App-Version"))
   }
 
   func testAppAttestProviderUsesInfoDictionaryValueWhenPresent() {

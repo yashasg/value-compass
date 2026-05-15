@@ -104,7 +104,6 @@ decision behind issue #271), each backend request includes:
 | Header | What it is | Purpose | Legal basis |
 |---|---|---|---|
 | `X-Device-UUID` | A per-install UUIDv4 generated on first launch and persisted in your device's Keychain. | Identifies your install on the backend without requiring an account. | GDPR Art. 6(1)(b) — performance of the user-requested sync feature; CCPA "service-provider" relationship per §1798.140(j)–(v). |
-| `X-App-Version` | The Investrum build version (e.g. `1.0.3 (42)`). | Lets the backend serve the right schema and gate forced-update responses. | GDPR Art. 6(1)(f) — legitimate interest in API compatibility; no personal data. |
 
 The body of those requests carries the portfolio, holdings, and
 contribution-history rows linked to that `X-Device-UUID`. See §7 for
@@ -144,7 +143,7 @@ declaration in [`docs/legal/privacy-manifest.md`](privacy-manifest.md)):
 | Endpoint | When | What we send | What we receive | Reference |
 |---|---|---|---|---|
 | `https://api.massive.com/v1/account` | When you save or re-validate a Massive API key in Settings. | Your Massive API key in the `Authorization` header. | HTTP status only (the body is parsed for validity but not surfaced). | `MassiveAPIKeyValidator.swift` |
-| Investrum backend (host pinned at build time, see [`docs/services-tech-spec.md`](../services-tech-spec.md)) | When sync features are explicitly enabled by a future build. Not active in v1. | `X-Device-UUID`, `X-App-Version`, request body with portfolios / holdings / contributions you have saved. | The persisted snapshot for your `X-Device-UUID`. | `APIClient.swift` |
+| Investrum backend (host pinned at build time, see [`docs/services-tech-spec.md`](../services-tech-spec.md)) | When sync features are explicitly enabled by a future build. Not active in v1. | `X-Device-UUID`, request body with portfolios / holdings / contributions you have saved. | The persisted snapshot for your `X-Device-UUID`. | `APIClient.swift` |
 | `https://apps.apple.com/search?term=Investrum` | If a forced-update prompt fires after a `min_app_version` signal. | Standard App Store search query. Opens in Safari / App Store. | App Store result page. | `ForcedUpdateFeature.swift` |
 
 No other network endpoints are contacted by Investrum.
@@ -369,7 +368,7 @@ The following code surfaces must be re-checked any time a change to this
 policy ships, and vice-versa:
 
 - [`app/Sources/Backend/Networking/APIClient.swift`](../../app/Sources/Backend/Networking/APIClient.swift)
-  (`X-Device-UUID` / `X-App-Version` headers)
+  (`X-Device-UUID` header)
 - [`app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift`](../../app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift)
   (Massive endpoint and request shape)
 - [`app/Sources/Backend/Networking/DeviceIDProvider.swift`](../../app/Sources/Backend/Networking/DeviceIDProvider.swift)
