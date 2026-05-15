@@ -107,8 +107,10 @@ struct SettingsView: View {
             .valueCompassTextStyle(.bodySmall)
             .foregroundStyle(Color.appContentSecondary)
           Text(store.apiKeyMaskedDisplay ?? "")
-            .accessibilityIdentifier("settings.apiKey.maskedDisplay")
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(store.apiKeyMaskedAccessibilityLabel ?? "Saved API key")
+        .accessibilityIdentifier("settings.apiKey.maskedDisplay")
         Spacer()
         Button("Re-validate") {
           store.send(.revalidateStoredKeyTapped)
@@ -132,6 +134,7 @@ struct SettingsView: View {
           .accessibilityIdentifier("settings.apiKey.status.failed")
         if let mask = store.apiKeyMaskedDisplay {
           Text(mask)
+            .accessibilityLabel(store.apiKeyMaskedAccessibilityLabel ?? "Saved API key")
             .accessibilityIdentifier("settings.apiKey.maskedDisplay")
         }
         HStack {

@@ -118,4 +118,32 @@ enum MassiveAPIKeyMask {
     let suffix = String(trimmed.suffix(bulletCount))
     return bullets + suffix
   }
+
+  /// Builds a VoiceOver-friendly description of a masked API key.
+  ///
+  /// VoiceOver pronounces the literal `•` (U+2022 BULLET) glyph from the
+  /// `mask(_:)` rendering as the word "bullet" (e.g. `••••WXYZ` is spoken
+  /// as "bullet bullet bullet bullet, W X Y Z"), or skips it entirely on
+  /// some voices, leaving the row with no useful confirmation that a key
+  /// is stored. SettingsView attaches this label to the masked-display
+  /// row so VoiceOver users hear an intelligible summary instead.
+  ///
+  /// - Returns:
+  ///   - `nil` for empty / whitespace-only input (mirrors `mask(_:)`).
+  ///   - `"Saved API key, last four characters hidden"` for keys with
+  ///     `<= bulletCount` characters, where `mask(_:)` reveals no suffix.
+  ///   - `"Saved API key ending in <spelled suffix>"` otherwise, where
+  ///     each character of the trailing `bulletCount` is space-separated
+  ///     so VoiceOver reads them individually (e.g. "W X Y Z").
+  static func accessibilityLabel(for key: String) -> String? {
+    let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    if trimmed.count <= bulletCount {
+      return "Saved API key, last four characters hidden"
+    }
+    let spelledSuffix = trimmed.suffix(bulletCount)
+      .map { String($0) }
+      .joined(separator: " ")
+    return "Saved API key ending in \(spelledSuffix)"
+  }
 }

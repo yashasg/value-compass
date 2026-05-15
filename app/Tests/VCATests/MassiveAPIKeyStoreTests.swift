@@ -181,4 +181,49 @@ final class MassiveAPIKeyMaskTests: XCTestCase {
       MassiveAPIKeyMask.mask("placeholder-massive-key-WXYZ"),
       "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ")
   }
+
+  // MARK: accessibilityLabel(for:) — issue #243
+
+  /// Empty / whitespace-only keys mirror `mask(_:)` and produce no label —
+  /// SettingsView falls back to a generic "Saved API key" string, so the
+  /// reducer must report `nil` when there is nothing to describe.
+  func testAccessibilityLabelReturnsNilForEmptyOrWhitespaceInput() {
+    XCTAssertNil(MassiveAPIKeyMask.accessibilityLabel(for: ""))
+    XCTAssertNil(MassiveAPIKeyMask.accessibilityLabel(for: "   "))
+  }
+
+  /// Keys with `<= bulletCount` characters reveal no suffix in `mask(_:)`,
+  /// so the spoken label avoids fabricating one and instead tells VoiceOver
+  /// users that all characters are hidden.
+  func testAccessibilityLabelHidesSuffixForShortKeys() {
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "a"),
+      "Saved API key, last four characters hidden")
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "abcd"),
+      "Saved API key, last four characters hidden")
+  }
+
+  /// Longer keys spell the trailing four characters with single spaces so
+  /// VoiceOver pronounces each character individually instead of running
+  /// digits/letters together as a single token.
+  func testAccessibilityLabelSpellsLastFourCharactersForLongerKeys() {
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "placeholder-massive-key-WXYZ"),
+      "Saved API key ending in W X Y Z")
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "abcdef1234"),
+      "Saved API key ending in 1 2 3 4")
+  }
+
+  /// Surrounding whitespace must be trimmed before measuring length and
+  /// extracting the suffix, mirroring `mask(_:)`'s own trimming behavior.
+  func testAccessibilityLabelTrimsSurroundingWhitespace() {
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "  placeholder-key-WXYZ  "),
+      "Saved API key ending in W X Y Z")
+    XCTAssertEqual(
+      MassiveAPIKeyMask.accessibilityLabel(for: "   abcd   "),
+      "Saved API key, last four characters hidden")
+  }
 }

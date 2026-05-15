@@ -183,6 +183,7 @@ final class SettingsFeatureTests: XCTestCase {
       $0.deviceIDPrefix = "12345678\u{2026}"
       $0.apiKeyStatus = .storedAndValid
       $0.apiKeyMaskedDisplay = "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ"
+      $0.apiKeyMaskedAccessibilityLabel = "Saved API key ending in W X Y Z"
       $0.apiKeyLoadError = nil
     }
   }
@@ -257,6 +258,7 @@ final class SettingsFeatureTests: XCTestCase {
     await store.receive(\.apiKeyValidationCompleted) {
       $0.apiKeyStatus = .storedAndValid
       $0.apiKeyMaskedDisplay = "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ"
+      $0.apiKeyMaskedAccessibilityLabel = "Saved API key ending in W X Y Z"
       $0.apiKeyDraft = ""
       $0.apiKeyRequestStatus = .savedSuccessfully
       $0.apiKeyLoadError = nil
