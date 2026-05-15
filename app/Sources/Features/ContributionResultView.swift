@@ -39,8 +39,9 @@ struct ContributionResultContent: View {
         // is not separated by a navigation push or a settings tap.
         CalculationOutputDisclaimerFooter()
       }
-      .padding()
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(AppLayoutMetrics.mainMargin)
+      .frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
     }
     .navigationTitle(store.output.error == nil ? "Contribution Result" : "Calculation Failed")
     .alert(
