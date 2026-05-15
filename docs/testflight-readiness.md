@@ -5,7 +5,7 @@ Use this checklist to unblock the manual `ios-deploy` workflow for TestFlight up
 ## Apple Developer and App Store Connect
 
 1. Enroll in the Apple Developer Program and confirm the team has App Manager or Admin access in App Store Connect.
-2. Register the app identifier `com.valuecompass.VCA` in Certificates, Identifiers & Profiles with Push Notifications enabled because the app declares the `remote-notification` background mode.
+2. Register the app identifier `com.valuecompass.VCA` in Certificates, Identifiers & Profiles. No additional capabilities are required for the MVP; push notifications are deferred (see `docs/tech-spec.md` Non-Goals §5) and the `remote-notification` background mode has been removed from `Info.plist`. Re-add the Push Notifications capability only when the post-MVP APNs flow is implemented.
 3. Create or reuse an Apple Distribution certificate for the team, export it as a password-protected `.p12`, and keep the password for GitHub Secrets.
 4. Create an App Store provisioning profile for `com.valuecompass.VCA` using the distribution certificate, then download the `.mobileprovision`.
 5. Create the App Store Connect app record for bundle ID `com.valuecompass.VCA`, SKU `value-compass-ios`, and the intended display name.
