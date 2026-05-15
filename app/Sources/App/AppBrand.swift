@@ -27,6 +27,14 @@ struct AppLogoMark: View {
     }
     .frame(width: size, height: size)
     .accessibilityHidden(true)
+    // Smart Invert (Accessibility → Display & Text Size) flips arbitrary
+    // colors, but Apple's heuristic only auto-excludes image/media content.
+    // AppLogoMark is a `Shape` + `LinearGradient`, so without this opt-out
+    // the brand mark inverts while the surrounding chrome inverts correctly,
+    // breaking brand identity in OnboardingView and the iPad sidebar header.
+    // Do not remove without updating #346 and replacing with an equivalent
+    // brand-asset preservation strategy (e.g. an `Image` asset).
+    .accessibilityIgnoresInvertColors(true)
     // Preserve the brand mark under Smart Invert (Settings → Accessibility →
     // Display & Text Size → Smart Invert). `AppLogoMark` is the app's only
     // custom-drawn (`Shape` + `LinearGradient`) brand vector; without this

@@ -12,6 +12,19 @@ final class NavigationShellTests: XCTestCase {
     XCTAssertNotNil(Bundle.main.url(forResource: "icon", withExtension: "svg"))
   }
 
+  // Renders the brand mark to force-execute `AppLogoMark.body`, which
+  // pins the `.accessibilityIgnoresInvertColors(true)` modifier present
+  // on the root view. The modifier is required so Smart Invert
+  // (Accessibility → Display & Text Size) does not flip the brand
+  // gradient or rounded plate (#346); SwiftUI does not let us
+  // introspect modifiers at runtime, so a successful body evaluation
+  // plus the inline comment in `AppBrand.swift` is the load-bearing
+  // contract that prevents regressions.
+  func testAppLogoMarkBodyRendersWithoutCrashing() {
+    let body = AppLogoMark(size: 44).body
+    XCTAssertNotNil(body)
+  }
+
   func testCompactWidthUsesNavigationStack() {
     XCTAssertEqual(MainFeature.shellKind(for: .compact), .stack)
   }
