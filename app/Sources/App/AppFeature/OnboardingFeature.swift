@@ -6,8 +6,15 @@ import ComposableArchitecture
 /// The flow has two on-screen steps:
 ///
 /// 1. Disclaimer acknowledgement — toggled by `acknowledgeDisclaimerTapped`.
-/// 2. Portfolio setup intro — completed by `startSetupTapped`, which requests
-///    push authorization and then signals the parent reducer to transition.
+/// 2. Portfolio setup intro — completed by `startSetupTapped`, which signals
+///    the parent reducer to transition. The MVP build does **not** ship a
+///    user-facing push notification feature, so `startSetupTapped` no longer
+///    requests `UNUserNotificationCenter` authorization or registers for
+///    APNs (issue #305). `PushNotificationsClient` and the APNs
+///    `AppDelegate` callbacks remain in the project intentionally dormant so
+///    the future push-notification feature (whenever it ships under its own
+///    issue) can rewire permission gating without re-introducing dead
+///    infrastructure.
 ///
 /// Persistence of `hasSeenDisclaimer` and the actual transition to the main
 /// route are owned by `AppFeature` (Phase 2, #158) — this reducer only emits
@@ -33,8 +40,6 @@ struct OnboardingFeature {
     }
   }
 
-  @Dependency(\.pushNotifications) var pushNotifications
-
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
@@ -43,10 +48,7 @@ struct OnboardingFeature {
         return .none
 
       case .startSetupTapped:
-        return .run { [pushNotifications] send in
-          await pushNotifications.requestAuthorizationAndRegister()
-          await send(.delegate(.completed))
-        }
+        return .send(.delegate(.completed))
 
       case .delegate:
         return .none
