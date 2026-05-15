@@ -55,12 +55,13 @@ struct PortfolioListFeature {
     Reduce { state, action in
       switch action {
       case .task:
-        return .run { send in
-          let snapshots = try await loadSnapshots()
-          await send(.portfoliosLoaded(snapshots))
-        } catch: { error, send in
-          await send(.portfoliosLoaded([]))
-          _ = error
+        return .run { [modelContainer] send in
+          do {
+            let snapshots = try await Self.loadSnapshots(modelContainer: modelContainer)
+            await send(.portfoliosLoaded(snapshots))
+          } catch {
+            await send(.portfoliosLoaded([]))
+          }
         }
 
       case .portfoliosLoaded(let snapshots):
@@ -81,14 +82,15 @@ struct PortfolioListFeature {
         return .none
 
       case .deleteTapped(let id):
-        return .run { send in
+        return .run { [modelContainer] send in
           do {
-            try await deleteSnapshot(id: id)
-            let snapshots = try await loadSnapshots()
+            try await Self.deleteSnapshot(modelContainer: modelContainer, id: id)
+            let snapshots = try await Self.loadSnapshots(modelContainer: modelContainer)
             await send(.portfoliosLoaded(snapshots))
           } catch {
-            await send(.portfoliosLoaded((try? await loadSnapshots()) ?? []))
-            _ = error
+            let snapshots =
+              (try? await Self.loadSnapshots(modelContainer: modelContainer)) ?? []
+            await send(.portfoliosLoaded(snapshots))
           }
         }
 
@@ -100,10 +102,12 @@ struct PortfolioListFeature {
         return .none
 
       case .editor(.presented(.delegate(.saved))):
-        return .run { send in
-          let snapshots = try await loadSnapshots()
-          await send(.portfoliosLoaded(snapshots))
-        } catch: { _, _ in
+        return .run { [modelContainer] send in
+          do {
+            let snapshots = try await Self.loadSnapshots(modelContainer: modelContainer)
+            await send(.portfoliosLoaded(snapshots))
+          } catch {
+          }
         }
 
       case .editor:
@@ -122,7 +126,9 @@ struct PortfolioListFeature {
     }
   }
 
-  private func loadSnapshots() async throws -> [PortfolioSnapshot] {
+  private static func loadSnapshots(
+    modelContainer: ModelContainerClient
+  ) async throws -> [PortfolioSnapshot] {
     try await withCheckedThrowingContinuation { continuation in
       Task {
         do {
@@ -139,7 +145,10 @@ struct PortfolioListFeature {
     }
   }
 
-  private func deleteSnapshot(id: UUID) async throws {
+  private static func deleteSnapshot(
+    modelContainer: ModelContainerClient,
+    id: UUID
+  ) async throws {
     try await modelContainer.task { actor in
       try await actor.deletePortfolio(id: id)
     }

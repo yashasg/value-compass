@@ -88,6 +88,8 @@
 		C0000000000000000000B015 /* ContributionResultFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F015 /* ContributionResultFeatureTests.swift */; };
 		C0000000000000000000B012 /* PortfolioDetailFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F012 /* PortfolioDetailFeatureTests.swift */; };
 		C0000000000000000000B013 /* HoldingsEditorFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */; };
+		C0000000000000000000B010 /* PortfolioListFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F010 /* PortfolioListFeatureTests.swift */; };
+		C0000000000000000000B011 /* PortfolioEditorFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -174,6 +176,8 @@
 		C0000000000000000000F015 /* ContributionResultFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionResultFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F012 /* PortfolioDetailFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingsEditorFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F010 /* PortfolioListFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorFeatureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -401,6 +405,8 @@
 				C0000000000000000000F015 /* ContributionResultFeatureTests.swift */,
 				C0000000000000000000F012 /* PortfolioDetailFeatureTests.swift */,
 				C0000000000000000000F013 /* HoldingsEditorFeatureTests.swift */,
+				C0000000000000000000F010 /* PortfolioListFeatureTests.swift */,
+				C0000000000000000000F011 /* PortfolioEditorFeatureTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -603,6 +609,8 @@
 				C0000000000000000000B015 /* ContributionResultFeatureTests.swift in Sources */,
 				C0000000000000000000B012 /* PortfolioDetailFeatureTests.swift in Sources */,
 				C0000000000000000000B013 /* HoldingsEditorFeatureTests.swift in Sources */,
+				C0000000000000000000B010 /* PortfolioListFeatureTests.swift in Sources */,
+				C0000000000000000000B011 /* PortfolioEditorFeatureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
