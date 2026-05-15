@@ -94,7 +94,7 @@ struct ContributionResultContent: View {
         .valueCompassTextStyle(.labelCaps)
         .foregroundStyle(Color.appContentSecondary)
 
-      Text("$\(decimalText(store.output.totalAmount))")
+      Text(store.output.totalAmount.appCurrencyFormatted())
         .valueCompassTextStyle(.displayLarge)
         .minimumScaleFactor(0.7)
         .foregroundStyle(Color.appContentPrimary)
@@ -118,7 +118,7 @@ struct ContributionResultContent: View {
               .valueCompassTextStyle(.bodyLarge)
               .foregroundStyle(Color.appContentPrimary)
             Spacer()
-            Text("$\(decimalText(category.amount))")
+            Text(category.amount.appCurrencyFormatted())
               .valueCompassTextStyle(.data)
               .foregroundStyle(Color.appContentPrimary)
           }
@@ -134,10 +134,10 @@ struct ContributionResultContent: View {
                 .valueCompassTextStyle(.labelCaps)
                 .foregroundStyle(Color.appContentPrimary)
               Spacer()
-              Text("$\(decimalText(allocation.amount))")
+              Text(allocation.amount.appCurrencyFormatted())
                 .valueCompassTextStyle(.data)
                 .foregroundStyle(Color.appContentPrimary)
-              Text("\(percentText(allocation.allocatedWeight))%")
+              Text(allocation.allocatedWeight.appPercentFormatted())
                 .valueCompassTextStyle(.data)
                 .foregroundStyle(Color.appContentSecondary)
             }
@@ -189,13 +189,5 @@ struct ContributionResultContent: View {
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
-  }
-
-  private func decimalText(_ value: Decimal) -> String {
-    NSDecimalNumber(decimal: value).stringValue
-  }
-
-  private func percentText(_ value: Decimal) -> String {
-    decimalText(value * 100)
   }
 }

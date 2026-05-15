@@ -23,8 +23,8 @@ import XCTest
 /// - `.saveErrorDismissed`, `.saveConfirmationDismissed`,
 ///   `.calculationCompleted(_)`, `.persistFailed(_)`,
 ///   `.persistSucceeded(savedTotal:portfolioName:)` mutations.
-/// - `confirmationMessage(savedTotal:portfolioName:)` /
-///   `decimalText(_:)` pure helpers.
+/// - `confirmationMessage(savedTotal:portfolioName:)` pure helper, now
+///   sourced from `Decimal.appCurrencyFormatted()` (#257).
 @MainActor
 final class ContributionResultFeatureTests: XCTestCase {
   // MARK: - .retryTapped
@@ -336,11 +336,5 @@ final class ContributionResultFeatureTests: XCTestCase {
     let message = ContributionResultFeature.confirmationMessage(
       savedTotal: Decimal(string: "12.34")!, portfolioName: "Growth")
     XCTAssertEqual(message, "Saved $12.34 for Growth.")
-  }
-
-  func testDecimalTextRendersDecimalWithoutTrailingZeros() {
-    XCTAssertEqual(ContributionResultFeature.decimalText(Decimal(string: "12.34")!), "12.34")
-    XCTAssertEqual(ContributionResultFeature.decimalText(Decimal(0)), "0")
-    XCTAssertEqual(ContributionResultFeature.decimalText(Decimal(1_000)), "1000")
   }
 }
