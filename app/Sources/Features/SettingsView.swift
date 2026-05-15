@@ -354,8 +354,8 @@ struct SettingsView: View {
       Text(
         "Erasing your data deletes every record on this device and asks the "
           + "Investrum server to delete every record tied to your device "
-          + "identifier. The Investrum app will return to the disclaimer screen "
-          + "on next launch, exactly like a fresh install."
+          + "identifier. The Investrum app returns to the welcome screen "
+          + "automatically, exactly like a fresh install."
       )
       .accessibilityIdentifier("settings.erase.footer")
     }
@@ -379,13 +379,10 @@ struct SettingsView: View {
         Text("Your data has been erased.")
           .valueCompassTextStyle(.bodySmall)
           .foregroundStyle(Color.appPositive)
-        Text(
-          "Please force-quit Investrum from the App Switcher and reopen it to "
-            + "complete the reset."
-        )
-        .valueCompassTextStyle(.bodySmall)
-        .foregroundStyle(Color.appContentSecondary)
-        .fixedSize(horizontal: false, vertical: true)
+        Text("Returning to the welcome screen…")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appContentSecondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
       .accessibilityIdentifier("settings.erase.status.erased")
     case .failed(let reason):

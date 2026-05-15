@@ -219,6 +219,34 @@ final class AppFeatureTests: XCTestCase {
     )
   }
 
+  // MARK: - .destination(.main(.settings(.delegate(.dataErased)))) — issue #471
+
+  /// HIG → Launching → Quitting: the post-erase route swap must happen
+  /// in-process so the user does not have to force-quit the app to see
+  /// the freshly reset onboarding gate. `AppFeature` intercepts the
+  /// `SettingsFeature.delegate(.dataErased)` notification and swaps
+  /// `destination` to a fresh `OnboardingFeature.State()`.
+  func testSettingsDataErasedDelegateRoutesToOnboarding() async {
+    let store = TestStore(
+      initialState: AppFeature.State(destination: .main(MainFeature.State()))
+    ) {
+      AppFeature()
+    }
+
+    await store.send(.destination(.main(.settings(.delegate(.dataErased))))) {
+      $0.destination = .onboarding(OnboardingFeature.State())
+    }
+  }
+
+  // The `if !state.requiresAppUpdate` guard in `AppFeature` is defensive:
+  // by the time `requiresAppUpdate` is `true`, `destination` is already
+  // `.forcedUpdate(...)` (set in the same `.minVersionEvent` reduction),
+  // so a `.destination(.main(.settings(.delegate(.dataErased))))` action
+  // is structurally impossible — TCA's `.ifCaseLet` correctly aborts a
+  // child action whose state case has already changed. There is no
+  // reachable scenario to exercise here, and forcing one would assert
+  // against TCA's framework behaviour rather than our reducer logic.
+
   // MARK: - .task cancel-in-flight
 
   func testTaskCancelInFlightDeduplicatesEventSubscription() async {

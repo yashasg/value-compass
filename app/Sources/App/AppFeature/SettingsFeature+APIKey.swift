@@ -45,9 +45,13 @@ enum SettingsAccountErasureStatus: Equatable, Sendable {
   /// Backend erasure (and the subsequent local cleanup) is running.
   case erasing
   /// Every step (backend, SwiftData, Keychain, UUID rotation, onboarding
-  /// reset) completed successfully. The view layer surfaces a copy
-  /// instructing the user to relaunch Investrum so the freshly reset
-  /// onboarding gate fires.
+  /// reset) completed successfully. `SettingsFeature` fires the
+  /// `.delegate(.dataErased)` notification so `AppFeature` can reroute
+  /// `destination` back to `.onboarding(...)` programmatically — the
+  /// in-app route swap is the user-visible signal that the erase
+  /// succeeded. HIG → Launching → Quitting forbids instructing the user
+  /// to force-quit or relaunch the app, so the view layer never asks
+  /// for a relaunch.
   case erased
   /// At least one step in the pipeline failed. `reason` distinguishes
   /// "network error, nothing was erased — safe to retry" from "backend

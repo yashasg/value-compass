@@ -97,6 +97,33 @@ struct AppFeature {
         }
         return .none
 
+      case .destination(.main(.settings(.delegate(.dataErased)))):
+        // Settings → Erase All My Data pipeline finished. Swap
+        // `destination` back to onboarding programmatically so the
+        // user sees the freshly reset disclaimer/welcome screen
+        // without being asked to force-quit the app (HIG → Launching
+        // → Quitting forbids quit/relaunch instructions). Issue #471.
+        //
+        // `SettingsFeature` already cleared the persisted onboarding-
+        // gate user defaults (`AppPreferenceKeys.disclaimer` /
+        // `legacyOnboarding`) inside the erase pipeline, so the
+        // disclaimer flag does not need to be re-touched here — a
+        // fresh `OnboardingFeature.State()` mirrors the cold-launch
+        // post-erase posture exactly.
+        //
+        // The `!state.requiresAppUpdate` guard is defensive parity
+        // with `.disclaimerSeenChanged` and `.onboarding(.delegate(
+        // .completed))`. In practice, by the time `requiresAppUpdate`
+        // is `true`, `destination` is already `.forcedUpdate(...)` (set
+        // in the same `.minVersionEvent` reduction) and TCA's
+        // `.ifCaseLet` aborts this `.main(.settings(...))` action
+        // before it reaches this case — the guard is unreachable but
+        // documents the invariant.
+        if !state.requiresAppUpdate {
+          state.destination = .onboarding(OnboardingFeature.State())
+        }
+        return .none
+
       case .destination:
         return .none
       }
