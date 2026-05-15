@@ -1,0 +1,6 @@
+processor,role,personal_data,establishment,transfer_mechanism,dpa_status,dpa_link,acceptance_evidence
+Cloudflare,"Reverse proxy / DDoS / cache / App Attest verification","Device ID; full request URL and headers; non-cached response bodies",United States,"DPF self-cert + SCC Module 2",TODO,https://www.cloudflare.com/cloudflare-customer-dpa/,
+Supabase,"Managed Postgres host for portfolios/holdings/stock_cache","Device ID; budget; ticker; weight; timestamps",United States,"DPF self-cert + SCC Module 2",TODO,https://supabase.com/legal/dpa,
+Microsoft Azure,"VM host for vca-api + vca-poller; journald operational logs","Device ID (transient in logs); request metadata",TBD (record region before submission),"Microsoft Products and Services DPA + EU SCCs (Module 2) when outside EEA",TODO,https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA,
+Apple APNs,"Push delivery for new-ticker notifications","APNs device token only (no X-Device-UUID, no financial data)",United States,"Apple Developer Program License Agreement",Not required,https://developer.apple.com/support/terms/apple-developer-program-license-agreement/,N/A
+Polygon.io,"Market-data fetch by ticker symbol",None (outbound only; no personal data),United States,N/A,Not required,https://polygon.io/terms,N/A
