@@ -2,6 +2,39 @@
 
 ## Active Decisions
 
+### 2026-05-15T15:16:00Z: Trademark clearance is a five-surface pre-submission gate, gated on licensed counsel
+**By:** Squad loop (compliance stream) | **Status:** Adopted | **Issue:** #314 | **PR:** TBD
+
+[`docs/legal/trademark-clearance.md`](../docs/legal/trademark-clearance.md)
+is the engineering record of the three IP surfaces the v1 build ships
+(`Investrum` word mark, `UnevenInvestrumGlyph` logo,
+`VCA` trigram) and the public-record searches that must exist on file
+before any external TestFlight or App Store submission. The default-to-no
+posture in [`docs/legal/app-review-notes.md`](../docs/legal/app-review-notes.md)
+applies: until licensed counsel signs off on each row of the four search
+sections and on the `VCA` trigram disposition (option (a) class-distance
+defense / (b) rename in user-facing copy / (c) keep strictly internal),
+submission is blocked.
+
+This raises the count of pre-submission sync surfaces from **four** to
+**five** — alongside the App Review Notes (#254), Privacy Policy (#224),
+App Privacy nutrition label (#271 closed), and Age-Rating Questionnaire
+(#287). Submission may proceed only when all five agree.
+
+**No clearance is asserted by this decision.** The decision is purely that
+the memo exists, that the searches it enumerates are required, and that
+the `VCA` trigram disposition is not yet decided. The actual clearance
+opinion must be issued by a qualified trademark attorney in each launch
+jurisdiction; this engineering record explicitly disclaims any legal
+conclusion.
+
+**Follow-up:** when counsel returns the freedom-to-operate memo, attach
+or reference it from `docs/legal/trademark-clearance.md`, fill in each
+"Status" cell with a dated artifact, and update this decision entry with
+the chosen `VCA` trigram option and the counsel name.
+
+---
+
 ### 2026-05-15T06:30-07:00: ContributionRecord.portfolioId ↔ portfolio invariant — Option C-precondition
 **By:** Squad loop (backend stream) | **Status:** Adopted | **Issue:** #250 | **PR:** TBD
 

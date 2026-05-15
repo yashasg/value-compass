@@ -149,6 +149,11 @@ them in sync at every submission:
   declaration; reviewer may ask about encryption export classification.
 - `docs/legal/privacy-manifest.md` — Apple privacy manifest (`PrivacyInfo.xcprivacy`)
   must match the "Data handling" section of the Notes block.
+- `docs/legal/trademark-clearance.md` — trademark / freedom-to-operate
+  posture for the `Investrum` word mark, `UnevenInvestrumGlyph` logo, and
+  `VCA` trigram (issue #314). Until licensed counsel signs off on each
+  search row and on the `VCA` trigram disposition, external TestFlight /
+  App Store submission is gated.
 - Issue #224 — privacy policy and in-app legal link for the Massive API
   network flow. The published privacy policy text must be consistent with
   the "Data handling" claims in the Notes block.
