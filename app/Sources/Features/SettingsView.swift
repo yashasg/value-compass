@@ -247,6 +247,8 @@ struct SettingsView: View {
         .textContentType(.password)
         .autocorrectionDisabled(true)
         .textInputAutocapitalization(.never)
+        .submitLabel(.done)
+        .onSubmit { store.send(.submitAPIKeyTapped) }
         .accessibilityIdentifier("settings.apiKey.draftField")
 
       Button("Save") {

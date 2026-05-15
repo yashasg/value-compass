@@ -245,6 +245,81 @@ final class SettingsFeatureTests: XCTestCase {
     }
   }
 
+  // MARK: - Return-key submit (issue #462)
+
+  /// Issue #462: hitting the SecureField Return key with a valid draft
+  /// must dispatch the same effect as the paired `Save` Button (HIG →
+  /// Onscreen keyboards / Text fields → Submitting input). The reducer
+  /// owns the routing so a single canSave predicate gates both surfaces.
+  func testSubmitAPIKeyTappedOnValidDraftRoutesToSave() async {
+    let saved = LockIsolated<[String]>([])
+    let store = TestStore(
+      initialState: SettingsFeature.State(apiKeyDraft: "placeholder-key-WXYZ")
+    ) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKeyValidator.validate = { key in
+        XCTAssertEqual(key, "placeholder-key-WXYZ")
+        return .valid
+      }
+      $0.massiveAPIKey.save = { key in
+        saved.withValue { $0.append(key) }
+      }
+    }
+
+    await store.send(.submitAPIKeyTapped)
+    await store.receive(\.saveAPIKeyTapped) {
+      $0.apiKeyRequestStatus = .validating
+    }
+    await store.receive(\.apiKeyValidationCompleted) {
+      $0.apiKeyStatus = .storedAndValid
+      $0.apiKeyMaskedDisplay = "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ"
+      $0.apiKeyMaskedAccessibilityLabel = "Saved API key ending in W X Y Z"
+      $0.apiKeyDraft = ""
+      $0.apiKeyRequestStatus = .savedSuccessfully
+      $0.apiKeyLoadError = nil
+    }
+    XCTAssertEqual(saved.value, ["placeholder-key-WXYZ"])
+  }
+
+  /// A Return-key press on an empty / whitespace-only draft must be a
+  /// silent no-op — it must NOT fall through to `.saveAPIKeyTapped`'s
+  /// "API key cannot be empty" rejection banner the way an explicit
+  /// `Save` tap does, because the user pressing Return while typing is
+  /// not a deliberate submit attempt. The `Save` Button is disabled in
+  /// the same state, so the predicates stay in lockstep.
+  func testSubmitAPIKeyTappedOnEmptyDraftIsNoop() async {
+    let store = TestStore(initialState: SettingsFeature.State(apiKeyDraft: "  ")) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKeyValidator.validate = { _ in
+        XCTFail("Validator must not be invoked for empty draft")
+        return .invalid(reason: "")
+      }
+    }
+
+    await store.send(.submitAPIKeyTapped)
+  }
+
+  /// A second Return press while the first validation is still in flight
+  /// must not kick off a duplicate validation. Mirrors the `Save` Button
+  /// being disabled (`apiKeyRequestStatus.isInFlight`).
+  func testSubmitAPIKeyTappedWhileValidatingIsNoop() async {
+    var initialState = SettingsFeature.State(apiKeyDraft: "placeholder-key-WXYZ")
+    initialState.apiKeyRequestStatus = .validating
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKeyValidator.validate = { _ in
+        XCTFail("Validator must not run while a previous validation is in flight")
+        return .invalid(reason: "")
+      }
+    }
+
+    await store.send(.submitAPIKeyTapped)
+  }
+
   /// Happy path: validator accepts → reducer persists key → state flips to
   /// stored-and-valid, draft is cleared, and the masked display reveals the
   /// trailing four characters only.

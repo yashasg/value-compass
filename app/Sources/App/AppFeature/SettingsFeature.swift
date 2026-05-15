@@ -86,6 +86,14 @@ struct SettingsFeature {
 
     // MARK: API key actions (issue #127)
     case saveAPIKeyTapped
+    /// User pressed the Return key (`.submitLabel(.done)`) on the API key
+    /// `SecureField`. Issue #462 — HIG / Onscreen keyboards / Text fields
+    /// → Submitting input requires the Return-key path to mirror the
+    /// `Save` Button's enable predicate exactly: empty/whitespace drafts
+    /// and in-flight validations are dropped so a stray Return press never
+    /// surfaces a spurious "API key cannot be empty" banner or kicks off a
+    /// duplicate validation.
+    case submitAPIKeyTapped
     case removeAPIKeyTapped
     case revalidateStoredKeyTapped
     case apiKeyValidationCompleted(MassiveAPIKeyValidationOutcome, persistedKey: String)
@@ -183,6 +191,20 @@ struct SettingsFeature {
           let outcome = await massiveAPIKeyValidator.validate(key: candidate)
           await send(.apiKeyValidationCompleted(outcome, persistedKey: candidate))
         }
+
+      case .submitAPIKeyTapped:
+        // Issue #462: routes the SecureField Return key through the same
+        // enable predicate `apiKeyEntryRow`'s `Save` Button uses, so empty
+        // / whitespace drafts and in-flight validations no-op silently
+        // instead of falling through to `.saveAPIKeyTapped`'s "API key
+        // cannot be empty" rejection banner or starting a duplicate
+        // validation. Valid drafts dispatch `.saveAPIKeyTapped` so the
+        // two surfaces share a single persistence path.
+        let trimmed = state.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !state.apiKeyRequestStatus.isInFlight else {
+          return .none
+        }
+        return .send(.saveAPIKeyTapped)
 
       case .apiKeyValidationCompleted(let outcome, let persistedKey):
         switch outcome {
