@@ -1,21 +1,20 @@
 import Foundation
 
-/// Pure composer for the Settings → Privacy & Data → "Erase All My Data"
-/// status announcement seam (#473). Same family as
-/// ``OnboardingAccessibility`` (#330) and ``MainAccessibility`` (#343):
-/// the SwiftUI `.appAnnounceOnChange` modifier in ``SettingsView`` is a
-/// view-tree decoration not introspectable without a UI host, but the
-/// closure it consumes — "given the new ``SettingsAccountErasureStatus``,
-/// what string (if any) does VoiceOver hear?" — is a pure value-level
-/// contract this enum pins.
+/// Pure composer for the Settings status-announcement seams (#473, #479).
+/// Same family as ``OnboardingAccessibility`` (#330) and
+/// ``MainAccessibility`` (#343): the SwiftUI `.appAnnounceOnChange`
+/// modifier in ``SettingsView`` is a view-tree decoration not
+/// introspectable without a UI host, but the closure it consumes —
+/// "given the new status, what string (if any) does VoiceOver hear?" —
+/// is a pure value-level contract this enum pins.
 ///
-/// The GDPR Art. 17 / CCPA §1798.105 / App Store §5.1.1(v) right-to-
-/// erasure flow is destructive and irreversible; a VoiceOver user must
-/// hear feedback for every state transition so they know whether to
-/// retry, force-quit-and-relaunch, or escalate. WCAG 2.2 SC 4.1.3
-/// (Status Messages) and Apple HIG → Accessibility → Notifications and
-/// announcements require these status changes be programmatically
-/// perceivable to assistive technologies without moving focus.
+/// Two state machines flow through Settings → Privacy & Data and
+/// Settings → Massive API Key. Both surface inline `Text` rows on
+/// reducer transitions that SwiftUI does not natively announce to
+/// assistive technologies. WCAG 2.2 SC 4.1.3 (Status Messages) and
+/// Apple HIG → Accessibility → Notifications and announcements require
+/// these status changes be programmatically perceivable to assistive
+/// technologies without moving focus.
 enum SettingsAccessibility {
   /// Returns the AT announcement string for the given
   /// ``SettingsAccountErasureStatus`` transition, or `nil` to skip
@@ -53,6 +52,60 @@ enum SettingsAccessibility {
         + "Switcher and reopen it to complete the reset."
     case .failed(let reason):
       return reason
+    }
+  }
+
+  /// Returns the AT announcement string for the given
+  /// ``SettingsAPIKeyRequestStatus`` transition, or `nil` to skip posting
+  /// an announcement.
+  ///
+  /// The Massive API-key save flow is the gate to the only third-party
+  /// integration the app depends on (`docs/legal/third-party-services.md`,
+  /// #294). A VoiceOver user who taps Save and hears nothing cannot tell
+  /// whether the key was accepted, rejected, networked-out, or failed to
+  /// land in the Keychain — so every non-idle transition is audible.
+  ///
+  /// - ``SettingsAPIKeyRequestStatus/idle``: returns `nil`. Matches the
+  ///   ``transitionAnnouncement(forAccountErasure:)`` precedent — the
+  ///   pre-tap baseline (and the post-dismiss / post-remove reset to
+  ///   idle) is silent so the helper does not chatter.
+  /// - ``SettingsAPIKeyRequestStatus/validating``: returns a short
+  ///   "operation started" sentence so the user knows the round-trip to
+  ///   Massive is in flight and the now-disabled Save button has not
+  ///   silently failed. Prepends "your API key" so the announcement is
+  ///   self-describing even when posted out of focus context.
+  /// - ``SettingsAPIKeyRequestStatus/rejected(reason:)``: forwards the
+  ///   reducer-supplied rejection reason, prefixed with "API key
+  ///   rejected:" so the spoken text identifies the surface (the
+  ///   reasons themselves — e.g. "API key cannot be empty." or Massive's
+  ///   validator messages — are already user-facing sentences).
+  /// - ``SettingsAPIKeyRequestStatus/networkError(reason:)``: forwards the
+  ///   reducer-supplied connectivity reason, prefixed with "Network
+  ///   error:" so VoiceOver users hear whether to retry online vs.
+  ///   re-enter the key.
+  /// - ``SettingsAPIKeyRequestStatus/storeError(reason:)``: forwards the
+  ///   Keychain-write failure reason so the user knows the key never
+  ///   landed on disk and a retry (or a Keychain-lock check) is needed.
+  /// - ``SettingsAPIKeyRequestStatus/savedSuccessfully``: returns the
+  ///   "API key saved." sentence verbatim from the inline status row so
+  ///   spoken text matches visible text and self-identifies the
+  ///   surface when posted without surrounding context.
+  static func transitionAnnouncement(
+    forAPIKeyRequest status: SettingsAPIKeyRequestStatus
+  ) -> String? {
+    switch status {
+    case .idle:
+      return nil
+    case .validating:
+      return "Validating your API key with Massive…"
+    case .rejected(let reason):
+      return "API key rejected: \(reason)"
+    case .networkError(let reason):
+      return "Network error: \(reason)"
+    case .storeError(let reason):
+      return "Could not save your API key: \(reason)"
+    case .savedSuccessfully:
+      return "API key saved."
     }
   }
 }
