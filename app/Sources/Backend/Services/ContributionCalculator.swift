@@ -1,6 +1,6 @@
 import Foundation
 
-protocol ContributionCalculating {
+protocol ContributionCalculating: Sendable {
   func calculate(input: ContributionInput) -> ContributionOutput
 }
 
@@ -163,11 +163,28 @@ enum ContributionCalculationError: LocalizedError, Equatable {
 }
 
 enum ContributionCalculationService {
+  /// Legacy entry point used by reducers that have not yet migrated to the
+  /// full-shape seam (issue #242 step 2). Builds a `ContributionInput`
+  /// from `Portfolio.monthlyBudget` + the `Portfolio.tickers` graph and
+  /// delegates to ``calculate(input:calculator:)``.
   static func calculate(
     portfolio: Portfolio?,
     calculator: any ContributionCalculating = MovingAverageContributionCalculator()
   ) -> ContributionOutput {
-    let input = ContributionInput(portfolio: portfolio)
+    calculate(input: ContributionInput(portfolio: portfolio), calculator: calculator)
+  }
+
+  /// Full-shape entry point used by ``ContributionCalculatorClient``'s
+  /// `calculateWithInput` seam. Lets a reducer supply every degree of
+  /// freedom on `ContributionInput` (monthly budget, market-data
+  /// snapshot, min/max multipliers) and pick which `ContributionCalculating`
+  /// implementation to run — required by #128 (Massive market-data
+  /// snapshot), #130 (Invest with required capital), and #131 (snapshots
+  /// that record their input). See issue #242.
+  static func calculate(
+    input: ContributionInput,
+    calculator: any ContributionCalculating
+  ) -> ContributionOutput {
     if let validationError = ContributionInputValidator.validate(input) {
       return .failure(validationError)
     }

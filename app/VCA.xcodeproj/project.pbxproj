@@ -106,6 +106,7 @@
 		C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */; };
 		C0000000000000000000B018 /* MVPModelsPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */; };
 		C0000000000000000000B019 /* LocalSchemaMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */; };
+		C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -210,6 +211,7 @@
 		C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidatorTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MVPModelsPersistenceTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSchemaMigrationTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -463,6 +465,7 @@
 				C0000000000000000000F017 /* MassiveAPIKeyValidatorTests.swift */,
 				C0000000000000000000F018 /* MVPModelsPersistenceTests.swift */,
 				C0000000000000000000F019 /* LocalSchemaMigrationTests.swift */,
+				C0000000000000000000F01A /* ContributionCalculatorClientTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -683,6 +686,7 @@
 				C0000000000000000000B017 /* MassiveAPIKeyValidatorTests.swift in Sources */,
 				C0000000000000000000B018 /* MVPModelsPersistenceTests.swift in Sources */,
 				C0000000000000000000B019 /* LocalSchemaMigrationTests.swift in Sources */,
+				C0000000000000000000B01A /* ContributionCalculatorClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
