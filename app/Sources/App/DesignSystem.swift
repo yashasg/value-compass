@@ -64,3 +64,32 @@ extension View {
     )
   }
 }
+
+extension Decimal {
+  /// USD-currency display string with locale-aware grouping separators
+  /// and two fractional digits (e.g. `$1,234.50`). Pinned to `en_US` so
+  /// the English-only MVP renders deterministically across simulators
+  /// and CI, and so VoiceOver pronounces "dollars" via the currency tag
+  /// instead of reading the literal `$` glyph (#257). When multi-currency
+  /// support lands post-MVP, replace the locale + currency code with
+  /// `Locale.current` + `Locale.current.currency?.identifier`.
+  func appCurrencyFormatted() -> String {
+    formatted(
+      .currency(code: "USD")
+        .locale(Locale(identifier: "en_US"))
+    )
+  }
+
+  /// Percent display string built from a fractional weight (e.g. `0.125`
+  /// → `"12.5%"`). VoiceOver pronounces the percent glyph as "percent"
+  /// reliably when emitted by `Decimal.formatted(.percent)`; the manual
+  /// `"\(value * 100)%"` pattern it replaces did not (#257). Pinned to
+  /// `en_US` for the English-only MVP rendering surface.
+  func appPercentFormatted() -> String {
+    formatted(
+      .percent
+        .precision(.fractionLength(0...2))
+        .locale(Locale(identifier: "en_US"))
+    )
+  }
+}

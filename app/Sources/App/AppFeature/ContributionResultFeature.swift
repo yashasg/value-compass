@@ -184,11 +184,7 @@ struct ContributionResultFeature {
     savedTotal: Decimal,
     portfolioName: String
   ) -> String {
-    "Saved $\(decimalText(savedTotal)) for \(portfolioName)."
-  }
-
-  static func decimalText(_ value: Decimal) -> String {
-    NSDecimalNumber(decimal: value).stringValue
+    "Saved \(savedTotal.appCurrencyFormatted()) for \(portfolioName)."
   }
 }
 

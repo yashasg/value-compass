@@ -73,7 +73,7 @@ private struct ContributionHistoryContent: View {
             HStack {
               Text(section.title)
               Spacer()
-              Text("$\(decimalText(section.totalAmount))")
+              Text(section.totalAmount.appCurrencyFormatted())
             }
           }
         }
@@ -117,10 +117,6 @@ private struct ContributionHistoryContent: View {
     .accessibilityIdentifier("contribution.history")
   }
 
-  private func decimalText(_ value: Decimal) -> String {
-    NSDecimalNumber(decimal: value).stringValue
-  }
-
   private func dateText(_ date: Date) -> String {
     ContributionHistoryDateFormatters.day.string(from: date)
   }
@@ -144,15 +140,11 @@ private struct ContributionHistoryRow: View {
 
       Spacer()
 
-      Text("$\(decimalText(record.totalAmount))")
+      Text(record.totalAmount.appCurrencyFormatted())
         .valueCompassTextStyle(.data)
         .foregroundStyle(Color.appContentPrimary)
     }
     .accessibilityElement(children: .combine)
-  }
-
-  private func decimalText(_ value: Decimal) -> String {
-    NSDecimalNumber(decimal: value).stringValue
   }
 }
 
@@ -168,12 +160,12 @@ private struct ContributionHistoryDetailContent: View {
       Section("Summary") {
         LabeledContent(
           "Date", value: ContributionHistoryDateFormatters.day.string(from: record.date))
-        LabeledContent("Total", value: "$\(decimalText(record.totalAmount))")
+        LabeledContent("Total", value: record.totalAmount.appCurrencyFormatted())
       }
 
       Section("Category Totals") {
         ForEach(record.categoryBreakdown) { category in
-          LabeledContent(category.categoryName, value: "$\(decimalText(category.amount))")
+          LabeledContent(category.categoryName, value: category.amount.appCurrencyFormatted())
             .accessibilityIdentifier("contribution.history.detail.category")
         }
       }
@@ -186,7 +178,7 @@ private struct ContributionHistoryDetailContent: View {
                 .valueCompassTextStyle(.labelCaps)
                 .foregroundStyle(Color.appContentPrimary)
               Spacer()
-              Text("$\(decimalText(allocation.amount))")
+              Text(allocation.amount.appCurrencyFormatted())
                 .valueCompassTextStyle(.data)
                 .foregroundStyle(Color.appContentPrimary)
             }
@@ -209,10 +201,6 @@ private struct ContributionHistoryDetailContent: View {
     }
     .navigationTitle("Saved Result")
     .accessibilityIdentifier("contribution.history.detail")
-  }
-
-  private func decimalText(_ value: Decimal) -> String {
-    NSDecimalNumber(decimal: value).stringValue
   }
 }
 
