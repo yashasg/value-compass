@@ -4,7 +4,9 @@ import Foundation
 /// survives app reinstall (within the device-only accessibility constraint).
 ///
 /// The backend identifies anonymous installs by this value. It is generated
-/// lazily on first access and never rotated client-side.
+/// lazily on first access. The Settings → "Erase All My Data" flow
+/// (issue #329) is the only legitimate caller of `rotate()`, which severs
+/// the link between the pre- and post-erasure identity on the same device.
 enum DeviceIDProvider {
   private static let keychainKey = "com.valuecompass.deviceUUID"
 
@@ -27,5 +29,17 @@ enum DeviceIDProvider {
     let new = UUID().uuidString
     try? KeychainStore.set(new, for: keychainKey)
     return new
+  }
+
+  /// Removes the persisted device UUID so the next `deviceID()` call
+  /// generates and persists a fresh one. Used by the Settings → "Erase
+  /// All My Data" flow (issue #329 §1.iii) to break the join between
+  /// pre- and post-erasure backend traffic.
+  ///
+  /// Treats "no entry to remove" as success (delegated to
+  /// `KeychainStore.remove`) so the caller can sequence this step
+  /// idempotently inside a larger erasure transaction.
+  static func rotate() throws {
+    try KeychainStore.remove(keychainKey)
   }
 }

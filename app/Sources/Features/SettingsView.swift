@@ -54,6 +54,8 @@ struct SettingsView: View {
         LabeledContent("Device ID", value: store.deviceIDPrefix)
       }
 
+      dataPrivacySection
+
       Section("Legal") {
         DisclosureGroup("Disclaimer", isExpanded: $store.isDisclaimerExpanded) {
           Text(Disclaimer.text)
@@ -81,6 +83,9 @@ struct SettingsView: View {
     .navigationTitle("Settings")
     .tint(Color.appPrimary)
     .task { store.send(.task) }
+    .confirmationDialog(
+      $store.scope(state: \.dataErasureConfirmation, action: \.dataErasureConfirmation)
+    )
   }
 
   // MARK: - Massive API key (issue #127)
@@ -264,6 +269,92 @@ struct SettingsView: View {
         .valueCompassTextStyle(.bodySmall)
         .foregroundStyle(Color.appPositive)
         .accessibilityIdentifier("settings.apiKey.request.saved")
+    }
+  }
+
+  // MARK: - Data & Privacy (issue #329)
+
+  /// "Erase All My Data" surface mandated by App Store §5.1.1(v), GDPR
+  /// Art. 17, and CCPA §1798.105. Renders as a destructive `Button`
+  /// (`role: .destructive`) inside a dedicated section so it cannot be
+  /// confused with the local-only API-key removal above. The actual
+  /// confirmation dialog + irreversible chain is owned by
+  /// `SettingsFeature` — this view only dispatches `eraseAllDataTapped`
+  /// and renders the status row.
+  @ViewBuilder
+  private var dataPrivacySection: some View {
+    Section {
+      Button(role: .destructive) {
+        store.send(.eraseAllDataTapped)
+      } label: {
+        HStack {
+          Text("Erase All My Data")
+          Spacer()
+          if case .deleting = store.dataErasureStatus {
+            ProgressView()
+          }
+        }
+      }
+      .accessibilityIdentifier("settings.dataErasure.eraseAllData")
+      .accessibilityHint(
+        "Permanently deletes your portfolios, holdings, and saved key from this device and the server."
+      )
+      .disabled(store.dataErasureStatus.isInFlight)
+
+      dataErasureStatusRow
+    } header: {
+      Text("Data & Privacy")
+    } footer: {
+      Text(
+        "Erasing your data removes every portfolio, holding, and "
+          + "calculation history entry from this device and from Value "
+          + "Compass's servers, rotates your anonymous device identity, "
+          + "and signs you back to the welcome screen."
+      )
+      .accessibilityIdentifier("settings.dataErasure.disclosure")
+    }
+  }
+
+  @ViewBuilder
+  private var dataErasureStatusRow: some View {
+    switch store.dataErasureStatus {
+    case .idle, .awaitingConfirmation:
+      EmptyView()
+    case .deleting:
+      HStack(spacing: 8) {
+        ProgressView()
+        Text("Erasing your data…")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appContentSecondary)
+      }
+      .accessibilityIdentifier("settings.dataErasure.status.deleting")
+    case .succeeded:
+      HStack(spacing: 8) {
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(Color.appPositive)
+          .accessibilityHidden(true)
+        Text("Your data has been erased.")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appPositive)
+      }
+      .accessibilityIdentifier("settings.dataErasure.status.succeeded")
+    case .failed(let reason):
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 8) {
+          Image(systemName: "exclamationmark.triangle.fill")
+            .foregroundStyle(Color.appNegative)
+            .accessibilityHidden(true)
+          Text("Could not erase your data.")
+            .valueCompassTextStyle(.bodySmall)
+            .foregroundStyle(Color.appNegative)
+        }
+        Text(reason)
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appContentSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("settings.dataErasure.status.failed")
     }
   }
 }

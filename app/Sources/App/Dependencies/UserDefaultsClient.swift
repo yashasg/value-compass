@@ -9,12 +9,17 @@ import Foundation
 /// writes the real `UserDefaults.standard`; the macro-synthesized
 /// `testValue` fails any unimplemented call so reducer tests must
 /// explicitly stub each key access.
+///
+/// `remove` is consumed by the Settings → "Erase All My Data" flow
+/// (issue #329) to drop the disclaimer / theme / language keys so the
+/// onboarding gate re-fires on the next launch.
 @DependencyClient
 struct UserDefaultsClient: Sendable {
   var bool: @Sendable (_ forKey: String) -> Bool = { _ in false }
   var string: @Sendable (_ forKey: String) -> String? = { _ in nil }
   var setBool: @Sendable (_ value: Bool, _ forKey: String) -> Void
   var setString: @Sendable (_ value: String, _ forKey: String) -> Void
+  var remove: @Sendable (_ forKey: String) -> Void
 }
 
 extension UserDefaultsClient: DependencyKey {
@@ -24,7 +29,8 @@ extension UserDefaultsClient: DependencyKey {
       bool: { defaults.bool(forKey: $0) },
       string: { defaults.string(forKey: $0) },
       setBool: { defaults.set($0, forKey: $1) },
-      setString: { defaults.set($0, forKey: $1) }
+      setString: { defaults.set($0, forKey: $1) },
+      remove: { defaults.removeObject(forKey: $0) }
     )
   }()
 
@@ -34,7 +40,8 @@ extension UserDefaultsClient: DependencyKey {
       bool: { key in storage.value[key] as? Bool ?? false },
       string: { key in storage.value[key] as? String },
       setBool: { value, key in storage.withValue { $0[key] = value } },
-      setString: { value, key in storage.withValue { $0[key] = value } }
+      setString: { value, key in storage.withValue { $0[key] = value } },
+      remove: { key in storage.withValue { $0.removeValue(forKey: key) } }
     )
   }()
 }

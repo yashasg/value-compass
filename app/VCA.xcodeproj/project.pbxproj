@@ -66,6 +66,8 @@
 		A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09A /* ContributionHistoryFeature.swift */; };
 		A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09B /* PortfolioEditorFeature.swift */; };
 		A0000000000000000000B09C /* SettingsFeature+APIKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F09C /* SettingsFeature+APIKey.swift */; };
+		A0000000000000000000B0D0 /* DataErasureRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0D0 /* DataErasureRequest.swift */; };
+		A0000000000000000000B0D1 /* SettingsFeature+DataErasure.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0D1 /* SettingsFeature+DataErasure.swift */; };
 		A0000000000000000000B017 /* PortfolioListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F017 /* PortfolioListView.swift */; };
 		A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F018 /* PortfolioEditorView.swift */; };
 		A0000000000000000000B036 /* openapi.json in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F036 /* openapi.json */; };
@@ -196,6 +198,8 @@
 		A0000000000000000000F09A /* ContributionHistoryFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionHistoryFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F09B /* PortfolioEditorFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F09C /* SettingsFeature+APIKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsFeature+APIKey.swift"; sourceTree = "<group>"; };
+		A0000000000000000000F0D0 /* DataErasureRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataErasureRequest.swift; sourceTree = "<group>"; };
+		A0000000000000000000F0D1 /* SettingsFeature+DataErasure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsFeature+DataErasure.swift"; sourceTree = "<group>"; };
 		A0000000000000000000F017 /* PortfolioListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F018 /* PortfolioEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000F037 /* openapi-generator-config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "openapi-generator-config.yaml"; sourceTree = "<group>"; };
@@ -352,6 +356,7 @@
 				A0000000000000000000F095 /* PortfolioListFeature.swift */,
 				A0000000000000000000F096 /* SettingsFeature.swift */,
 				A0000000000000000000F09C /* SettingsFeature+APIKey.swift */,
+				A0000000000000000000F0D1 /* SettingsFeature+DataErasure.swift */,
 				A0000000000000000000F097 /* PortfolioDetailFeature.swift */,
 				A0000000000000000000F098 /* HoldingsEditorFeature.swift */,
 				A0000000000000000000F099 /* ContributionResultFeature.swift */,
@@ -418,6 +423,7 @@
 				A0000000000000000000F034 /* MassiveAPIKeyStore.swift */,
 				A0000000000000000000F038 /* MassiveAPIKeyValidator.swift */,
 				A0000000000000000000F039 /* AppAttestProvider.swift */,
+				A0000000000000000000F0D0 /* DataErasureRequest.swift */,
 				A0000000000000000000F035 /* BackendSyncProjection.swift */,
 				A0000000000000000000F037 /* openapi-generator-config.yaml */,
 				A0000000000000000000F036 /* openapi.json */,
@@ -695,6 +701,8 @@
 				A0000000000000000000B09A /* ContributionHistoryFeature.swift in Sources */,
 				A0000000000000000000B09B /* PortfolioEditorFeature.swift in Sources */,
 				A0000000000000000000B09C /* SettingsFeature+APIKey.swift in Sources */,
+				A0000000000000000000B0D0 /* DataErasureRequest.swift in Sources */,
+				A0000000000000000000B0D1 /* SettingsFeature+DataErasure.swift in Sources */,
 				A0000000000000000000B017 /* PortfolioListView.swift in Sources */,
 				A0000000000000000000B018 /* PortfolioEditorView.swift in Sources */,
 				A0000000000000000000B040 /* ContributionCalculator.swift in Sources */,

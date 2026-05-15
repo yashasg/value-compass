@@ -16,6 +16,14 @@ import Foundation
 /// `UserDefaults`, SwiftData, logs, or fixtures) and revalidated against
 /// Massive via `@Dependency(\.massiveAPIKeyValidator)` before any save.
 ///
+/// Issue #329 adds the "Erase All My Data" surface that satisfies GDPR
+/// Art. 17 / CCPA §1798.105 / App Store §5.1.1(v). The orchestration
+/// (backend `DELETE /portfolio` → SwiftData wipe → Keychain wipe →
+/// device-UUID rotation → onboarding-gate reset) lives in
+/// `SettingsFeature+DataErasure.swift` so this file stays focused on the
+/// preferences/API-key surface; the entry-point action is declared here so
+/// the reducer body's single `switch` covers every dispatched action.
+///
 /// Phase 2 (#158) replaces the legacy `AppState`-backed bridge in
 /// `SettingsView.init()` once the real `Store` is wired at app entry.
 @Reducer
@@ -62,6 +70,16 @@ struct SettingsFeature {
     /// separate from `apiKeyRequestStatus` so a load failure doesn't get
     /// clobbered by a later save attempt.
     var apiKeyLoadError: String?
+
+    // MARK: Data erasure (issue #329)
+
+    /// Source-of-truth status of the in-app data-erasure orchestration.
+    /// See `SettingsFeature+DataErasure.swift` for the reducer logic.
+    var dataErasureStatus: SettingsDataErasureStatus = .idle
+    /// `nil` whenever the destructive confirmation dialog is dismissed.
+    /// Populated by `eraseAllDataTapped` and consumed by the view's
+    /// `.confirmationDialog(...)` modifier.
+    @Presents var dataErasureConfirmation: ConfirmationDialogState<Action.DataErasure>?
   }
 
   enum Action: BindableAction, Equatable, Sendable {
@@ -75,6 +93,31 @@ struct SettingsFeature {
     case apiKeyValidationCompleted(MassiveAPIKeyValidationOutcome, persistedKey: String)
     case apiKeyRevalidationCompleted(MassiveAPIKeyValidationOutcome)
     case apiKeyRemovalFailed(reason: String)
+
+    // MARK: Data erasure actions (issue #329)
+    case eraseAllDataTapped
+    case dataErasureConfirmation(PresentationAction<DataErasure>)
+    case dataErasureCompleted(SettingsDataErasureOutcome)
+    case dataErasureAcknowledged
+    case delegate(Delegate)
+
+    /// Confirmation-dialog button payloads. Kept on `Action` (rather than
+    /// nested under `dataErasureConfirmation`) so `BindableAction`
+    /// conformance and the `Equatable` synthesis stay simple.
+    @CasePathable
+    enum DataErasure: Equatable, Sendable {
+      case confirm
+      case cancel
+    }
+
+    @CasePathable
+    enum Delegate: Equatable, Sendable {
+      /// Server + local erasure completed. The parent reducer
+      /// (`AppFeature`) clears the disclaimer gate and routes back to
+      /// onboarding so the user re-acknowledges the terms before any
+      /// fresh traffic is issued.
+      case dataErasureCompleted
+    }
   }
 
   @Dependency(\.userDefaults) var userDefaults
@@ -82,6 +125,8 @@ struct SettingsFeature {
   @Dependency(\.deviceID) var deviceID
   @Dependency(\.massiveAPIKey) var massiveAPIKey
   @Dependency(\.massiveAPIKeyValidator) var massiveAPIKeyValidator
+  @Dependency(\.apiClient) var apiClient
+  @Dependency(\.modelContainer) var modelContainer
 
   /// `UserDefaults` keys mirrored from `AppState` so reducer reads/writes hit
   /// the same persisted values the legacy `AppState` does. #158 deletes
@@ -232,7 +277,29 @@ struct SettingsFeature {
           state.apiKeyRequestStatus = .networkError(reason: reason)
         }
         return .none
+
+      case .eraseAllDataTapped:
+        return reduceEraseAllDataTapped(state: &state)
+
+      case .dataErasureConfirmation(.presented(.confirm)):
+        return reduceDataErasureConfirmed(state: &state)
+
+      case .dataErasureConfirmation(.presented(.cancel)),
+        .dataErasureConfirmation(.dismiss):
+        state.dataErasureConfirmation = nil
+        return .none
+
+      case .dataErasureCompleted(let outcome):
+        return reduceDataErasureCompleted(outcome: outcome, state: &state)
+
+      case .dataErasureAcknowledged:
+        state.dataErasureStatus = .idle
+        return .none
+
+      case .delegate:
+        return .none
       }
     }
+    .ifLet(\.$dataErasureConfirmation, action: \.dataErasureConfirmation)
   }
 }

@@ -97,6 +97,19 @@ struct AppFeature {
         }
         return .none
 
+      case .destination(.main(.settings(.delegate(.dataErasureCompleted)))):
+        // The Settings flow has already removed the disclaimer flag from
+        // UserDefaults inside its erasure effect; here we mirror the
+        // routing transition so the user lands back on the onboarding
+        // gate within the same session and re-acknowledges the
+        // disclaimer (issue #329 §1.v). Skipped while a forced-update
+        // sticky destination is in flight so the upgrade gate can't be
+        // bypassed by an erasure during launch.
+        if !state.requiresAppUpdate {
+          state.destination = .onboarding(OnboardingFeature.State())
+        }
+        return .none
+
       case .destination:
         return .none
       }

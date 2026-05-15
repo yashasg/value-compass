@@ -219,6 +219,42 @@ final class AppFeatureTests: XCTestCase {
     )
   }
 
+  // MARK: - .destination(.main(.settings(.delegate(.dataErasureCompleted))))
+
+  /// Issue #329: when SettingsFeature delegates `.dataErasureCompleted`
+  /// through the `.main` destination, AppFeature must route back to
+  /// `.onboarding` so the user re-acknowledges the disclaimer before any
+  /// fresh traffic flows. UserDefaults writes were performed by the
+  /// SettingsFeature effect already, so AppFeature is only responsible
+  /// for the in-session destination transition.
+  func testDataErasureCompletedFromSettingsRoutesBackToOnboarding() async {
+    let store = TestStore(
+      initialState: AppFeature.State(destination: .main(MainFeature.State()))
+    ) {
+      AppFeature()
+    }
+
+    await store.send(.destination(.main(.settings(.delegate(.dataErasureCompleted))))) {
+      $0.destination = .onboarding(OnboardingFeature.State())
+    }
+  }
+
+  /// Forced-update sticky state must take precedence over data erasure —
+  /// the user cannot bypass the upgrade gate by erasing during launch.
+  func testDataErasureCompletedDuringForcedUpdateLeavesDestinationAlone() async {
+    let store = TestStore(
+      initialState: AppFeature.State(
+        destination: .forcedUpdate(ForcedUpdateFeature.State(minimumVersion: "9.9.9")),
+        minimumAppVersion: "9.9.9",
+        requiresAppUpdate: true
+      )
+    ) {
+      AppFeature()
+    }
+
+    await store.send(.destination(.main(.settings(.delegate(.dataErasureCompleted)))))
+  }
+
   // MARK: - .task cancel-in-flight
 
   func testTaskCancelInFlightDeduplicatesEventSubscription() async {

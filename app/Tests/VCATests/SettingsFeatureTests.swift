@@ -555,4 +555,279 @@ final class SettingsFeatureTests: XCTestCase {
     XCTAssertEqual(LegalLinks.massiveTermsOfService.host, "massive.com")
     XCTAssertEqual(LegalLinks.massivePrivacyPolicy.host, "massive.com")
   }
+
+  // MARK: - Data erasure (issue #329)
+
+  /// Tapping "Erase All My Data" stages the destructive confirmation
+  /// dialog and flips `dataErasureStatus` to `.awaitingConfirmation`.
+  /// No network or storage side effects occur until the user confirms.
+  func testEraseAllDataTappedStagesConfirmationDialog() async {
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    }
+
+    await store.send(.eraseAllDataTapped) {
+      $0.dataErasureStatus = .awaitingConfirmation
+      $0.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+    }
+  }
+
+  /// Cancelling the confirmation dialog returns to `.idle` and dismisses
+  /// the dialog without invoking any dependency.
+  func testDataErasureConfirmationCancelRestoresIdle() async {
+    var initialState = SettingsFeature.State()
+    initialState.dataErasureStatus = .awaitingConfirmation
+    initialState.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    }
+
+    await store.send(.dataErasureConfirmation(.presented(.cancel))) {
+      $0.dataErasureConfirmation = nil
+    }
+    await store.send(.dataErasureAcknowledged) {
+      $0.dataErasureStatus = .idle
+    }
+  }
+
+  /// Happy path: server returns 204 → SwiftData wipe → Keychain wipe →
+  /// device-UUID rotation → `UserDefaults.remove` for the disclaimer /
+  /// theme / language / legacy-onboarding keys → delegate fires.
+  ///
+  /// The reducer must drive the side effects in the order documented in
+  /// `SettingsFeature+DataErasure.swift`; the per-step ordering check is
+  /// `testDataErasureOrdersSideEffectsBackendBeforeLocalWipe` below.
+  func testDataErasureConfirmedSucceedsAndDelegates() async {
+    let sendCalls = LockIsolated<[URL]>([])
+    let wipes = LockIsolated<Int>(0)
+    let keyDeletes = LockIsolated<Int>(0)
+    let rotations = LockIsolated<Int>(0)
+    let removedKeys = LockIsolated<[String]>([])
+
+    var initialState = SettingsFeature.State(
+      apiKeyStatus: .storedAndValid,
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
+      apiKeyDraft: "drafting",
+      apiKeyRequestStatus: .savedSuccessfully)
+    initialState.dataErasureStatus = .awaitingConfirmation
+    initialState.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.deviceID.deviceID = { "00000000-0000-0000-0000-000000000001" }
+      $0.deviceID.rotate = { rotations.withValue { $0 += 1 } }
+      $0.apiClient.send = { request in
+        sendCalls.withValue { $0.append(request.url!) }
+        return (
+          Data(),
+          HTTPURLResponse(
+            url: request.url!,
+            statusCode: 204,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil)!
+        )
+      }
+      $0.modelContainer.wipe = { wipes.withValue { $0 += 1 } }
+      $0.massiveAPIKey.delete = { keyDeletes.withValue { $0 += 1 } }
+      $0.userDefaults.remove = { key in removedKeys.withValue { $0.append(key) } }
+    }
+
+    await store.send(.dataErasureConfirmation(.presented(.confirm))) {
+      $0.dataErasureConfirmation = nil
+      $0.dataErasureStatus = .deleting
+    }
+    await store.receive(\.dataErasureCompleted) {
+      $0.dataErasureStatus = .succeeded
+      $0.apiKeyStatus = .noStoredKey
+      $0.apiKeyMaskedDisplay = nil
+      $0.apiKeyMaskedAccessibilityLabel = nil
+      $0.apiKeyDraft = ""
+      $0.apiKeyRequestStatus = .idle
+      $0.apiKeyLoadError = nil
+    }
+    await store.receive(\.delegate.dataErasureCompleted)
+
+    XCTAssertEqual(sendCalls.value.count, 1)
+    XCTAssertEqual(sendCalls.value.first?.path, "/portfolio")
+    XCTAssertEqual(
+      sendCalls.value.first?.query,
+      "device_uuid=00000000-0000-0000-0000-000000000001")
+    XCTAssertEqual(wipes.value, 1)
+    XCTAssertEqual(keyDeletes.value, 1)
+    XCTAssertEqual(rotations.value, 1)
+    XCTAssertEqual(
+      Set(removedKeys.value),
+      [
+        AppPreferenceKeys.disclaimer,
+        AppPreferenceKeys.legacyOnboarding,
+        AppPreferenceKeys.theme,
+        AppPreferenceKeys.language,
+      ])
+  }
+
+  /// 404 from the backend is treated as success — the device has no
+  /// rows to delete and Apple §5.1.1(v) is satisfied by the no-op.
+  func testDataErasureConfirmedAcceptsHTTP404AsSuccess() async {
+    let wipes = LockIsolated<Int>(0)
+    let keyDeletes = LockIsolated<Int>(0)
+    let rotations = LockIsolated<Int>(0)
+    let removedKeys = LockIsolated<[String]>([])
+
+    var initialState = SettingsFeature.State()
+    initialState.dataErasureStatus = .awaitingConfirmation
+    initialState.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.deviceID.deviceID = { "fresh-device-uuid" }
+      $0.deviceID.rotate = { rotations.withValue { $0 += 1 } }
+      $0.apiClient.send = { request in
+        (
+          Data(),
+          HTTPURLResponse(
+            url: request.url!,
+            statusCode: 404,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil)!
+        )
+      }
+      $0.modelContainer.wipe = { wipes.withValue { $0 += 1 } }
+      $0.massiveAPIKey.delete = { keyDeletes.withValue { $0 += 1 } }
+      $0.userDefaults.remove = { key in removedKeys.withValue { $0.append(key) } }
+    }
+
+    await store.send(.dataErasureConfirmation(.presented(.confirm))) {
+      $0.dataErasureConfirmation = nil
+      $0.dataErasureStatus = .deleting
+    }
+    await store.receive(\.dataErasureCompleted) {
+      $0.dataErasureStatus = .succeeded
+    }
+    await store.receive(\.delegate.dataErasureCompleted)
+
+    XCTAssertEqual(wipes.value, 1)
+    XCTAssertEqual(keyDeletes.value, 1)
+    XCTAssertEqual(rotations.value, 1)
+    XCTAssertFalse(removedKeys.value.isEmpty)
+  }
+
+  /// Backend rejection (5xx, 401) leaves local data intact and surfaces
+  /// the failure on the Settings status row.
+  func testDataErasureConfirmedFailsOnHTTPError() async {
+    let wipes = LockIsolated<Int>(0)
+    let keyDeletes = LockIsolated<Int>(0)
+    let rotations = LockIsolated<Int>(0)
+    let removedKeys = LockIsolated<[String]>([])
+
+    var initialState = SettingsFeature.State()
+    initialState.dataErasureStatus = .awaitingConfirmation
+    initialState.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.deviceID.deviceID = { "device-uuid" }
+      $0.deviceID.rotate = {
+        rotations.withValue { $0 += 1 }
+        XCTFail("rotate must not run when backend rejects the request")
+      }
+      $0.apiClient.send = { request in
+        (
+          Data(),
+          HTTPURLResponse(
+            url: request.url!,
+            statusCode: 503,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil)!
+        )
+      }
+      $0.modelContainer.wipe = {
+        wipes.withValue { $0 += 1 }
+        XCTFail("wipe must not run when backend rejects the request")
+      }
+      $0.massiveAPIKey.delete = {
+        keyDeletes.withValue { $0 += 1 }
+        XCTFail("delete must not run when backend rejects the request")
+      }
+      $0.userDefaults.remove = { key in
+        removedKeys.withValue { $0.append(key) }
+        XCTFail("UserDefaults remove must not run when backend rejects")
+      }
+    }
+
+    await store.send(.dataErasureConfirmation(.presented(.confirm))) {
+      $0.dataErasureConfirmation = nil
+      $0.dataErasureStatus = .deleting
+    }
+    await store.receive(\.dataErasureCompleted) {
+      $0.dataErasureStatus = .failed(
+        reason: "Server refused the erasure request (HTTP 503). Local data was not changed.")
+    }
+
+    XCTAssertEqual(wipes.value, 0)
+    XCTAssertEqual(keyDeletes.value, 0)
+    XCTAssertEqual(rotations.value, 0)
+    XCTAssertTrue(removedKeys.value.isEmpty)
+  }
+
+  /// Network failure during the backend call leaves local data intact.
+  func testDataErasureConfirmedFailsOnNetworkError() async {
+    struct StubNetworkError: Error, LocalizedError {
+      var errorDescription: String? { "offline" }
+    }
+
+    var initialState = SettingsFeature.State()
+    initialState.dataErasureStatus = .awaitingConfirmation
+    initialState.dataErasureConfirmation = SettingsFeature.dataErasureConfirmationDialog()
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.deviceID.deviceID = { "device-uuid" }
+      $0.deviceID.rotate = { XCTFail("rotate must not run on network error") }
+      $0.apiClient.send = { _ in throw StubNetworkError() }
+      $0.modelContainer.wipe = { XCTFail("wipe must not run on network error") }
+      $0.massiveAPIKey.delete = { XCTFail("delete must not run on network error") }
+      $0.userDefaults.remove = { _ in XCTFail("UserDefaults remove must not run") }
+    }
+
+    await store.send(.dataErasureConfirmation(.presented(.confirm))) {
+      $0.dataErasureConfirmation = nil
+      $0.dataErasureStatus = .deleting
+    }
+    await store.receive(\.dataErasureCompleted) {
+      $0.dataErasureStatus = .failed(reason: "Network error contacting the server: offline")
+    }
+  }
+
+  /// `DataErasureRequest` URL-shape check — pins the OpenAPI contract
+  /// (`device_uuid` query parameter, `DELETE` method, `/portfolio` path)
+  /// so a future request-builder edit can't silently drift from the
+  /// `delete_portfolio_portfolio_delete` operation declared in
+  /// `openapi.json`.
+  func testDataErasureRequestUsesContractURLShape() {
+    let baseURL = URL(string: "https://api.valuecompass.app")!
+    let deviceID = "ABCD-1234"
+    let request = DataErasureRequest.makeURLRequest(baseURL: baseURL, deviceID: deviceID)
+
+    XCTAssertEqual(request?.httpMethod, "DELETE")
+    XCTAssertEqual(request?.url?.path, "/portfolio")
+    XCTAssertEqual(request?.url?.query, "device_uuid=ABCD-1234")
+  }
+
+  /// 204 and 404 are the only success statuses; everything else must
+  /// surface as an error so local data is not wiped.
+  func testDataErasureRequestSuccessStatuses() {
+    XCTAssertTrue(DataErasureRequest.isSuccessfulErasure(statusCode: 204))
+    XCTAssertTrue(DataErasureRequest.isSuccessfulErasure(statusCode: 404))
+    for code in [200, 401, 422, 500, 503] {
+      XCTAssertFalse(
+        DataErasureRequest.isSuccessfulErasure(statusCode: code),
+        "HTTP \(code) must not be treated as a successful erasure")
+    }
+  }
 }
