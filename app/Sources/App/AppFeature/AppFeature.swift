@@ -110,6 +110,15 @@ struct AppFeature {
         // disclaimer flag does not need to be re-touched here — a
         // fresh `OnboardingFeature.State()` mirrors the cold-launch
         // post-erase posture exactly.
+        //
+        // The `!state.requiresAppUpdate` guard is defensive parity
+        // with `.disclaimerSeenChanged` and `.onboarding(.delegate(
+        // .completed))`. In practice, by the time `requiresAppUpdate`
+        // is `true`, `destination` is already `.forcedUpdate(...)` (set
+        // in the same `.minVersionEvent` reduction) and TCA's
+        // `.ifCaseLet` aborts this `.main(.settings(...))` action
+        // before it reaches this case — the guard is unreachable but
+        // documents the invariant.
         if !state.requiresAppUpdate {
           state.destination = .onboarding(OnboardingFeature.State())
         }

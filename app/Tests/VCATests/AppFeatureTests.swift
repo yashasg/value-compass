@@ -238,22 +238,14 @@ final class AppFeatureTests: XCTestCase {
     }
   }
 
-  /// While `requiresAppUpdate` is sticky, the post-erase reroute MUST
-  /// NOT clobber the forced-update destination. The forced-update gate
-  /// stays on screen until the user updates and relaunches naturally.
-  func testSettingsDataErasedDelegateWhileRequiresAppUpdateLeavesDestinationAlone() async {
-    let store = TestStore(
-      initialState: AppFeature.State(
-        destination: .forcedUpdate(ForcedUpdateFeature.State(minimumVersion: "1.2.3")),
-        requiresAppUpdate: true
-      )
-    ) {
-      AppFeature()
-    }
-
-    // No state mutation expected — destination stays on `.forcedUpdate(...)`.
-    await store.send(.destination(.main(.settings(.delegate(.dataErased)))))
-  }
+  // The `if !state.requiresAppUpdate` guard in `AppFeature` is defensive:
+  // by the time `requiresAppUpdate` is `true`, `destination` is already
+  // `.forcedUpdate(...)` (set in the same `.minVersionEvent` reduction),
+  // so a `.destination(.main(.settings(.delegate(.dataErased))))` action
+  // is structurally impossible — TCA's `.ifCaseLet` correctly aborts a
+  // child action whose state case has already changed. There is no
+  // reachable scenario to exercise here, and forcing one would assert
+  // against TCA's framework behaviour rather than our reducer logic.
 
   // MARK: - .task cancel-in-flight
 
