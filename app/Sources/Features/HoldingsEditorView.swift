@@ -374,6 +374,16 @@ struct TickerDraft: Identifiable, Equatable, Sendable {
     symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
   }
 
+  /// Accessibility-facing label fallback used by per-row reorder/delete
+  /// controls in ``HoldingsEditorView``. VoiceOver and Voice Control resolve
+  /// commands by matching the control's spoken/AT label, so an empty draft
+  /// symbol still needs a unique-ish per-row anchor instead of an empty
+  /// interpolation gap (issue #268).
+  var displaySymbol: String {
+    let normalized = normalizedSymbol
+    return normalized.isEmpty ? "New ticker" : normalized
+  }
+
   var currentPrice: Decimal? {
     Self.validPositiveDecimal(from: currentPriceText)
   }
@@ -691,7 +701,12 @@ struct HoldingsEditorView: View {
               .autocorrectionDisabled()
               .accessibilityIdentifier("holdings.ticker.symbol")
 
-            tickerControls(categoryID: category.wrappedValue.id, tickerID: ticker.id)
+            tickerControls(
+              categoryID: category.wrappedValue.id,
+              tickerID: ticker.id,
+              categoryName: category.wrappedValue.displayName,
+              tickerSymbol: ticker.displaySymbol
+            )
           }
 
           tickerMarketDataFields(ticker: $ticker)
@@ -720,13 +735,16 @@ struct HoldingsEditorView: View {
       HStack {
         Text(category.wrappedValue.displayName)
         Spacer()
-        categoryControls(categoryID: category.wrappedValue.id)
+        categoryControls(
+          categoryID: category.wrappedValue.id,
+          categoryName: category.wrappedValue.displayName
+        )
       }
     }
     .accessibilityIdentifier("holdings.category.section")
   }
 
-  private func categoryControls(categoryID: UUID) -> some View {
+  private func categoryControls(categoryID: UUID, categoryName: String) -> some View {
     HStack {
       Button {
         store.send(.moveCategory(id: categoryID, direction: .up))
@@ -735,7 +753,7 @@ struct HoldingsEditorView: View {
       }
       .disabled(store.draft.categories.first?.id == categoryID)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Move category up")
+      .accessibilityLabel("Move category \(categoryName) up")
 
       Button {
         store.send(.moveCategory(id: categoryID, direction: .down))
@@ -744,7 +762,7 @@ struct HoldingsEditorView: View {
       }
       .disabled(store.draft.categories.last?.id == categoryID)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Move category down")
+      .accessibilityLabel("Move category \(categoryName) down")
 
       Button(role: .destructive) {
         store.send(.deleteCategory(id: categoryID))
@@ -753,7 +771,7 @@ struct HoldingsEditorView: View {
       }
       .tint(Color.appError)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Delete category")
+      .accessibilityLabel("Delete category \(categoryName)")
     }
     .buttonStyle(.borderless)
   }
@@ -787,7 +805,10 @@ struct HoldingsEditorView: View {
               .frame(width: 120)
               .accessibilityIdentifier("holdings.category.weight")
 
-            categoryControls(categoryID: category.wrappedValue.id)
+            categoryControls(
+              categoryID: category.wrappedValue.id,
+              categoryName: category.wrappedValue.displayName
+            )
           }
         }
         .padding()
@@ -824,7 +845,12 @@ struct HoldingsEditorView: View {
 
                   tickerMarketDataFields(ticker: $ticker)
 
-                  tickerControls(categoryID: category.wrappedValue.id, tickerID: ticker.id)
+                  tickerControls(
+                    categoryID: category.wrappedValue.id,
+                    tickerID: ticker.id,
+                    categoryName: category.wrappedValue.displayName,
+                    tickerSymbol: ticker.displaySymbol
+                  )
                 }
 
                 if let message = ticker.marketDataStatusMessage {
@@ -868,7 +894,12 @@ struct HoldingsEditorView: View {
     }
   }
 
-  private func tickerControls(categoryID: UUID, tickerID: UUID) -> some View {
+  private func tickerControls(
+    categoryID: UUID,
+    tickerID: UUID,
+    categoryName: String,
+    tickerSymbol: String
+  ) -> some View {
     HStack(spacing: 4) {
       Button {
         store.send(.moveTicker(categoryID: categoryID, tickerID: tickerID, direction: .up))
@@ -877,7 +908,7 @@ struct HoldingsEditorView: View {
       }
       .disabled(firstTickerID(in: categoryID) == tickerID)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Move ticker up")
+      .accessibilityLabel("Move \(tickerSymbol) up in \(categoryName)")
 
       Button {
         store.send(.moveTicker(categoryID: categoryID, tickerID: tickerID, direction: .down))
@@ -886,7 +917,7 @@ struct HoldingsEditorView: View {
       }
       .disabled(lastTickerID(in: categoryID) == tickerID)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Move ticker down")
+      .accessibilityLabel("Move \(tickerSymbol) down in \(categoryName)")
 
       Button(role: .destructive) {
         store.send(.deleteTicker(categoryID: categoryID, tickerID: tickerID))
@@ -895,7 +926,7 @@ struct HoldingsEditorView: View {
       }
       .tint(Color.appError)
       .appMinimumTouchTarget()
-      .accessibilityLabel("Delete ticker")
+      .accessibilityLabel("Delete \(tickerSymbol) from \(categoryName)")
     }
     .buttonStyle(.borderless)
   }

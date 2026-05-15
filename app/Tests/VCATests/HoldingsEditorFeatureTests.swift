@@ -657,6 +657,51 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.delegate(.canceled))
   }
 
+  // MARK: - Accessibility-row identity (issue #268)
+
+  func testTickerDraftDisplaySymbolFallsBackForEmptyAndWhitespaceSymbols() {
+    // `HoldingsEditorView` interpolates `TickerDraft.displaySymbol` into the
+    // per-row reorder/delete `accessibilityLabel`s so VoiceOver and Voice
+    // Control can disambiguate identical controls across N tickers (#268).
+    // A freshly-added ticker has an empty symbol until the user types one;
+    // the label must still resolve to a deterministic non-empty fallback.
+    XCTAssertEqual(
+      TickerDraft(symbol: "", sortOrder: 0).displaySymbol,
+      "New ticker"
+    )
+    XCTAssertEqual(
+      TickerDraft(symbol: "   ", sortOrder: 0).displaySymbol,
+      "New ticker"
+    )
+    XCTAssertEqual(
+      TickerDraft(symbol: "vti", sortOrder: 0).displaySymbol,
+      "VTI"
+    )
+    XCTAssertEqual(
+      TickerDraft(symbol: "  vti  ", sortOrder: 0).displaySymbol,
+      "VTI"
+    )
+  }
+
+  func testCategoryDraftDisplayNameFallsBackForEmptyAndWhitespaceNames() {
+    // `HoldingsEditorView` interpolates `CategoryDraft.displayName` into the
+    // per-row reorder/delete `accessibilityLabel`s for category controls
+    // (#268). The fallback must mirror what the section header already
+    // shows, so the spoken label matches the visible title.
+    XCTAssertEqual(
+      CategoryDraft(name: "", weightPercentText: "0").displayName,
+      "New Category"
+    )
+    XCTAssertEqual(
+      CategoryDraft(name: "   ", weightPercentText: "0").displayName,
+      "New Category"
+    )
+    XCTAssertEqual(
+      CategoryDraft(name: "US Equity", weightPercentText: "0").displayName,
+      "US Equity"
+    )
+  }
+
   // MARK: - Helpers
 
   /// Returns a single-category draft that produces zero `HoldingsDraftIssue`s
