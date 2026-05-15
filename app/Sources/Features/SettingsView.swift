@@ -247,16 +247,32 @@ struct SettingsView: View {
         .textContentType(.password)
         .autocorrectionDisabled(true)
         .textInputAutocapitalization(.never)
+        .submitLabel(.done)
+        .onSubmit(submitAPIKeyFromReturnKey)
         .accessibilityIdentifier("settings.apiKey.draftField")
 
       Button("Save") {
         store.send(.saveAPIKeyTapped)
       }
       .accessibilityIdentifier("settings.apiKey.save")
-      .disabled(
-        store.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-          || store.apiKeyRequestStatus.isInFlight)
+      .disabled(!canSubmitAPIKey)
     }
+  }
+
+  private var canSubmitAPIKey: Bool {
+    !store.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !store.apiKeyRequestStatus.isInFlight
+  }
+
+  /// Hardware Return / software Done key on the API-key `SecureField`.
+  /// HIG → Onscreen keyboards → "Designing helpful actions": when a single
+  /// input drives a clearly-paired commit action, wire Return to that action
+  /// so people don't have to reach for a separate button. Gated by the same
+  /// predicate as the paired Save button so an empty draft or in-flight
+  /// validation doesn't fire a no-op effect. See issue #462.
+  private func submitAPIKeyFromReturnKey() {
+    guard canSubmitAPIKey else { return }
+    store.send(.saveAPIKeyTapped)
   }
 
   @ViewBuilder
