@@ -69,6 +69,7 @@
 		D0000000000000000000B009 /* PerceptionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D009 /* PerceptionCore */; };
 		D0000000000000000000B00A /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D00A /* Dependencies */; };
 		D0000000000000000000B00B /* ConcurrencyExtras in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D00B /* ConcurrencyExtras */; };
+		D0000000000000000000B00C /* CasePaths in Frameworks */ = {isa = PBXBuildFile; productRef = D0000000000000000000D00C /* CasePaths */; };
 		C0000000000000000000B002 /* LocalPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F002 /* LocalPersistenceTests.swift */; };
 		C0000000000000000000B003 /* NavigationShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F003 /* NavigationShellTests.swift */; };
 		C0000000000000000000B004 /* RootViewSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F004 /* RootViewSmokeTests.swift */; };
@@ -79,6 +80,7 @@
 		C0000000000000000000B009 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F009 /* DesignSystemTests.swift */; };
 		C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00A /* MinAppVersionClientTests.swift */; };
 		C0000000000000000000B00B /* ForcedUpdateFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */; };
+		C0000000000000000000B00C /* OnboardingFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00C /* OnboardingFeatureTests.swift */; };
 		C0000000000000000000B00D /* SettingsFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00D /* SettingsFeatureTests.swift */; };
 		C0000000000000000000B00E /* AppFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00E /* AppFeatureTests.swift */; };
 /* End PBXBuildFile section */
@@ -159,6 +161,7 @@
 		C0000000000000000000F009 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00A /* MinAppVersionClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinAppVersionClientTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F00C /* OnboardingFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00D /* SettingsFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00E /* AppFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -186,6 +189,7 @@
 				D0000000000000000000B002 /* ComposableArchitecture in Frameworks */,
 				D0000000000000000000B00A /* Dependencies in Frameworks */,
 				D0000000000000000000B00B /* ConcurrencyExtras in Frameworks */,
+				D0000000000000000000B00C /* CasePaths in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,6 +383,7 @@
 				C0000000000000000000F009 /* DesignSystemTests.swift */,
 				C0000000000000000000F00A /* MinAppVersionClientTests.swift */,
 				C0000000000000000000F00B /* ForcedUpdateFeatureTests.swift */,
+				C0000000000000000000F00C /* OnboardingFeatureTests.swift */,
 				C0000000000000000000F00D /* SettingsFeatureTests.swift */,
 				C0000000000000000000F00E /* AppFeatureTests.swift */,
 			);
@@ -433,6 +438,7 @@
 				D0000000000000000000D002 /* ComposableArchitecture */,
 				D0000000000000000000D00A /* Dependencies */,
 				D0000000000000000000D00B /* ConcurrencyExtras */,
+				D0000000000000000000D00C /* CasePaths */,
 			);
 			productName = VCATests;
 			productReference = C0000000000000000000A00A /* VCATests.xctest */;
@@ -574,6 +580,7 @@
 				C0000000000000000000B009 /* DesignSystemTests.swift in Sources */,
 				C0000000000000000000B00A /* MinAppVersionClientTests.swift in Sources */,
 				C0000000000000000000B00B /* ForcedUpdateFeatureTests.swift in Sources */,
+				C0000000000000000000B00C /* OnboardingFeatureTests.swift in Sources */,
 				C0000000000000000000B00D /* SettingsFeatureTests.swift in Sources */,
 				C0000000000000000000B00E /* AppFeatureTests.swift in Sources */,
 			);
@@ -876,6 +883,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D0000000000000000000C003 /* XCRemoteSwiftPackageReference "swift-concurrency-extras" */;
 			productName = ConcurrencyExtras;
+		};
+		D0000000000000000000D00C /* CasePaths */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0000000000000000000C005 /* XCRemoteSwiftPackageReference "swift-case-paths" */;
+			productName = CasePaths;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
