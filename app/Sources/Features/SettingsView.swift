@@ -83,6 +83,9 @@ struct SettingsView: View {
     .navigationTitle("Settings")
     .tint(Color.appPrimary)
     .task { store.send(.task) }
+    .appAnnounceOnChange(of: store.accountErasureStatus) { status in
+      SettingsAccessibility.transitionAnnouncement(forAccountErasure: status)
+    }
     .confirmationDialog(
       "Erase All My Data?",
       isPresented: Binding(
