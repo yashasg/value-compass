@@ -219,15 +219,18 @@ extension BackgroundModelActor {
     }
   }
 
-  /// Deletes the portfolio with the given identifier and saves. No-op when
-  /// the portfolio is not present (e.g. already deleted from another
-  /// context).
+  /// Deletes the portfolio with the given identifier through
+  /// `PortfolioCascadeDeleter` so the `Holding` and `InvestSnapshot` rows
+  /// owned by `id` (referenced by `portfolioId` UUID, not by SwiftData
+  /// `@Relationship`) are removed in the same transaction. Calling
+  /// `modelContext.delete(portfolio)` directly would leak orphan MVP rows —
+  /// see the cascade contract documented in `MVPModels.swift` and the helper
+  /// at `Backend/Persistence/PortfolioCascadeDeleter.swift`.
+  ///
+  /// No-op when the portfolio is not present (e.g. already deleted from
+  /// another context): the deleter's fetch returns empty and `save()`
+  /// becomes a no-op.
   func deletePortfolio(id: UUID) throws {
-    let descriptor = FetchDescriptor<Portfolio>(
-      predicate: #Predicate { $0.id == id }
-    )
-    guard let portfolio = try modelContext.fetch(descriptor).first else { return }
-    modelContext.delete(portfolio)
-    try modelContext.save()
+    try PortfolioCascadeDeleter(context: modelContext).delete(portfolioID: id)
   }
 }

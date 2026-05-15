@@ -237,6 +237,76 @@ final class PortfolioListFeatureTests: XCTestCase {
     await store.send(.confirmDelete)
   }
 
+  /// Regression for #340. The MVP `Holding` and `InvestSnapshot` rows
+  /// reference their owning `Portfolio` by UUID (not by SwiftData
+  /// `@Relationship`), so deleting the `Portfolio` row directly would leave
+  /// orphan rows in the store. `BackgroundModelActor.deletePortfolio` must
+  /// route through `PortfolioCascadeDeleter`, and the live `.confirmDelete`
+  /// path exercised here is the end-to-end assertion that proves it.
+  ///
+  /// Also pins the other half of the cascade contract: the shared
+  /// `MarketDataBar` row must outlive any single portfolio, since market
+  /// data is intentionally not portfolio-scoped.
+  func testConfirmDeleteCascadesHoldingsAndInvestSnapshotsAndPreservesMarketData()
+    async throws
+  {
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = container.mainContext
+
+    let deletedID = UUID()
+    let deletedDate = Date(timeIntervalSince1970: 1_000_000)
+    context.insert(
+      Portfolio(
+        id: deletedID, name: "Delete me", monthlyBudget: Decimal(100), maWindow: 50,
+        createdAt: deletedDate))
+    context.insert(Holding(portfolioId: deletedID, symbol: "VTI"))
+    context.insert(Holding(portfolioId: deletedID, symbol: "BND"))
+    let snapshot = try InvestSnapshot(
+      portfolioId: deletedID,
+      capitalAmount: Decimal(500),
+      maWindow: 50,
+      marketDataWindowStart: Date(timeIntervalSince1970: 1_700_000_000),
+      marketDataWindowEnd: Date(timeIntervalSince1970: 1_700_864_000),
+      composition: []
+    )
+    context.insert(snapshot)
+
+    var utcCalendar = Calendar(identifier: .gregorian)
+    utcCalendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+    let marketDay = utcCalendar.date(
+      from: DateComponents(year: 2024, month: 1, day: 15))!
+    context.insert(
+      MarketDataBar(symbol: "VTI", date: marketDay, open: 1, high: 1, low: 1, close: 1))
+    try context.save()
+
+    let deletedSnap = PortfolioSnapshot(
+      id: deletedID, name: "Delete me", monthlyBudget: Decimal(100), maWindow: 50,
+      createdAt: deletedDate, categoryCount: 0)
+
+    var initialState = PortfolioListFeature.State()
+    initialState.portfolios = [deletedSnap]
+    initialState.pendingDeletion = deletedSnap
+
+    let store = TestStore(initialState: initialState) {
+      PortfolioListFeature()
+    } withDependencies: {
+      $0.modelContainer.container = { container }
+    }
+
+    await store.send(.confirmDelete) {
+      $0.pendingDeletion = nil
+    }
+    await store.receive(\.portfoliosLoaded) {
+      $0.portfolios = []
+    }
+
+    XCTAssertEqual(try context.fetch(FetchDescriptor<Portfolio>()).count, 0)
+    XCTAssertEqual(try context.fetch(FetchDescriptor<Holding>()).count, 0)
+    XCTAssertEqual(try context.fetch(FetchDescriptor<InvestSnapshot>()).count, 0)
+    // Shared market data must outlive any single portfolio.
+    XCTAssertEqual(try context.fetch(FetchDescriptor<MarketDataBar>()).count, 1)
+  }
+
   func testCancelDeleteClearsPendingDeletionWithoutTouchingTheStore() async throws {
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = container.mainContext
