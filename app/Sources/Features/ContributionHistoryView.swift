@@ -54,6 +54,19 @@ private struct ContributionHistoryContent: View {
                   store.send(.deleteTapped(record: record))
                 }
               }
+              // Mirror every `.swipeActions` button as a semantic
+              // `.accessibilityAction(named:)` so the destructive Delete
+              // is also reachable to Voice Control ("Tap Delete"),
+              // Switch Control (action menu), and Full Keyboard Access
+              // (action shortcut) — none of which can synthesize the
+              // trailing-swipe gesture today. VoiceOver users gain a
+              // labeled entry in the Actions rotor alongside the
+              // existing swipe-mirror. WCAG 2.5.1 (Pointer Gestures):
+              // any single-point gesture-only path must have an
+              // equivalent non-gesture alternative (#285).
+              .accessibilityAction(named: Text("Delete")) {
+                store.send(.deleteTapped(record: record))
+              }
               .accessibilityIdentifier("contribution.history.record")
             }
           } header: {

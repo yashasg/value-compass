@@ -53,6 +53,26 @@ private struct PortfolioListContent: View {
                 }
                 .tint(.blue)
               }
+              // Mirror both `.swipeActions` buttons as semantic
+              // `.accessibilityAction(named:)`s so Edit and the
+              // destructive Delete reach Voice Control ("Tap Edit" /
+              // "Tap Delete"), Switch Control (action menu), and Full
+              // Keyboard Access (action shortcut) — none of which can
+              // synthesize the trailing-swipe gesture. VoiceOver users
+              // also gain consistent labeled entries in the Actions
+              // rotor. Edit is otherwise unreachable to those AT paths
+              // because the codebase has no `EditButton`/`EditMode` and
+              // no toolbar-level entry point for per-row edit (#272
+              // intentionally removed the `.onDelete` stub plumbing).
+              // WCAG 2.5.1 (Pointer Gestures): any single-point
+              // gesture-only path must have an equivalent non-gesture
+              // alternative (#285).
+              .accessibilityAction(named: Text("Edit")) {
+                store.send(.editTapped(id: portfolio.id))
+              }
+              .accessibilityAction(named: Text("Delete")) {
+                store.send(.deleteTapped(id: portfolio.id))
+              }
           }
         }
         .accessibilityIdentifier("portfolio.list")
