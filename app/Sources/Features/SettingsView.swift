@@ -70,6 +70,9 @@ struct SettingsView: View {
     .appAnnounceOnChange(of: store.accountErasureStatus) { status in
       SettingsAccessibility.transitionAnnouncement(forAccountErasure: status)
     }
+    .appAnnounceOnChange(of: store.apiKeyRequestStatus) { status in
+      SettingsAccessibility.transitionAnnouncement(forAPIKeyRequest: status)
+    }
     .confirmationDialog(
       "Erase All My Data?",
       isPresented: Binding(

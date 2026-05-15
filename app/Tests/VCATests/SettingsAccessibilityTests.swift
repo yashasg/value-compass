@@ -147,4 +147,168 @@ final class SettingsAccessibilityTests: XCTestCase {
       )
     }
   }
+
+  // MARK: - API-key request transition announcement: idle
+
+  func testTransitionAnnouncementForAPIKeyIdleIsSilent() {
+    XCTAssertNil(
+      SettingsAccessibility.transitionAnnouncement(forAPIKeyRequest: .idle)
+    )
+  }
+
+  // MARK: - API-key request transition announcement: validating
+
+  func testTransitionAnnouncementForAPIKeyValidatingIsAStartedSentence() {
+    let announcement = SettingsAccessibility.transitionAnnouncement(
+      forAPIKeyRequest: .validating
+    )
+
+    XCTAssertEqual(
+      announcement,
+      "Validating your API key with Massive…"
+    )
+  }
+
+  func testTransitionAnnouncementForAPIKeyValidatingIsNonEmpty() {
+    let announcement = SettingsAccessibility.transitionAnnouncement(
+      forAPIKeyRequest: .validating
+    )
+
+    XCTAssertNotNil(announcement)
+    XCTAssertFalse(
+      announcement?.isEmpty ?? true,
+      "Validating-state announcement must not be empty — the helper drops empty strings."
+    )
+  }
+
+  // MARK: - API-key request transition announcement: rejected
+
+  func testTransitionAnnouncementForAPIKeyRejectedForwardsReason() {
+    // The reducer-supplied rejection reasons are already user-facing
+    // sentences (e.g. "API key cannot be empty.", "Massive said the key
+    // looks malformed."), so the announcement appends them verbatim
+    // after a self-describing "API key rejected:" prefix. The prefix
+    // makes the announcement self-describing when posted without the
+    // surrounding row's "Rejected:" visual prefix in focus context.
+    let reasons = [
+      "API key cannot be empty.",
+      "Massive said the key looks malformed.",
+      "Key length is below the minimum accepted by Massive.",
+    ]
+    for reason in reasons {
+      let announcement = SettingsAccessibility.transitionAnnouncement(
+        forAPIKeyRequest: .rejected(reason: reason)
+      )
+      XCTAssertEqual(
+        announcement, "API key rejected: \(reason)",
+        "Rejected-state announcement should wrap the reason '\(reason)' with the self-describing prefix."
+      )
+      XCTAssertFalse(
+        announcement?.isEmpty ?? true,
+        "Rejected-state announcement for reason '\(reason)' must not collapse to empty."
+      )
+    }
+  }
+
+  // MARK: - API-key request transition announcement: networkError
+
+  func testTransitionAnnouncementForAPIKeyNetworkErrorForwardsReason() {
+    // Network-error reasons distinguish "offline, retry when online"
+    // from "Massive responded with HTTP N, please try again". Forward
+    // them verbatim so VoiceOver users get the same retry guidance
+    // sighted users get from the inline row.
+    let reasons = [
+      "The Internet connection appears to be offline.",
+      "Massive responded with HTTP 503. Please try again.",
+      "Request timed out.",
+    ]
+    for reason in reasons {
+      let announcement = SettingsAccessibility.transitionAnnouncement(
+        forAPIKeyRequest: .networkError(reason: reason)
+      )
+      XCTAssertEqual(
+        announcement, "Network error: \(reason)",
+        "Network-error announcement should wrap the reason '\(reason)' with the self-describing prefix."
+      )
+      XCTAssertFalse(
+        announcement?.isEmpty ?? true,
+        "Network-error announcement for reason '\(reason)' must not collapse to empty."
+      )
+    }
+  }
+
+  // MARK: - API-key request transition announcement: storeError
+
+  func testTransitionAnnouncementForAPIKeyStoreErrorForwardsReason() {
+    // Keychain-write failures are surfaced separately so the user knows
+    // the network round-trip succeeded but the key never landed on
+    // disk — a different remedy (Keychain lock, restart) than a network
+    // error.
+    let reason = "errSecItemNotFound"
+    let announcement = SettingsAccessibility.transitionAnnouncement(
+      forAPIKeyRequest: .storeError(reason: reason)
+    )
+
+    XCTAssertEqual(
+      announcement, "Could not save your API key: \(reason)"
+    )
+    XCTAssertFalse(
+      announcement?.isEmpty ?? true,
+      "Store-error announcement must not collapse to empty."
+    )
+  }
+
+  // MARK: - API-key request transition announcement: savedSuccessfully
+
+  func testTransitionAnnouncementForAPIKeySavedAcknowledgesSuccess() {
+    let announcement = SettingsAccessibility.transitionAnnouncement(
+      forAPIKeyRequest: .savedSuccessfully
+    )
+
+    XCTAssertEqual(announcement, "API key saved.")
+  }
+
+  func testTransitionAnnouncementForAPIKeySavedNamesTheSurface() {
+    // The success announcement must self-identify the surface ("API
+    // key") because it is posted without focus context — a VoiceOver
+    // user who tapped Save and swiped away should still hear "API key
+    // saved" and not just a bare "saved".
+    let announcement = SettingsAccessibility.transitionAnnouncement(
+      forAPIKeyRequest: .savedSuccessfully
+    )
+
+    XCTAssertNotNil(announcement)
+    XCTAssertTrue(
+      announcement?.lowercased().contains("api key") ?? false,
+      "Saved-state announcement should reference 'API key' so VoiceOver users can identify the surface out of context."
+    )
+  }
+
+  // MARK: - Coverage: every non-idle API-key case is audible
+
+  func testEveryNonIdleAPIKeyRequestStatusHasANonEmptyAnnouncement() {
+    // Pin "everything but idle is audible" so a future
+    // `SettingsAPIKeyRequestStatus` case (e.g. a `.rateLimited(retryAfter:)`)
+    // cannot silently ship without an AT announcement. The API-key
+    // surface is the only third-party-integration gate in the app
+    // (`docs/legal/third-party-services.md`, #294); a silent transition
+    // here blocks a VoiceOver user from completing setup.
+    let nonIdleCases: [SettingsAPIKeyRequestStatus] = [
+      .validating,
+      .rejected(reason: "rejected reason"),
+      .networkError(reason: "network reason"),
+      .storeError(reason: "store reason"),
+      .savedSuccessfully,
+    ]
+    for status in nonIdleCases {
+      let announcement = SettingsAccessibility.transitionAnnouncement(
+        forAPIKeyRequest: status
+      )
+      XCTAssertNotNil(announcement, "\(status) has no announcement.")
+      XCTAssertFalse(
+        announcement?.isEmpty ?? true,
+        "\(status) announcement is empty."
+      )
+    }
+  }
 }
