@@ -714,6 +714,49 @@ def test_portfolio_export_returns_full_record(
         assert set(holding.keys()) == {"ticker", "weight"}
 
 
+def test_portfolio_export_response_marks_format_version_required(
+    client: TestClient,
+) -> None:
+    """``format_version`` must be declared required in the OpenAPI schema.
+
+    Regression guard for issue #463: ``format_version`` carries a
+    Pydantic default which Pydantic v2 silently drops from the
+    auto-generated ``required`` list, even though the server always
+    emits the field. The fix at
+    :class:`PortfolioExportResponse.model_config` promotes it back into
+    ``required`` via ``json_schema_extra`` (same #381 pattern previously
+    applied to :class:`HealthResponse`).
+
+    Without this guard, generated iOS clients would decode
+    ``format_version`` as ``Int?`` and silently collapse "absent" with
+    "default 1" — defeating the field's purpose as the forward-
+    compatibility lever for the GDPR Art. 20 export envelope.
+    """
+    schema = client.get("/openapi.json").json()
+    export_schema = schema["components"]["schemas"]["PortfolioExportResponse"]
+
+    required = export_schema.get("required", [])
+    assert "format_version" in required, (
+        "PortfolioExportResponse.format_version must appear in the "
+        "schema's `required` array so generated clients decode it as "
+        "non-optional (issue #463)."
+    )
+    # The pre-existing required fields must remain required — guards
+    # against accidental regressions where `json_schema_extra` overrides
+    # rather than extends the auto-generated list.
+    for field in ("generated_at", "device_uuid", "portfolio"):
+        assert field in required, (
+            f"PortfolioExportResponse.{field} must remain required."
+        )
+
+    # The field schema itself must still describe a constrained integer
+    # so a future format-N bump cannot silently land as a non-integer.
+    format_version_schema = export_schema["properties"]["format_version"]
+    assert format_version_schema["type"] == "integer"
+    assert format_version_schema["default"] == 1
+    assert format_version_schema["minimum"] == 1
+
+
 def test_portfolio_export_preserves_decimal_precision(
     client: TestClient, db_session: Session
 ) -> None:
