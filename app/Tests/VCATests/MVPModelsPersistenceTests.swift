@@ -170,6 +170,33 @@ final class MVPModelsPersistenceTests: XCTestCase {
     XCTAssertEqual(try fetched.decodedWarnings(), ["Stale market data: BND"])
   }
 
+  func testInvestSnapshotPinsCategorySnapshotInputCompositionJSONShape() throws {
+    let composition = [
+      CategorySnapshotInput(
+        name: "Equity", weight: Decimal(string: "0.7")!, symbols: ["VTI", "VXUS"])
+    ]
+    let canonicalCompositionJSON =
+      "[{\"name\":\"Equity\",\"symbols\":[\"VTI\",\"VXUS\"],\"weight\":0.7}]"
+    let snapshot = try InvestSnapshot(
+      portfolioId: UUID(),
+      capitalAmount: Decimal(1_000),
+      maWindow: 50,
+      marketDataWindowStart: Date(timeIntervalSince1970: 1_700_000_000),
+      marketDataWindowEnd: Date(timeIntervalSince1970: 1_700_864_000),
+      composition: composition
+    )
+
+    XCTAssertEqual(snapshot.compositionJSON, canonicalCompositionJSON)
+    XCTAssertEqual(snapshot.warningsJSON, "[]")
+    XCTAssertEqual(
+      try JSONDecoder().decode(
+        [CategorySnapshotInput].self,
+        from: Data(canonicalCompositionJSON.utf8)
+      ),
+      composition
+    )
+  }
+
   // MARK: - AppSettings
 
   func testAppSettingsRepositorySeedsSingletonExactlyOnce() throws {

@@ -172,10 +172,21 @@ final class MarketDataBar {
 /// portfolio composition (categories, weights, member symbols) at snapshot
 /// time so a snapshot can be re-computed later without depending on the
 /// then-current portfolio.
+///
+/// The property names below define the on-disk JSON key set for every
+/// `InvestSnapshot.compositionJSON` row written from `LocalSchemaV1` onward.
+/// Renaming a property requires a `MigrationStage` entry in
+/// `LocalSchemaMigrationPlan` that rewrites legacy JSON; the explicit
+/// `CodingKeys` enum below keeps the wire-format stable across pure-Swift
+/// refactors.
 struct CategorySnapshotInput: Codable, Equatable {
   var name: String
   var weight: Decimal
   var symbols: [String]
+
+  private enum CodingKeys: String, CodingKey {
+    case name, weight, symbols
+  }
 }
 
 /// A snapshot of an "Invest" calculation's *inputs* and metadata only. Per
