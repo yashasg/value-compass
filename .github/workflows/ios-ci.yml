@@ -53,6 +53,16 @@ jobs:
             ${{ runner.os }}-xcode-ios-ci-
             ${{ runner.os }}-xcode-
 
+      - name: Purge cached xcresult and xcactivitylog bundles
+        # The cache step above can restore Logs/Test/*.xcresult and
+        # Logs/Build/*.xcactivitylog from a previous run. If the current
+        # build fails, the upload step below would then collect those stale
+        # bundles alongside the current ones, making it hard to find the
+        # failing run's diagnostics and bloating the artifact. Delete only
+        # the Logs directory so compilation products in the cache are
+        # preserved.
+        run: rm -rf build/app/xcode-derived-data/Logs
+
       - name: Build and test (no signing)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL || secrets.SERVICES_BASE_URL }}
