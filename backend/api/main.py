@@ -6,6 +6,7 @@ original services spec:
 * ``GET  /health``              — liveness + DB reachability
 * ``GET  /portfolio/status``    — last_modified / next_modified, cacheable
 * ``GET  /portfolio/data``      — full portfolio allocation for the device
+* ``GET  /portfolio/export``    — GDPR Art. 20 / CCPA §1798.100 data export
 * ``GET  /schema/version``      — current API schema version
 * ``POST /portfolio/holdings``  — add a ticker; queues a background fetch
 
@@ -389,6 +390,57 @@ class AddHoldingRequest(BaseModel):
     weight: float = Field(gt=0, le=1)
 
 
+class PortfolioExportHolding(BaseModel):
+    """Single holding in the personal-data export.
+
+    Mirrors the persisted row (``backend/db/models.py::Holding``) rather
+    than the enriched :class:`HoldingOut` returned from
+    ``/portfolio/data``: the export is a verbatim dump of every
+    ``X-Device-UUID``-linked row, not a recomputed view, so cached
+    market-data fields are intentionally excluded.
+    """
+
+    ticker: str
+    weight: DecimalString
+
+
+class PortfolioExport(BaseModel):
+    """Personal data the backend stores about one device's portfolio.
+
+    Every field is sourced directly from ``backend/db/models.py`` so the
+    export is auditable against the schema: if a row has it, the export
+    has it.
+    """
+
+    portfolio_id: UUID
+    name: str
+    monthly_budget: DecimalString
+    ma_window: int
+    created_at: datetime
+    last_seen_at: datetime | None
+    holdings: list[PortfolioExportHolding]
+
+
+class PortfolioExportResponse(BaseModel):
+    """GDPR Art. 20 / CCPA §1798.100 personal-data export envelope.
+
+    Returned by ``GET /portfolio/export``. The body is the complete set
+    of ``X-Device-UUID``-linked rows the backend stores for the caller,
+    in a structured machine-readable form so the data subject can move
+    it to another controller (Art. 20) or audit what is held about them
+    (Art. 15 / §1798.110).
+
+    ``format_version`` lets us evolve the export shape additively without
+    breaking offline tooling that parses prior exports. Bump on every
+    backwards-incompatible field change.
+    """
+
+    format_version: int = Field(default=1, ge=1)
+    generated_at: datetime
+    device_uuid: UUID
+    portfolio: PortfolioExport
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -541,6 +593,92 @@ def portfolio_data(
         monthly_budget=portfolio.monthly_budget,
         ma_window=portfolio.ma_window,
         holdings=holdings_out,
+    )
+    _stamp_activity(db, portfolio)
+    return response
+
+
+@app.get(
+    "/portfolio/export",
+    response_model=PortfolioExportResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def portfolio_export(
+    device_uuid: UUID,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> PortfolioExportResponse:
+    """Return every ``X-Device-UUID``-linked row stored on the backend.
+
+    Implements GDPR Art. 20 (right to data portability), CCPA §1798.100
+    (consumer right to know), and the export commitment made in
+    ``docs/legal/privacy-policy.md`` §6. The body is a verbatim dump of
+    the persisted schema — `Portfolio` columns plus the cascaded
+    `Holding` rows — so the data subject receives the same fields the
+    backend stores, not a recomputed view.
+
+    Authentication mirrors every other protected route: a valid
+    ``X-App-Attest`` header plus a ``device_uuid`` that resolves to an
+    existing portfolio. Identity verification at the data-subject-rights
+    level (Privacy Policy §6 "How to exercise these rights") is
+    delegated to the iOS client, which only emits this request after
+    reading the device UUID from the Keychain entry created at first
+    launch.
+
+    Reading the export stamps ``last_seen_at`` so an export call alone
+    keeps the row out of the retention-purge sweep documented in
+    ``docs/legal/data-retention.md`` — consistent with every other
+    authenticated read of the portfolio surface.
+    """
+    try:
+        portfolio = db.execute(
+            select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("portfolio export lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+    if portfolio is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Portfolio not found for device.",
+        )
+
+    response = PortfolioExportResponse(
+        generated_at=datetime.now(UTC),
+        device_uuid=device_uuid,
+        portfolio=PortfolioExport(
+            portfolio_id=portfolio.id,
+            name=portfolio.name,
+            monthly_budget=portfolio.monthly_budget,
+            ma_window=portfolio.ma_window,
+            created_at=portfolio.created_at,
+            last_seen_at=portfolio.last_seen_at,
+            holdings=[
+                PortfolioExportHolding(
+                    ticker=holding.ticker,
+                    weight=holding.weight,
+                )
+                for holding in portfolio.holdings
+            ],
+        ),
     )
     _stamp_activity(db, portfolio)
     return response

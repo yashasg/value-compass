@@ -475,6 +475,186 @@
         }
       }
     },
+    "/portfolio/export": {
+      "get": {
+        "summary": "Portfolio Export",
+        "description": "Return every ``X-Device-UUID``-linked row stored on the backend.\n\nImplements GDPR Art. 20 (right to data portability), CCPA \u00a71798.100\n(consumer right to know), and the export commitment made in\n``docs/legal/privacy-policy.md`` \u00a76. The body is a verbatim dump of\nthe persisted schema \u2014 `Portfolio` columns plus the cascaded\n`Holding` rows \u2014 so the data subject receives the same fields the\nbackend stores, not a recomputed view.\n\nAuthentication mirrors every other protected route: a valid\n``X-App-Attest`` header plus a ``device_uuid`` that resolves to an\nexisting portfolio. Identity verification at the data-subject-rights\nlevel (Privacy Policy \u00a76 \"How to exercise these rights\") is\ndelegated to the iOS client, which only emits this request after\nreading the device UUID from the Keychain entry created at first\nlaunch.\n\nReading the export stamps ``last_seen_at`` so an export call alone\nkeeps the row out of the retention-purge sweep documented in\n``docs/legal/data-retention.md`` \u2014 consistent with every other\nauthenticated read of the portfolio surface.",
+        "operationId": "portfolio_export_portfolio_export_get",
+        "parameters": [
+          {
+            "name": "device_uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Device Uuid"
+            }
+          },
+          {
+            "name": "X-App-Attest",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "title": "X-App-Attest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioExportResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid App Attest credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Requested portfolio resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request uses an unsupported contract or market-data option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service, sync, or market data is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "Cloudflare-cacheable max-age in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "UTC RFC 7231 timestamp for the response.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portfolio/holdings": {
       "post": {
         "summary": "Add Holding",
@@ -943,6 +1123,115 @@
         ],
         "title": "PortfolioDataResponse",
         "description": "Full portfolio allocation response body."
+      },
+      "PortfolioExport": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Portfolio Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monthly_budget": {
+            "type": "string",
+            "format": "decimal",
+            "title": "Monthly Budget"
+          },
+          "ma_window": {
+            "type": "integer",
+            "title": "Ma Window"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioExportHolding"
+            },
+            "type": "array",
+            "title": "Holdings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "name",
+          "monthly_budget",
+          "ma_window",
+          "created_at",
+          "last_seen_at",
+          "holdings"
+        ],
+        "title": "PortfolioExport",
+        "description": "Personal data the backend stores about one device's portfolio.\n\nEvery field is sourced directly from ``backend/db/models.py`` so the\nexport is auditable against the schema: if a row has it, the export\nhas it."
+      },
+      "PortfolioExportHolding": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "weight": {
+            "type": "string",
+            "format": "decimal",
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "weight"
+        ],
+        "title": "PortfolioExportHolding",
+        "description": "Single holding in the personal-data export.\n\nMirrors the persisted row (``backend/db/models.py::Holding``) rather\nthan the enriched :class:`HoldingOut` returned from\n``/portfolio/data``: the export is a verbatim dump of every\n``X-Device-UUID``-linked row, not a recomputed view, so cached\nmarket-data fields are intentionally excluded."
+      },
+      "PortfolioExportResponse": {
+        "properties": {
+          "format_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Format Version",
+            "default": 1
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "device_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Device Uuid"
+          },
+          "portfolio": {
+            "$ref": "#/components/schemas/PortfolioExport"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "device_uuid",
+          "portfolio"
+        ],
+        "title": "PortfolioExportResponse",
+        "description": "GDPR Art. 20 / CCPA \u00a71798.100 personal-data export envelope.\n\nReturned by ``GET /portfolio/export``. The body is the complete set\nof ``X-Device-UUID``-linked rows the backend stores for the caller,\nin a structured machine-readable form so the data subject can move\nit to another controller (Art. 20) or audit what is held about them\n(Art. 15 / \u00a71798.110).\n\n``format_version`` lets us evolve the export shape additively without\nbreaking offline tooling that parses prior exports. Bump on every\nbackwards-incompatible field change."
       },
       "PortfolioStatusResponse": {
         "properties": {
