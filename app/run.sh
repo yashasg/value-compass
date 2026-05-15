@@ -55,6 +55,24 @@ require_xcode() {
   command -v xcrun >/dev/null 2>&1 || fail "xcrun is required. Install Xcode command line tools."
 }
 
+allow_swiftpm_bare_repository_caches() {
+  # SwiftPM stores fetched dependencies as bare git repositories under
+  # ~/Library/Caches/org.swift.swiftpm/repositories. When the surrounding
+  # environment sets safe.bareRepository=explicit (e.g. sandboxed CI agents,
+  # Copilot CLI), git refuses to read those caches and xcodebuild's "Resolve
+  # Package Graph" step fails with "cannot use bare repository ... (safe.bareRepository
+  # is 'explicit')". We append safe.bareRepository=all to GIT_CONFIG_COUNT so it
+  # overrides any inherited value (last entry wins) for every git invocation
+  # spawned by xcodebuild.
+  local count="${GIT_CONFIG_COUNT:-0}"
+  case "$count" in
+    ''|*[!0-9]*) count=0 ;;
+  esac
+  export "GIT_CONFIG_KEY_${count}=safe.bareRepository"
+  export "GIT_CONFIG_VALUE_${count}=all"
+  export "GIT_CONFIG_COUNT=$((count + 1))"
+}
+
 validate_project() {
   if [ -n "$WORKSPACE_PATH" ]; then
     [ -d "$WORKSPACE_PATH" ] || fail "WORKSPACE_PATH '$WORKSPACE_PATH' does not exist. Set WORKSPACE_PATH to the .xcworkspace."
@@ -272,6 +290,7 @@ require_xcode
 validate_project
 validate_positive_integer SIMCTL_RETRY_ATTEMPTS "$SIMCTL_RETRY_ATTEMPTS"
 validate_positive_integer SIMCTL_RETRY_DELAY_SECONDS "$SIMCTL_RETRY_DELAY_SECONDS"
+allow_swiftpm_bare_repository_caches
 select_values
 SIM_UDID="$(ensure_simulator "$DEVICE_NAME" "$OS_VERSION")"
 build_app "$DEVICE_NAME" "$OS_VERSION" "$SIM_UDID"
