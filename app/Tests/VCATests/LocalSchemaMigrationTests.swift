@@ -13,7 +13,13 @@ import XCTest
 /// 2. ``LocalSchemaMigrationPlan`` pins both schema versions in order and
 ///    registers exactly one migration stage (`v1 → v2`) per the v2
 ///    contribution-row identity contract.
-/// 3. A disk-backed container can be opened cold (creates the store),
+/// 3. ``LocalSchemaV1`` and ``LocalSchemaV2`` are *frozen* snapshots — their
+///    `models` arrays must reference distinct nested `@Model` types so a
+///    future edit to a live `@Model` class cannot retroactively change the
+///    v1 on-disk shape (issue #337). The frozen baseline must also carry the
+///    documented v1 → v2 field-level delta: `CategoryContribution` and
+///    `TickerAllocation` ship the `id: UUID` column in v2 but not in v1.
+/// 4. A disk-backed container can be opened cold (creates the store),
 ///    written to, and reopened warm against the same URL without raising a
 ///    migration error. Reopening warm exercises the SwiftData migration
 ///    runtime against the explicit `migrationPlan` argument and proves the
@@ -21,7 +27,7 @@ import XCTest
 @MainActor
 final class LocalSchemaMigrationTests: XCTestCase {
   func testSchemaV1ListsEveryModelRegisteredOnLocalPersistence() {
-    let v1Names = Set(LocalSchemaV1.models.map { String(describing: $0) })
+    let v1Names = Set(LocalSchemaV1.models.map { entityName(for: $0) })
     let expected: Set<String> = [
       "Portfolio",
       "Category",
@@ -43,11 +49,75 @@ final class LocalSchemaMigrationTests: XCTestCase {
     XCTAssertEqual(LocalSchemaV1.versionIdentifier, Schema.Version(1, 0, 0))
   }
 
-  func testSchemaV2ListsTheSameModelsAsV1AndAdvertisesABumpedVersion() {
-    let v1Names = Set(LocalSchemaV1.models.map { String(describing: $0) })
-    let v2Names = Set(LocalSchemaV2.models.map { String(describing: $0) })
-    XCTAssertEqual(v1Names, v2Names)
+  func testSchemaV2AdvertisesABumpedVersionIdentifier() {
     XCTAssertEqual(LocalSchemaV2.versionIdentifier, Schema.Version(2, 0, 0))
+  }
+
+  func testSchemaV2ListsTheSameEntityNamesAsV1() {
+    let v1Names = Set(LocalSchemaV1.models.map { entityName(for: $0) })
+    let v2Names = Set(LocalSchemaV2.models.map { entityName(for: $0) })
+    XCTAssertEqual(v1Names, v2Names)
+  }
+
+  /// Frozen-snapshot invariant: ``LocalSchemaV1`` and ``LocalSchemaV2`` must
+  /// reference *distinct* `@Model` class objects. If the two `models` arrays
+  /// ever share live class identity, an edit to any of those classes would
+  /// silently mutate `LocalSchemaV1` — making the v1 baseline useless for
+  /// migration. Issue #337.
+  func testSchemaV1AndV2DoNotShareLiveModelTypes() {
+    let v1Identifiers = Set(LocalSchemaV1.models.map { ObjectIdentifier($0) })
+    let v2Identifiers = Set(LocalSchemaV2.models.map { ObjectIdentifier($0) })
+    XCTAssertTrue(
+      v1Identifiers.isDisjoint(with: v2Identifiers),
+      """
+      LocalSchemaV1 and LocalSchemaV2 share at least one live @Model class. \
+      Each schema version must own its own frozen snapshot of every entity \
+      so future edits to the live shape cannot retroactively mutate the v1 \
+      on-disk baseline. Move the live class into LocalSchemaV2 and add a \
+      frozen V1 copy to LocalSchemaV1Models.swift (issue #337).
+      """
+    )
+  }
+
+  /// Asserts the v1 → v2 field-level delta documented in
+  /// `LocalSchemaV1Models.swift`: V2 ships an `id: UUID` column on
+  /// `CategoryContribution` and `TickerAllocation`, V1 does not. The test
+  /// fails closed if either side drifts — protecting both the v2 unique-key
+  /// contract (issue #249) and the v1 baseline that the migration stage
+  /// targets (issue #337).
+  func testSchemaV1AndV2DifferOnContributionBreakdownIdentityColumn() throws {
+    let v1Schema = Schema(versionedSchema: LocalSchemaV1.self)
+    let v2Schema = Schema(versionedSchema: LocalSchemaV2.self)
+
+    let v1CategoryContribution = try XCTUnwrap(
+      v1Schema.entities.first { $0.name == "CategoryContribution" }
+    )
+    let v2CategoryContribution = try XCTUnwrap(
+      v2Schema.entities.first { $0.name == "CategoryContribution" }
+    )
+    let v1TickerAllocation = try XCTUnwrap(
+      v1Schema.entities.first { $0.name == "TickerAllocation" }
+    )
+    let v2TickerAllocation = try XCTUnwrap(
+      v2Schema.entities.first { $0.name == "TickerAllocation" }
+    )
+
+    XCTAssertFalse(
+      v1CategoryContribution.properties.contains(where: { $0.name == "id" }),
+      "LocalSchemaV1.CategoryContribution must NOT expose an 'id' column — that field is the v1→v2 delta."
+    )
+    XCTAssertTrue(
+      v2CategoryContribution.properties.contains(where: { $0.name == "id" }),
+      "LocalSchemaV2.CategoryContribution must expose an 'id' column (issue #249)."
+    )
+    XCTAssertFalse(
+      v1TickerAllocation.properties.contains(where: { $0.name == "id" }),
+      "LocalSchemaV1.TickerAllocation must NOT expose an 'id' column — that field is the v1→v2 delta."
+    )
+    XCTAssertTrue(
+      v2TickerAllocation.properties.contains(where: { $0.name == "id" }),
+      "LocalSchemaV2.TickerAllocation must expose an 'id' column (issue #249)."
+    )
   }
 
   func testMigrationPlanPinsV1AndV2InOrderWithSingleV1ToV2Stage() {
@@ -164,5 +234,16 @@ final class LocalSchemaMigrationTests: XCTestCase {
     let fetchedAllocations = try context.fetch(FetchDescriptor<TickerAllocation>())
     XCTAssertEqual(fetchedAllocations.count, 1)
     XCTAssertEqual(fetchedAllocations.first?.id, allocationID)
+  }
+
+  // MARK: - Helpers
+
+  /// Returns the SwiftData entity name for a `@Model` type. Nested types
+  /// (e.g. `LocalSchemaV1.Portfolio`) report a dotted name from
+  /// `String(describing:)` but SwiftData keys entities off the simple class
+  /// name, so strip any enclosing namespace prefix.
+  private func entityName(for type: any PersistentModel.Type) -> String {
+    let described = String(describing: type)
+    return described.split(separator: ".").last.map(String.init) ?? described
   }
 }

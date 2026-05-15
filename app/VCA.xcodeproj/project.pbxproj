@@ -12,6 +12,7 @@
 		A0000000000000000000B0A0 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A0 /* AppPreferences.swift */; };
 		A0000000000000000000B005 /* LocalPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F005 /* LocalPersistence.swift */; };
 		A0000000000000000000B008 /* LocalSchemaVersions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F008 /* LocalSchemaVersions.swift */; };
+		A0000000000000000000B009 /* LocalSchemaV1Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F009 /* LocalSchemaV1Models.swift */; };
 		A0000000000000000000B006 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F006 /* AppBrand.swift */; };
 		A0000000000000000000B007 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F007 /* DesignSystem.swift */; };
 		A0000000000000000000B010 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F010 /* RootView.swift */; };
@@ -131,6 +132,7 @@
 		A0000000000000000000F0A0 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		A0000000000000000000F005 /* LocalPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPersistence.swift; sourceTree = "<group>"; };
 		A0000000000000000000F008 /* LocalSchemaVersions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSchemaVersions.swift; sourceTree = "<group>"; };
+		A0000000000000000000F009 /* LocalSchemaV1Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSchemaV1Models.swift; sourceTree = "<group>"; };
 		A0000000000000000000F006 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
 		A0000000000000000000F007 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		A0000000000000000000F010 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -309,6 +311,7 @@
 				A0000000000000000000F0A0 /* AppPreferences.swift */,
 				A0000000000000000000F005 /* LocalPersistence.swift */,
 				A0000000000000000000F008 /* LocalSchemaVersions.swift */,
+				A0000000000000000000F009 /* LocalSchemaV1Models.swift */,
 				A0000000000000000000F006 /* AppBrand.swift */,
 				A0000000000000000000F007 /* DesignSystem.swift */,
 				A0000000000000000000A080 /* Dependencies */,
@@ -607,6 +610,7 @@
 				A0000000000000000000B0A0 /* AppPreferences.swift in Sources */,
 				A0000000000000000000B005 /* LocalPersistence.swift in Sources */,
 				A0000000000000000000B008 /* LocalSchemaVersions.swift in Sources */,
+				A0000000000000000000B009 /* LocalSchemaV1Models.swift in Sources */,
 				A0000000000000000000B006 /* AppBrand.swift in Sources */,
 				A0000000000000000000B007 /* DesignSystem.swift in Sources */,
 				A0000000000000000000B010 /* RootView.swift in Sources */,
