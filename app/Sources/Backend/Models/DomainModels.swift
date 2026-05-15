@@ -238,19 +238,31 @@ final class ContributionRecord {
   }
 }
 
+/// Per-category breakdown row attached to a `ContributionRecord` snapshot.
+///
+/// Identity contract: every row carries a stable `@Attribute(.unique) var id: UUID`
+/// to match the convention used by `Portfolio`, `Category`, `Ticker`, and
+/// `ContributionRecord`. The id is the persisted business key — it survives
+/// `.json` export, store rebuilds, and the future CloudKit sync path; the
+/// SwiftData-synthesized `PersistentIdentifier` is not stable across any of
+/// those (issue #249). The default `UUID()` initializer keeps construction
+/// backward compatible for existing call sites that did not specify an id.
 @Model
 final class CategoryContribution {
+  @Attribute(.unique) var id: UUID
   var categoryName: String
   var amount: Decimal
   var allocatedWeight: Decimal
   var record: ContributionRecord?
 
   init(
+    id: UUID = UUID(),
     categoryName: String,
     amount: Decimal,
     allocatedWeight: Decimal,
     record: ContributionRecord? = nil
   ) {
+    self.id = id
     self.categoryName = categoryName
     self.amount = amount
     self.allocatedWeight = allocatedWeight
@@ -258,8 +270,13 @@ final class CategoryContribution {
   }
 }
 
+/// Per-ticker allocation row attached to a `ContributionRecord` snapshot.
+///
+/// Identity contract matches `CategoryContribution` — see the doc comment
+/// above for the rationale (issue #249).
 @Model
 final class TickerAllocation {
+  @Attribute(.unique) var id: UUID
   var tickerSymbol: String
   var categoryName: String
   var amount: Decimal
@@ -267,12 +284,14 @@ final class TickerAllocation {
   var record: ContributionRecord?
 
   init(
+    id: UUID = UUID(),
     tickerSymbol: String,
     categoryName: String,
     amount: Decimal,
     allocatedWeight: Decimal = 0,
     record: ContributionRecord? = nil
   ) {
+    self.id = id
     self.tickerSymbol = tickerSymbol
     self.categoryName = categoryName
     self.amount = amount
