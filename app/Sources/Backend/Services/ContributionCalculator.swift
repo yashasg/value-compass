@@ -96,6 +96,72 @@ struct ContributionInput {
     self.minMultiplier = minMultiplier
     self.maxMultiplier = maxMultiplier
   }
+
+  /// MVP-path constructor (issue #359). Builds a ``ContributionInput`` from a
+  /// flat `[Holding]` array — the MVP shape that replaces the legacy
+  /// `Portfolio → Category → Ticker` graph once issue #123 lands.
+  ///
+  /// Because every shipping ``ContributionCalculating`` conformer
+  /// (`MovingAverageContributionCalculator`,
+  /// `BandAdjustedContributionCalculator`,
+  /// `ProportionalSplitContributionCalculator`) reads
+  /// `input.portfolio.categories.flatMap(\.tickers)`, this initializer
+  /// synthesizes a transient `Portfolio` containing a single `"Holdings"`
+  /// category at weight `1.0`, with one `Ticker` per `Holding` (matching the
+  /// holding's `symbol` and `sortOrder`). The synthesized tickers carry no
+  /// indicator fields — market data flows entirely from `marketDataSnapshot`
+  /// (or its `MarketDataSnapshot(holdings:)` stub fallback).
+  ///
+  /// The synthesized graph keeps calculators bit-identical on the legacy
+  /// path while letting reducer-level code (and tests) drive them with only
+  /// MVP `Holding` rows + a market-data snapshot. When the legacy graph is
+  /// retired (#123) the synthesis step is the single point that needs to be
+  /// replaced — at that point, conformers can be migrated to read from
+  /// `[Holding]` directly without further seam churn.
+  ///
+  /// See ``ContributionCalculatorClient/calculateForHoldings`` for the
+  /// reducer-facing dependency wiring.
+  init(
+    holdings: [Holding],
+    monthlyBudget: Decimal,
+    marketDataSnapshot: MarketDataSnapshot? = nil,
+    minMultiplier: Decimal = BandMultiplierPolicy.defaultMinimum,
+    maxMultiplier: Decimal = BandMultiplierPolicy.defaultMaximum
+  ) {
+    let sortedHoldings = holdings.sorted { lhs, rhs in
+      if lhs.sortOrder != rhs.sortOrder {
+        return lhs.sortOrder < rhs.sortOrder
+      }
+      return lhs.normalizedSymbol < rhs.normalizedSymbol
+    }
+    let tickers: [Ticker] = sortedHoldings.enumerated().map { offset, holding in
+      Ticker(
+        symbol: holding.symbol,
+        currentPrice: nil,
+        movingAverage: nil,
+        bandPosition: nil,
+        sortOrder: offset
+      )
+    }
+    let category = Category(
+      name: "Holdings",
+      weight: 1,
+      sortOrder: 0,
+      tickers: tickers
+    )
+    let portfolio = Portfolio(
+      name: "Holdings",
+      monthlyBudget: monthlyBudget,
+      categories: [category]
+    )
+    self.init(
+      portfolio: portfolio,
+      monthlyBudget: monthlyBudget,
+      marketDataSnapshot: marketDataSnapshot ?? MarketDataSnapshot(holdings: holdings),
+      minMultiplier: minMultiplier,
+      maxMultiplier: maxMultiplier
+    )
+  }
 }
 
 struct MarketDataSnapshot: Equatable {
@@ -123,6 +189,34 @@ struct MarketDataSnapshot: Equatable {
       )
     }
     self.init(quotesBySymbol: quotesBySymbol)
+  }
+
+  /// MVP-path factory (issue #359). Walks `[Holding]` rows and projects
+  /// their indicator fields into a ``MarketDataSnapshot``.
+  ///
+  /// The MVP `Holding` schema does **not** yet carry indicator fields
+  /// (`currentPrice`, `movingAverage`, `bandPosition`); those values move
+  /// from `Ticker` to a shared `MarketDataBar` source (keyed by symbol)
+  /// only once issue #356 lands. Until then this initializer is a stub
+  /// that returns an empty snapshot — call sites can wire the seam ahead
+  /// of the data becoming available, and the snapshot starts carrying
+  /// quotes the moment #356 populates the source fields.
+  ///
+  /// Callers that need a non-empty snapshot before #356 lands (today's
+  /// reducers and tests) must build a ``MarketDataSnapshot`` directly via
+  /// ``init(quotesBySymbol:)`` and supply it to
+  /// ``ContributionInput/init(holdings:monthlyBudget:marketDataSnapshot:minMultiplier:maxMultiplier:)``.
+  init(holdings: [Holding]) {
+    // No indicator fields on `Holding` yet — see #356. Today this is a
+    // stub that returns an empty snapshot; once #356 adds indicator
+    // fields (or wires a shared `MarketDataBar` lookup keyed by symbol)
+    // this initializer becomes the canonical MVP factory and call sites
+    // begin receiving real quotes without further plumbing changes.
+    // Until then, callers that need a non-empty snapshot must build one
+    // via `init(quotesBySymbol:)` and supply it explicitly to
+    // `ContributionInput.init(holdings:monthlyBudget:marketDataSnapshot:...)`.
+    _ = holdings
+    self.init(quotesBySymbol: [:])
   }
 
   func quote(for symbol: String) -> MarketDataQuote? {
@@ -522,6 +616,28 @@ struct BandAdjustedContributionCalculator: ContributionCalculating {
 }
 
 struct ProportionalSplitContributionCalculator: ContributionCalculating {
+  /// Splits the monthly budget proportionally to category weights, then
+  /// evenly across the tickers within each category. The algorithm has no
+  /// market-data dependency in principle — only category weights and
+  /// ticker counts matter.
+  ///
+  /// ## MVP holdings path (issue #359)
+  ///
+  /// This calculator is **currently blocked** on the MVP holdings path
+  /// driven through ``ContributionCalculatorClient/calculateForHoldings``.
+  /// ``ContributionInputValidator`` gates every conformer on
+  /// `currentPrice` + `movingAverage` being present, even though this
+  /// calculator does not read them. Until the validator is made
+  /// calculator-aware (or a weight-only validator is introduced), an MVP
+  /// `[Holding]` array with zero market-data coverage still fails the
+  /// shared validator with `.missingMarketData(symbol)`.
+  ///
+  /// Callers that need the proportional split on the MVP path today must
+  /// supply a non-empty ``MarketDataSnapshot`` keyed by each holding's
+  /// symbol with non-`nil` `currentPrice` and `movingAverage` (the values
+  /// themselves are not consumed by this calculator). A follow-up to #359
+  /// owns relaxing the validator so the proportional split runs without
+  /// any market-data coverage.
   func calculate(input: ContributionInput) -> ContributionOutput {
     if let validationError = ContributionInputValidator.validate(input) {
       return .failure(validationError)

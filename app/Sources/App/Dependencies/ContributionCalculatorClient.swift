@@ -25,6 +25,12 @@ import Foundation
 ///   input) need; without it `BandAdjustedContributionCalculator` and
 ///   `ProportionalSplitContributionCalculator` are unreachable from any
 ///   reducer.
+/// - ``calculateForHoldings``: MVP-path seam introduced for #359. Drives
+///   `calculateWithInput` from a flat `[Holding]` array + caller-supplied
+///   `MarketDataSnapshot` so reducers can run a `ContributionCalculating`
+///   conformer against the MVP shape without traversing the legacy
+///   `Portfolio → Category → Ticker` graph. Required once #123 retires
+///   `Ticker`; available now so call sites can be wired ahead of time.
 /// - ``defaultCalculator``: live factory that returns the implementation
 ///   `MovingAverageContributionCalculator` to inject when a reducer has no
 ///   reason to override. Tests can swap this to drive end-to-end coverage
@@ -47,6 +53,26 @@ struct ContributionCalculatorClient: Sendable {
         ContributionOutput.failure(ContributionCalculationError.missingPortfolio)
       }
 
+  /// MVP-path seam (issue #359). Drives `calculateWithInput` from a flat
+  /// `[Holding]` array + a caller-supplied `MarketDataSnapshot`, without
+  /// requiring reducers to traverse the legacy `Portfolio → Category →
+  /// Ticker` graph. Internally wraps the inputs into a
+  /// ``ContributionInput`` via
+  /// ``ContributionInput/init(holdings:monthlyBudget:marketDataSnapshot:minMultiplier:maxMultiplier:)``
+  /// so existing ``ContributionCalculating`` conformers keep running
+  /// unchanged. Once `Ticker` is retired (#123), only the
+  /// `ContributionInput` synthesis step needs to be replaced — this seam
+  /// is stable.
+  var calculateForHoldings:
+    @MainActor @Sendable (
+      _ holdings: [Holding],
+      _ monthlyBudget: Decimal,
+      _ marketDataSnapshot: MarketDataSnapshot,
+      _ calculator: any ContributionCalculating
+    ) -> ContributionOutput = { _, _, _, _ in
+      ContributionOutput.failure(ContributionCalculationError.missingPortfolio)
+    }
+
   var defaultCalculator: @MainActor @Sendable () -> any ContributionCalculating = {
     MovingAverageContributionCalculator()
   }
@@ -63,12 +89,21 @@ extension ContributionCalculatorClient: DependencyKey {
     calculateWithInput: { input, calculator in
       ContributionCalculationService.calculate(input: input, calculator: calculator)
     },
+    calculateForHoldings: { holdings, monthlyBudget, marketDataSnapshot, calculator in
+      let input = ContributionInput(
+        holdings: holdings,
+        monthlyBudget: monthlyBudget,
+        marketDataSnapshot: marketDataSnapshot
+      )
+      return ContributionCalculationService.calculate(input: input, calculator: calculator)
+    },
     defaultCalculator: { MovingAverageContributionCalculator() }
   )
 
   static let previewValue = ContributionCalculatorClient(
     calculate: { _ in ContributionOutput(totalAmount: 0) },
     calculateWithInput: { _, _ in ContributionOutput(totalAmount: 0) },
+    calculateForHoldings: { _, _, _, _ in ContributionOutput(totalAmount: 0) },
     defaultCalculator: { MovingAverageContributionCalculator() }
   )
 }

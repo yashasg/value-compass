@@ -118,6 +118,7 @@
 		C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */; };
 		C0000000000000000000B020 /* MainAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F020 /* MainAccessibilityTests.swift */; };
 		C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */; };
+		C0000000000000000000B022 /* ContributionCalculatorMVPHoldingsSeamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */; };
 		A0000000000000000000B0C1 /* CalculationOutputDisclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */; };
 /* End PBXBuildFile section */
 
@@ -235,6 +236,7 @@
 		C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F020 /* MainAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerSurfaceTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorMVPHoldingsSeamTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationOutputDisclaimer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -502,6 +504,7 @@
 				C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */,
 				C0000000000000000000F020 /* MainAccessibilityTests.swift */,
 				C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */,
+				C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -735,6 +738,7 @@
 				C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */,
 				C0000000000000000000B020 /* MainAccessibilityTests.swift in Sources */,
 				C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */,
+				C0000000000000000000B022 /* ContributionCalculatorMVPHoldingsSeamTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
