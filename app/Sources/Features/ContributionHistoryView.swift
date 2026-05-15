@@ -89,18 +89,23 @@ private struct ContributionHistoryContent: View {
     }
     .navigationTitle("History")
     .task { store.send(.task) }
-    .alert(
-      "Delete Saved Result?",
+    .confirmationDialog(
+      Self.deletionDialogTitle(for: store.pendingDeletion),
       isPresented: Binding(
         get: { store.pendingDeletion != nil },
-        set: { if !$0 { store.send(.cancelDelete) } }
+        set: { isPresented in
+          if !isPresented { store.send(.cancelDelete) }
+        }
       ),
+      titleVisibility: .visible,
       presenting: store.pendingDeletion
     ) { _ in
       Button("Delete", role: .destructive) { store.send(.confirmDelete) }
+        .accessibilityIdentifier("contribution.history.delete.confirm")
       Button("Cancel", role: .cancel) { store.send(.cancelDelete) }
+        .accessibilityIdentifier("contribution.history.delete.cancel")
     } message: { record in
-      Text("This removes the saved result from \(dateText(record.date)).")
+      Text("This removes the saved result from \(Self.dateText(record.date)).")
     }
     .alert(
       "Could Not Delete Result",
@@ -117,8 +122,19 @@ private struct ContributionHistoryContent: View {
     .accessibilityIdentifier("contribution.history")
   }
 
-  private func dateText(_ date: Date) -> String {
+  private static func dateText(_ date: Date) -> String {
     ContributionHistoryDateFormatters.day.string(from: date)
+  }
+
+  /// Builds the confirmation-dialog title from the staged record so the
+  /// destructive action is unambiguous about *which* saved result is being
+  /// deleted (HIG → *Patterns → Confirming an action*: "Make sure the
+  /// destructive choice is clearly identified"). Falls back to a generic
+  /// title only as a safety net for the brief window when SwiftUI evaluates
+  /// the title while `pendingDeletion` is being cleared.
+  private static func deletionDialogTitle(for record: ContributionRecordSnapshot?) -> String {
+    guard let record else { return "Delete Saved Result?" }
+    return "Delete result from \(dateText(record.date))?"
   }
 }
 
