@@ -2,6 +2,38 @@
 
 ## Active Decisions
 
+### 2026-05-15T16:55:00Z: v1.0 launches via invite-only TestFlight beta → public flip with seeded ratings
+**By:** Saul (Market Researcher) | **Status:** Adopted (default-active pending Danny cohort-size pick) | **Issue:** #378 | **PR:** TBD
+
+Investrum's v1.0 public-launch path is a **2–4 week invite-only
+TestFlight beta** with 50–100 qualified users recruited from the #240
+ICP (Bogleheads / FIRE / dividends, spreadsheet refugees), followed by
+a coordinated single-day flip to the public App Store listing with
+beta-seeded reviews live by day 1. Success criteria at day 30:
+≥ 20 App Store reviews, ≥ 4.0★ average, zero `support_response`
+complaints (per Frank #312 bucket taxonomy).
+
+The full playbook lives at
+[`docs/aso/cold-start-launch-playbook.md`](../docs/aso/cold-start-launch-playbook.md):
+phase plan (beta → launch-day flip → days 4–30 steady state),
+competitor cold-start baselines (US storefront, 2026-05-15), Snowball
+trial-model evidence (verbatim), Frank #312 support-response
+correlation, integration matrix against 12 open issues, six honest
+evidence ceilings, and explicit out-of-scope guardrails (no paid
+acquisition, no public-link TestFlight, no review incentivization).
+
+The playbook **stacks with — does not replace —** #263 channel
+validation, #312 review-response templates, #277 trust-cycle
+engagement, #345 ratings-prompt cadence, and #313 monthly retention
+loop. Beta is the cold-start credibility investment; those five run
+as the steady-state mechanism after public flip.
+
+**Revisit triggers:** if v1.x adds an IAP / paid tier, the "free"
+recruitment claim changes and the #312 / #322 message stack must be
+re-validated; if Reuben's eight pre-submission sync surfaces fail to
+clear by the planned public-flip date, the flip slips by the smallest
+window the beta cohort can absorb (Danny's call).
+
 ### 2026-05-15T16:46:00Z: v1.0 App Store subtitle locks to `No Sign-Up · Free · VCA Calc` under Stance A primacy
 **By:** Saul (Market Researcher) | **Status:** Adopted (default-active pending Danny primacy confirmation) | **Issue:** #399 | **PR:** TBD
 
