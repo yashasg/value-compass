@@ -37,7 +37,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, PlainSerializer, WithJsonSchema
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, WithJsonSchema
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -297,6 +297,16 @@ DecimalString = Annotated[
 
 class HealthResponse(BaseModel):
     """Health-check response body."""
+
+    # `status` is always populated by the server and is therefore declared
+    # `required` in the generated OpenAPI schema (see issue #381). The
+    # `Field(default="ok")` default is preserved as documentation of the
+    # canonical value but is not relied on at runtime — `health()` always
+    # sets it explicitly. `json_schema_extra` is merged into the model
+    # schema and promotes `status` into the schema's top-level `required`
+    # array so generated clients (including the iOS SwiftOpenAPIGenerator
+    # client) decode it as non-optional.
+    model_config = ConfigDict(json_schema_extra={"required": ["status"]})
 
     status: str = Field(default="ok")
 

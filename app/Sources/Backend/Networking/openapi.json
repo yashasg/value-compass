@@ -784,6 +784,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "status"
+        ],
         "title": "HealthResponse",
         "description": "Health-check response body."
       },
