@@ -36,5 +36,6 @@ base64 -i path/to/file -o encoded.txt
 ## Release operation
 
 1. Confirm `./app/build.sh` and `./app/run.sh` pass locally.
-2. Open **Actions > ios-deploy > Run workflow**, set `ref` to the commit SHA, release branch, or tag to upload, then run the workflow.
-3. After upload, wait for App Store Connect processing, assign the build to the internal tester group, and complete TestFlight compliance prompts if Apple requests them.
+2. Confirm `app/Sources/App/Info.plist` declares `ITSAppUsesNonExemptEncryption=false` so App Store Connect skips the U.S. Encryption Registration Number (ERN) prompt. Background and re-classification triggers: `docs/legal/encryption-compliance.md`. (Re-validate with counsel whenever the cryptography surface changes.)
+3. Open **Actions > ios-deploy > Run workflow**, set `ref` to the commit SHA, release branch, or tag to upload, then run the workflow.
+4. After upload, wait for App Store Connect processing, assign the build to the internal tester group, and complete TestFlight compliance prompts if Apple requests them.
