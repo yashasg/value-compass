@@ -455,10 +455,21 @@ struct TickerDraft: Identifiable, Equatable, Sendable {
 /// Holdings editor view, driven by `HoldingsEditorFeature`. Pure TCA: scope
 /// a `StoreOf<HoldingsEditorFeature>` from the parent and pass it in.
 struct HoldingsEditorView: View {
+  /// Identifies a `.decimalPad` `TextField` so a single shared keyboard
+  /// toolbar can resign whichever numeric field is currently focused.
+  /// `.decimalPad` has no Return key, so HIG Inputs → Virtual Keyboards
+  /// requires an input-accessory affordance to dismiss it (issue #283).
+  private enum FocusedField: Hashable {
+    case categoryWeight(UUID)
+    case tickerCurrentPrice(UUID)
+    case tickerMovingAverage(UUID)
+  }
+
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
   @State private var store: StoreOf<HoldingsEditorFeature>
   @State private var selectedCategoryID: UUID?
+  @FocusState private var focusedField: FocusedField?
 
   init(store: StoreOf<HoldingsEditorFeature>) {
     _store = State(initialValue: store)
@@ -498,6 +509,12 @@ struct HoldingsEditorView: View {
           }
         }
         .accessibilityIdentifier("holdings.editor.save")
+      }
+
+      ToolbarItemGroup(placement: .keyboard) {
+        Spacer()
+        Button("Done") { focusedField = nil }
+          .accessibilityIdentifier("holdings.editor.keyboard.doneButton")
       }
     }
     .alert(
@@ -657,6 +674,7 @@ struct HoldingsEditorView: View {
 
       TextField("Weight %", text: category.weightPercentText)
         .keyboardType(.decimalPad)
+        .focused($focusedField, equals: .categoryWeight(category.wrappedValue.id))
         .accessibilityIdentifier("holdings.category.weight")
 
       if category.wrappedValue.tickers.isEmpty {
@@ -765,6 +783,7 @@ struct HoldingsEditorView: View {
 
             TextField("Weight %", text: category.weightPercentText)
               .keyboardType(.decimalPad)
+              .focused($focusedField, equals: .categoryWeight(category.wrappedValue.id))
               .frame(width: 120)
               .accessibilityIdentifier("holdings.category.weight")
 
@@ -839,10 +858,12 @@ struct HoldingsEditorView: View {
     HStack(spacing: AppLayoutMetrics.gridGutter) {
       TextField("Current Price", text: ticker.currentPriceText)
         .keyboardType(.decimalPad)
+        .focused($focusedField, equals: .tickerCurrentPrice(ticker.wrappedValue.id))
         .accessibilityIdentifier("holdings.ticker.currentPrice")
 
       TextField("Moving Average", text: ticker.movingAverageText)
         .keyboardType(.decimalPad)
+        .focused($focusedField, equals: .tickerMovingAverage(ticker.wrappedValue.id))
         .accessibilityIdentifier("holdings.ticker.movingAverage")
     }
   }
