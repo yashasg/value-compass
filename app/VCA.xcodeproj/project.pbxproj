@@ -85,6 +85,7 @@
 		C0000000000000000000B00E /* AppFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00E /* AppFeatureTests.swift */; };
 		C0000000000000000000B00F /* MainFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F00F /* MainFeatureTests.swift */; };
 		C0000000000000000000B014 /* ContributionHistoryFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F014 /* ContributionHistoryFeatureTests.swift */; };
+		C0000000000000000000B015 /* ContributionResultFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F015 /* ContributionResultFeatureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -168,6 +169,7 @@
 		C0000000000000000000F00E /* AppFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F00F /* MainFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFeatureTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F014 /* ContributionHistoryFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionHistoryFeatureTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F015 /* ContributionResultFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionResultFeatureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -392,6 +394,7 @@
 				C0000000000000000000F00E /* AppFeatureTests.swift */,
 				C0000000000000000000F00F /* MainFeatureTests.swift */,
 				C0000000000000000000F014 /* ContributionHistoryFeatureTests.swift */,
+				C0000000000000000000F015 /* ContributionResultFeatureTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -591,6 +594,7 @@
 				C0000000000000000000B00E /* AppFeatureTests.swift in Sources */,
 				C0000000000000000000B00F /* MainFeatureTests.swift in Sources */,
 				C0000000000000000000B014 /* ContributionHistoryFeatureTests.swift in Sources */,
+				C0000000000000000000B015 /* ContributionResultFeatureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
