@@ -93,7 +93,29 @@ struct AppBrandHeader: View {
         }
       }
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(AppBrand.displayName)
+    // `.ignore` plus a composed label keeps the spoken contract under the
+    // caller's control: `.combine` with an explicit `.accessibilityLabel`
+    // silently replaces the children's text (#326), so a non-nil subtitle
+    // would never reach VoiceOver. `.ignore` discards the child Texts and
+    // we re-emit both displayName and subtitle through one composed
+    // string so the AT user hears the same copy a sighted user reads.
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Self.accessibilityLabel(subtitle: subtitle))
+  }
+
+  /// Pure composer for the brand-header spoken contract (#326). Returns
+  /// `displayName` alone when no subtitle is rendered (matches the iPad
+  /// sidebar call site at `MainView.swift`), and `"<displayName>.
+  /// <subtitle>"` when a subtitle is visible (matches the first-launch
+  /// onboarding tagline). Empty / whitespace-only subtitles collapse to
+  /// the no-subtitle form so a caller that passes `""` does not produce
+  /// `"Investrum. "` with a trailing dot. Exposed at the type level so
+  /// the contract is unit-testable without hosting the SwiftUI view.
+  static func accessibilityLabel(subtitle: String?) -> String {
+    let trimmedSubtitle = subtitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let trimmedSubtitle, !trimmedSubtitle.isEmpty else {
+      return AppBrand.displayName
+    }
+    return "\(AppBrand.displayName). \(trimmedSubtitle)"
   }
 }
