@@ -1670,6 +1670,7 @@
         "enum": [
           "appAttestMissing",
           "conflictDetected",
+          "holdingNotFound",
           "lossyMappingRejected",
           "portfolioNotFound",
           "schemaUnsupported",
@@ -1680,7 +1681,7 @@
           "unsupportedMovingAverageWindow"
         ],
         "title": "ErrorCode",
-        "description": "Stable machine-readable error codes for clients."
+        "description": "Stable machine-readable error codes for clients.\n\n``portfolioNotFound`` and ``holdingNotFound`` carry distinct semantics\non the holding-scoped routes (PATCH/DELETE ``/portfolio/holdings/{ticker}``):\nthe portfolio code means the calling device never synced a portfolio\n(the iOS client should redirect to onboarding), while the holding code\nmeans the parent portfolio resolved successfully but the keyed holding\nrow is gone (the client should refresh its local holdings list and let\nthe user retry). The ``message`` field stays free-form per the\n``ErrorEnvelope`` contract \u2014 clients must dispatch on ``code``."
       },
       "ErrorEnvelope": {
         "properties": {

@@ -69,10 +69,21 @@ log = logging.getLogger("vca.api")
 
 
 class ErrorCode(StrEnum):
-    """Stable machine-readable error codes for clients."""
+    """Stable machine-readable error codes for clients.
+
+    ``portfolioNotFound`` and ``holdingNotFound`` carry distinct semantics
+    on the holding-scoped routes (PATCH/DELETE ``/portfolio/holdings/{ticker}``):
+    the portfolio code means the calling device never synced a portfolio
+    (the iOS client should redirect to onboarding), while the holding code
+    means the parent portfolio resolved successfully but the keyed holding
+    row is gone (the client should refresh its local holdings list and let
+    the user retry). The ``message`` field stays free-form per the
+    ``ErrorEnvelope`` contract — clients must dispatch on ``code``.
+    """
 
     APP_ATTEST_MISSING = "appAttestMissing"
     CONFLICT_DETECTED = "conflictDetected"
+    HOLDING_NOT_FOUND = "holdingNotFound"
     LOSSY_MAPPING_REJECTED = "lossyMappingRejected"
     PORTFOLIO_NOT_FOUND = "portfolioNotFound"
     SCHEMA_UNSUPPORTED = "schemaUnsupported"
@@ -1125,7 +1136,7 @@ def patch_holding(
     if holding is None:
         raise ApiError(
             status_code=status.HTTP_404_NOT_FOUND,
-            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            code=ErrorCode.HOLDING_NOT_FOUND,
             message="Holding not found for portfolio.",
         )
 
@@ -1197,7 +1208,7 @@ def delete_holding(
     if holding is None:
         raise ApiError(
             status_code=status.HTTP_404_NOT_FOUND,
-            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            code=ErrorCode.HOLDING_NOT_FOUND,
             message="Holding not found for portfolio.",
         )
 
