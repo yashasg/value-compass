@@ -254,8 +254,9 @@ confirming the destructive prompt. In a single action this:
 3. Removes the saved Massive API key from the iOS Keychain.
 4. Rotates the Keychain `X-Device-UUID` so future requests cannot be
    linked back to the erased records.
-5. Resets the onboarding gate so the next launch returns Investrum to
-   the disclaimer screen, exactly like a fresh install.
+5. Resets the onboarding gate and returns Investrum to the disclaimer
+   screen in the same session, exactly like a fresh install — you do
+   not need to quit and relaunch the app.
 
 The cache-only `StockCache` rows on the backend and the
 `MarketDataBar` / `TickerMetadata` cache rows on the device are
