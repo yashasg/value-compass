@@ -4,12 +4,22 @@ import SwiftData
 enum LocalPersistence {
   static var schema: Schema {
     Schema([
+      // Legacy contribution-history models. Removed in the follow-up that
+      // closes #123 once every feature reducer has migrated to the MVP shape.
       Portfolio.self,
       Category.self,
       Ticker.self,
       ContributionRecord.self,
       CategoryContribution.self,
       TickerAllocation.self,
+      // Additive MVP models (foundation for #123 / #128 / #131 / #133).
+      // Owned by the `Backend/Models/MVPModels.swift` file and the
+      // `Backend/Persistence/` repository seams.
+      Holding.self,
+      TickerMetadata.self,
+      MarketDataBar.self,
+      InvestSnapshot.self,
+      AppSettings.self,
     ])
   }
 
