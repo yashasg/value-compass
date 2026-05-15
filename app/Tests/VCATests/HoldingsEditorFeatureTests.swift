@@ -12,12 +12,13 @@ import XCTest
 /// Pins the holdings editor reducer:
 ///
 /// - `.task` no-op when `state.draft` is pre-seeded with at least one
-///   category, no-op when the production state from `MainFeature` is
-///   pushed (issue #209 — `state.issues = [.noCategories]` short-circuits
-///   the guard), the guarded happy path that loads via
+///   category (the `categories.isEmpty` guard short-circuits before the
+///   loader runs), the guarded happy path that loads via
 ///   `\.modelContainer.task` + `BackgroundModelActor.loadHoldingsDraft`,
 ///   and the throwing-container failure that surfaces via
-///   `state.saveError`.
+///   `state.saveError`. Includes the production-shaped state from
+///   `MainFeature` (issue #209: `state.issues = [.noCategories, ...]`
+///   no longer short-circuits the loader after the guard fix).
 /// - Every add / delete / move action against `HoldingsDraft` /
 ///   `CategoryDraft` (including the `firstIndex(where:)` guards that no-op
 ///   on a bogus `categoryID`).
@@ -56,48 +57,85 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     await store.send(.task)
   }
 
-  func testTaskIsNoOpForProductionStateFromMainFeature() async {
-    // Pins the actual production behavior (issue #209): `MainFeature`
-    // pushes `HoldingsEditorFeature.State(portfolioID:)` (empty draft),
-    // whose synthesized `init` derives
-    // `issues = draft.issues() = [.noCategories]` for an empty draft.
-    // The reducer's `.task` guard requires *both*
-    // `state.draft.categories.isEmpty` AND `state.issues.isEmpty`, so the
-    // `[.noCategories]` element short-circuits the loader and `.task` is a
-    // no-op for the production state shape — the editor never hydrates
-    // from disk for an existing portfolio when opened from `MainFeature`.
-    //
-    // This test will need to flip (assert the load *does* run) when #209
-    // is fixed; until then it documents the current surface so the next
-    // change is forced to acknowledge it.
+  func testTaskHydratesDraftForProductionStateFromMainFeature() async throws {
+    // Pins the fix for #209: `MainFeature` pushes
+    // `HoldingsEditorFeature.State(portfolioID:)` (empty draft), whose
+    // synthesized `init` derives `issues = draft.issues() = [.noCategories,
+    // .categoryWeightsDoNotSumTo100]` for an empty draft. The reducer's
+    // `.task` guard now keys on `state.draft.categories.isEmpty` only — the
+    // derived `issues` no longer short-circuits the loader — so the editor
+    // hydrates from disk for an existing portfolio when opened from
+    // `MainFeature`. Pre-#209 fix this assertion would fail because the
+    // guard short-circuited and `.draftLoaded` was never received.
+    let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
+    let context = container.mainContext
+
     let portfolioID = UUID()
+    let categoryID = UUID()
+    let tickerID = UUID()
+    context.insert(
+      Portfolio(
+        id: portfolioID, name: "Growth",
+        monthlyBudget: Decimal(500), maWindow: 50,
+        createdAt: Date(timeIntervalSince1970: 1_000_000),
+        categories: [
+          Category(
+            id: categoryID, name: "US Stocks",
+            weight: Decimal(string: "1.0")!, sortOrder: 0,
+            tickers: [
+              Ticker(
+                id: tickerID, symbol: "VTI",
+                currentPrice: Decimal(300), movingAverage: Decimal(280),
+                sortOrder: 0)
+            ])
+        ]))
+    try context.save()
+
     let state = HoldingsEditorFeature.State(portfolioID: portfolioID)
-    // The exact set of issues depends on `HoldingsDraft.issues()` (currently
-    // `[.noCategories, .categoryWeightsDoNotSumTo100]` for an empty draft);
-    // assert the guard-relevant invariant instead so this test is robust to
-    // unrelated changes in `issues()`.
+    // Sanity check that the production state shape really does derive a
+    // non-empty `issues` for an empty draft. If `HoldingsDraft.issues()`
+    // ever changes to return `[]` for an empty draft, the regression that
+    // prompted #209 is no longer reproducible by this state shape and this
+    // test would need a different setup.
     XCTAssertFalse(state.issues.isEmpty)
     XCTAssertTrue(state.draft.categories.isEmpty)
 
-    // Intentionally omit a `\.modelContainer.container` override: if the
-    // guard ever stops short-circuiting on this state shape, the test
-    // will fail loudly via the unimplemented dependency rather than
-    // silently passing.
     let store = TestStore(initialState: state) {
       HoldingsEditorFeature()
+    } withDependencies: {
+      $0.modelContainer.container = { container }
     }
 
+    let expectedDraft = HoldingsDraft(categories: [
+      CategoryDraft(
+        id: categoryID,
+        name: "US Stocks",
+        weightPercentText: "100",
+        sortOrder: 0,
+        tickers: [
+          TickerDraft(
+            id: tickerID,
+            symbol: "VTI",
+            currentPrice: Decimal(300),
+            movingAverage: Decimal(280),
+            bandPosition: nil,
+            sortOrder: 0)
+        ])
+    ])
+
     await store.send(.task)
+    await store.receive(.draftLoaded(expectedDraft)) {
+      $0.draft = expectedDraft
+      $0.issues = expectedDraft.issues()
+      $0.saveError = nil
+    }
   }
 
   func testTaskWithEmptyStateLoadsDraftFromContainer() async throws {
-    // Exercises the `.task` guarded loader path. The only state shape that
-    // satisfies the guard (`categories.isEmpty` AND `issues.isEmpty`) is
-    // *not* producible by the public `State(portfolioID:)` initializer
-    // (which seeds `[.noCategories]` — see #209), so we construct it
-    // manually. This covers the load + `.draftLoaded` reducer surface;
-    // the production entry path is pinned by
-    // `testTaskIsNoOpForProductionStateFromMainFeature` above.
+    // Exercises the `.task` guarded loader path with an explicitly-empty
+    // `State` (no derived issues). Complements
+    // `testTaskHydratesDraftForProductionStateFromMainFeature` which
+    // covers the same load through the production-shaped state #209 fixed.
     let container = try LocalPersistence.makeModelContainer(isStoredInMemoryOnly: true)
     let context = container.mainContext
 
@@ -157,18 +195,15 @@ final class HoldingsEditorFeatureTests: XCTestCase {
   }
 
   func testTaskWithThrowingContainerWritesSaveError() async {
-    // Same caveat as `testTaskWithEmptyStateLoadsDraftFromContainer`: we
-    // force-clear `state.issues` to satisfy the reducer's guard so the
-    // throwing dependency is actually invoked. The production state
-    // shape is pinned separately by
-    // `testTaskIsNoOpForProductionStateFromMainFeature` (see #209).
+    // Exercises the `.task` failure path: an empty draft satisfies the
+    // (post-#209) guard and the throwing container surfaces via
+    // `state.saveError`.
     struct StubError: LocalizedError, Equatable {
       var errorDescription: String? { "boom" }
     }
 
     let portfolioID = UUID()
-    var state = HoldingsEditorFeature.State(portfolioID: portfolioID)
-    state.issues = []
+    let state = HoldingsEditorFeature.State(portfolioID: portfolioID)
 
     let store = TestStore(initialState: state) {
       HoldingsEditorFeature()

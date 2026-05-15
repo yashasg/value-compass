@@ -89,11 +89,16 @@ struct HoldingsEditorFeature {
         return .none
 
       case .task:
-        // The legacy `init(portfolio:)` bridge pre-seeds `state.draft` from
-        // the SwiftData `Portfolio` synchronously, so we only need to fetch
-        // the canonical disk copy when the host (Phase 2 `MainFeature.path`)
-        // pushed an empty state.
-        guard state.draft.categories.isEmpty, state.issues.isEmpty else {
+        // Hydrate from disk whenever the host (Phase 2 `MainFeature.path`)
+        // pushed an empty draft. We intentionally do *not* gate on
+        // `state.issues.isEmpty` because the synthesized
+        // `State(portfolioID:)` initializer derives
+        // `issues = HoldingsDraft().issues() = [.noCategories, ...]`
+        // for an empty draft — gating on that short-circuits the loader for
+        // every production push from `MainFeature` (issue #209). Tests that
+        // pre-seed `state.draft` with at least one category continue to
+        // short-circuit via the `categories.isEmpty` check.
+        guard state.draft.categories.isEmpty else {
           return .none
         }
         let portfolioID = state.portfolioID
