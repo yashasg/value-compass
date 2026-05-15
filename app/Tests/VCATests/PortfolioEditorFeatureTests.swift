@@ -302,6 +302,63 @@ final class PortfolioEditorFeatureTests: XCTestCase {
       dismissCalls.value, 0, "Keep Editing must keep the editor on screen.")
   }
 
+  // MARK: - .accessibilityAction(.escape) parity with .cancelTapped (#421)
+  //
+  // The view layer wires `.accessibilityAction(.escape)` (VoiceOver
+  // two-finger Z-scrub, Full Keyboard Access Escape key, Switch Control
+  // "Escape" menu) directly into `.cancelTapped`, so AT users hit the
+  // same dirty-vs-clean branch the toolbar Cancel button (and #325) drove.
+  // These pins lock the reducer contract the modifier depends on: if a
+  // future refactor changes how `.cancelTapped` branches on
+  // `hasUnsavedChanges`, both the toolbar Cancel and the AT escape gesture
+  // must move together.
+
+  func testAccessibilityEscapeOnCleanDraftMatchesCancelTappedCleanPath() async {
+    let dismissCalls = LockIsolated(0)
+    let store = TestStore(
+      initialState: PortfolioEditorFeature.State(mode: .create)
+    ) {
+      PortfolioEditorFeature()
+    } withDependencies: {
+      $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
+    }
+
+    // The VoiceOver Z-scrub modifier dispatches `.cancelTapped`; on a clean
+    // draft (`hasUnsavedChanges == false`) the reducer fires
+    // `.delegate(.canceled)` and then `dismiss()` from the same `.run` —
+    // identical to the one-tap Cancel button path that #325 preserves.
+    await store.send(.cancelTapped)
+    await store.receive(\.delegate.canceled)
+
+    XCTAssertEqual(dismissCalls.value, 1)
+  }
+
+  func testAccessibilityEscapeOnDirtyDraftOpensDiscardDialog() async {
+    let dismissCalls = LockIsolated(0)
+    var state = PortfolioEditorFeature.State(
+      mode: .edit(UUID()),
+      draft: PortfolioFormDraft(name: "Growth", monthlyBudget: 1_000, maWindow: 50))
+    state.draft.name = "Growth (edited)"
+
+    let store = TestStore(initialState: state) {
+      PortfolioEditorFeature()
+    } withDependencies: {
+      $0.dismiss = DismissEffect { dismissCalls.withValue { $0 += 1 } }
+    }
+
+    // Dirty draft path: the escape gesture must NOT silently dismiss — it
+    // must flip `pendingCancellation = true` so the discard
+    // `.confirmationDialog` surfaces and routes through `.confirmDiscard`
+    // / `.keepEditing` exactly like the toolbar Cancel button does (#325).
+    await store.send(.cancelTapped) {
+      $0.pendingCancellation = true
+    }
+
+    XCTAssertEqual(
+      dismissCalls.value, 0,
+      "Escape-when-dirty must not dismiss the sheet — the discard dialog drives the next step.")
+  }
+
   // MARK: - hasUnsavedChanges
 
   func testHasUnsavedChangesIsFalseForUnmodifiedCreateState() {

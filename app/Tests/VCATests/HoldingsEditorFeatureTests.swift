@@ -739,6 +739,58 @@ final class HoldingsEditorFeatureTests: XCTestCase {
     }
   }
 
+  // MARK: - .accessibilityAction(.escape) parity with .cancelTapped (#421)
+  //
+  // The view layer wires `.accessibilityAction(.escape)` (VoiceOver
+  // two-finger Z-scrub, Full Keyboard Access Escape key, Switch Control
+  // "Escape" menu) directly into `.cancelTapped`, so AT users hit the
+  // same dirty-vs-clean branch the toolbar Cancel button (and #325) drove.
+  // These pins lock the reducer contract the modifier depends on: if a
+  // future refactor changes how `.cancelTapped` branches on
+  // `hasUnsavedChanges`, both the toolbar Cancel and the AT escape gesture
+  // must move together.
+
+  func testAccessibilityEscapeOnCleanDraftMatchesCancelTappedCleanPath() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let draft = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    let store = TestStore(
+      initialState: HoldingsEditorFeature.State(portfolioID: portfolioID, draft: draft)
+    ) {
+      HoldingsEditorFeature()
+    }
+
+    // The VoiceOver Z-scrub modifier dispatches `.cancelTapped`; on a clean
+    // draft (`hasUnsavedChanges == false`) that resolves into
+    // `.delegate(.canceled)` and the view then calls `dismiss()`. No
+    // discard dialog appears.
+    await store.send(.cancelTapped)
+    await store.receive(\.delegate.canceled)
+  }
+
+  func testAccessibilityEscapeOnDirtyDraftOpensDiscardDialog() async {
+    let portfolioID = UUID()
+    let categoryID = UUID()
+    let baseline = HoldingsDraft(categories: [Self.makeValidCategory(id: categoryID)])
+    var dirtyDraft = baseline
+    dirtyDraft.categories[0].name = "Edited"
+
+    var state = HoldingsEditorFeature.State(portfolioID: portfolioID, draft: baseline)
+    state.draft = dirtyDraft
+
+    let store = TestStore(initialState: state) {
+      HoldingsEditorFeature()
+    }
+
+    // Dirty draft path: the escape gesture must NOT silently dismiss — it
+    // must flip `pendingCancellation = true` so the discard
+    // `.confirmationDialog` surfaces and routes through `.confirmDiscard`
+    // / `.keepEditing` exactly like the toolbar Cancel button does (#325).
+    await store.send(.cancelTapped) {
+      $0.pendingCancellation = true
+    }
+  }
+
   // MARK: - hasUnsavedChanges (#325)
 
   func testHasUnsavedChangesIsFalseForUnmodifiedDraft() {
