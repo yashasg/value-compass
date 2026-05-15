@@ -186,6 +186,13 @@ final class ContributionRecord {
   @Relationship(deleteRule: .cascade, inverse: \TickerAllocation.record) var tickerAllocations:
     [TickerAllocation]
 
+  /// Designated initializer for an append-only `ContributionRecord` snapshot row.
+  ///
+  /// `tickerAllocations:` is the canonical parameter for the per-ticker
+  /// breakdown stored on this record. A legacy `breakdown:` spelling is
+  /// preserved as a deprecated convenience overload below; it forwards into
+  /// `tickerAllocations:` and exists solely so in-flight call sites compile
+  /// while they migrate. New call sites must use `tickerAllocations:`.
   init(
     id: UUID = UUID(),
     portfolioId: UUID,
@@ -193,8 +200,7 @@ final class ContributionRecord {
     totalAmount: Decimal,
     portfolio: Portfolio? = nil,
     categoryBreakdown: [CategoryContribution] = [],
-    tickerAllocations: [TickerAllocation] = [],
-    breakdown: [TickerAllocation] = []
+    tickerAllocations: [TickerAllocation] = []
   ) {
     self.id = id
     self.portfolioId = portfolioId
@@ -202,7 +208,42 @@ final class ContributionRecord {
     self.totalAmount = totalAmount
     self.portfolio = portfolio
     self.categoryBreakdown = categoryBreakdown
-    self.tickerAllocations = tickerAllocations.isEmpty ? breakdown : tickerAllocations
+    self.tickerAllocations = tickerAllocations
+  }
+
+  /// Legacy convenience initializer that accepts the per-ticker breakdown under
+  /// the historical `breakdown:` argument label. Forwards verbatim into the
+  /// designated initializer's `tickerAllocations:` parameter; scheduled for
+  /// removal in the next SwiftData schema bump (see #244 for the migration).
+  ///
+  /// Splitting the legacy spelling into its own deprecated overload removes the
+  /// silent precedence behavior of the prior dual-init (where the contract was
+  /// undefined when both arrays were non-empty) by making it structurally
+  /// impossible to supply both `tickerAllocations:` and `breakdown:` in the
+  /// same call.
+  @available(
+    *, deprecated,
+    renamed: "init(id:portfolioId:date:totalAmount:portfolio:categoryBreakdown:tickerAllocations:)",
+    message: "Use 'tickerAllocations:'; the 'breakdown:' alias is removed in the next schema."
+  )
+  convenience init(
+    id: UUID = UUID(),
+    portfolioId: UUID,
+    date: Date = Date(),
+    totalAmount: Decimal,
+    portfolio: Portfolio? = nil,
+    categoryBreakdown: [CategoryContribution] = [],
+    breakdown: [TickerAllocation]
+  ) {
+    self.init(
+      id: id,
+      portfolioId: portfolioId,
+      date: date,
+      totalAmount: totalAmount,
+      portfolio: portfolio,
+      categoryBreakdown: categoryBreakdown,
+      tickerAllocations: breakdown
+    )
   }
 
   convenience init(

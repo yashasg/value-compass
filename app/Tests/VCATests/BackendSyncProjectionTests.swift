@@ -87,7 +87,7 @@ final class BackendSyncProjectionTests: XCTestCase {
         ContributionRecord(
           portfolioId: UUID(),
           totalAmount: Decimal(250),
-          breakdown: [
+          tickerAllocations: [
             TickerAllocation(tickerSymbol: "VXUS", categoryName: "Snapshot", amount: Decimal(250))
           ]
         )
@@ -142,7 +142,7 @@ final class BackendSyncProjectionTests: XCTestCase {
               allocatedWeight: Decimal(string: "0.2468")!
             )
           ],
-          breakdown: [
+          tickerAllocations: [
             TickerAllocation(
               tickerSymbol: "HISTORY_ONLY",
               categoryName: "Historical Snapshot",
