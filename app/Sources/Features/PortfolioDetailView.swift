@@ -31,6 +31,26 @@ private struct PortfolioDetailContent: View {
   @Bindable var store: StoreOf<PortfolioDetailFeature>
 
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+  // WCAG 2.2 SC 1.4.4 (Resize Text) + SC 1.4.10 (Reflow) — at
+  // accessibility text sizes the fixed-width ticker columns clip
+  // financial values, so we collapse the regular-class table into the
+  // stacked compact layout and let text reflow naturally (#228).
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  // Column widths for the regular-class ticker table. `@ScaledMetric`
+  // grows these proportionally with non-accessibility Dynamic Type sizes
+  // so the symbol and status columns still fit larger text without
+  // truncation. Accessibility sizes route to the stacked layout below.
+  @ScaledMetric(relativeTo: .caption) private var tickerSymbolColumnWidth: CGFloat = 80
+  @ScaledMetric(relativeTo: .caption) private var tickerStatusColumnWidth: CGFloat = 88
+
+  // `true` when the regular-size-class table should render. We require
+  // a regular `horizontalSizeClass` AND non-accessibility Dynamic Type
+  // so accessibility-size users get the compact stacked rows that
+  // already reflow naturally for compact width classes.
+  private var showsTickerTable: Bool {
+    horizontalSizeClass == .regular && !dynamicTypeSize.isAccessibilitySize
+  }
 
   var body: some View {
     ScrollView {
@@ -123,7 +143,7 @@ private struct PortfolioDetailContent: View {
                 .foregroundStyle(Color.appNegative)
                 .accessibilityIdentifier("portfolio.detail.holdings.warning")
             } else {
-              if horizontalSizeClass == .regular {
+              if showsTickerTable {
                 tickerTableHeader
               }
 
@@ -151,13 +171,13 @@ private struct PortfolioDetailContent: View {
   private var tickerTableHeader: some View {
     HStack(spacing: AppLayoutMetrics.gridGutter) {
       Text("Ticker")
-        .frame(width: 80, alignment: .leading)
+        .frame(width: tickerSymbolColumnWidth, alignment: .leading)
       Text("Current Price")
         .frame(maxWidth: .infinity, alignment: .trailing)
       Text("\(store.snapshot.maWindow)-day MA")
         .frame(maxWidth: .infinity, alignment: .trailing)
       Text("Status")
-        .frame(width: 88, alignment: .trailing)
+        .frame(width: tickerStatusColumnWidth, alignment: .trailing)
     }
     .valueCompassTextStyle(.labelCaps)
     .foregroundStyle(Color.appContentSecondary)
@@ -165,12 +185,12 @@ private struct PortfolioDetailContent: View {
 
   @ViewBuilder
   private func tickerMarketDataRow(for ticker: TickerSnapshot) -> some View {
-    if horizontalSizeClass == .regular {
+    if showsTickerTable {
       HStack(spacing: AppLayoutMetrics.gridGutter) {
         Text(ticker.normalizedSymbol)
           .valueCompassTextStyle(.labelCaps)
           .foregroundStyle(Color.appContentPrimary)
-          .frame(width: 80, alignment: .leading)
+          .frame(width: tickerSymbolColumnWidth, alignment: .leading)
         Text(ticker.currentPriceText)
           .valueCompassTextStyle(.data)
           .frame(maxWidth: .infinity, alignment: .trailing)
@@ -180,7 +200,7 @@ private struct PortfolioDetailContent: View {
         Text(ticker.hasCompleteMarketData ? "Ready" : "Missing")
           .valueCompassTextStyle(.labelCaps)
           .foregroundStyle(Self.tickerMarketDataStatusColor(for: ticker))
-          .frame(width: 88, alignment: .trailing)
+          .frame(width: tickerStatusColumnWidth, alignment: .trailing)
       }
       .accessibilityIdentifier("portfolio.detail.tickerMarketData")
       // #227: the regular-width 4-column ticker market-data row splits
