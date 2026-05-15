@@ -7,6 +7,14 @@ import Foundation
 /// - Attaches the device UUID and current app version on every request so the
 ///   backend can identify the install and decide whether to emit
 ///   `X-Min-App-Version`.
+/// - Attaches the `X-App-Attest` header on every request so protected backend
+///   routes do not reject the call with `401 appAttestMissing` (issue #226).
+///   The header value is supplied by `attestationTokenProvider`; production
+///   callers default to `DeviceIDProvider.deviceID()` because the FastAPI
+///   service only checks that the header is present and non-empty
+///   (`backend/api/main.py:require_app_attest`) and Cloudflare performs the
+///   real cryptographic attestation in front of the service. Wiring
+///   `DCAppAttestService` is a future swap behind this single closure.
 /// - Forwards every response to `MinAppVersionClient.observe(response:)` so
 ///   the forced-update screen can be triggered. Phase 2 (#158) replaced the
 ///   former `MinAppVersionMonitor.shared` singleton with this client-static
@@ -21,12 +29,16 @@ final class APIClient {
 
   let session: URLSession
   let baseURL: URL
+  private let attestationTokenProvider: @Sendable () async throws -> String
 
   init(
     baseURL: URL = APIClient.configuredBaseURL(),
-    session: URLSession? = nil
+    session: URLSession? = nil,
+    attestationTokenProvider: @escaping @Sendable () async throws -> String =
+      APIClient.defaultAttestationTokenProvider
   ) {
     self.baseURL = baseURL
+    self.attestationTokenProvider = attestationTokenProvider
     if let session {
       self.session = session
     } else {
@@ -61,6 +73,16 @@ final class APIClient {
     return url
   }
 
+  /// Default placeholder attestation provider. Returns the persisted
+  /// device UUID, which the FastAPI backend accepts as a non-empty
+  /// header value while Cloudflare handles real attestation in
+  /// production. Replace by passing a different
+  /// `attestationTokenProvider` closure to a non-shared `APIClient`
+  /// (e.g. when the `DCAppAttestService` flow is wired).
+  static let defaultAttestationTokenProvider: @Sendable () async throws -> String = {
+    DeviceIDProvider.deviceID()
+  }
+
   enum APIError: Error {
     case nonHTTPResponse
   }
@@ -75,6 +97,8 @@ final class APIClient {
     if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
       req.setValue(version, forHTTPHeaderField: "X-App-Version")
     }
+    let attestationToken = try await attestationTokenProvider()
+    req.setValue(attestationToken, forHTTPHeaderField: "X-App-Attest")
 
     let (data, response) = try await session.data(for: req)
     guard let http = response as? HTTPURLResponse else {
