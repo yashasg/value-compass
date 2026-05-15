@@ -79,13 +79,27 @@ extension ModelContainerClient: DependencyKey {
   }()
 
   /// Shared wipe implementation: iterate every `@Model` type advertised
-  /// by the container's schema and call
-  /// `ModelContext.delete(model:where:includeSubclasses:)` to drop every
-  /// row of that entity in a single `save()`. Run on a background
+  /// by the *current* `LocalSchemaMigrationPlan` and call
+  /// `ModelContext.delete(model:includeSubclasses:)` to drop every row
+  /// of that entity in a single `save()`. Run on a background
   /// `ModelActor` so the wipe never blocks the main actor.
+  ///
+  /// `Schema.Entity` does not expose its backing `PersistentModel` type
+  /// in iOS 17.0 (the `mappedType` property only landed in iOS 18+), so
+  /// driving the wipe from the schema entities is not portable to our
+  /// minimum deployment target. The migration plan's
+  /// `schemas.last!.models` is the canonical "live model set" — it's
+  /// already the source of truth `LocalPersistence.makeModelContainer`
+  /// uses to build the running container, so a future schema bump that
+  /// appends `LocalSchemaV3` to the plan is automatically reflected
+  /// here without touching this file.
   private static func wipe(container: ModelContainer) async throws {
+    guard let currentVersion = LocalSchemaMigrationPlan.schemas.last else {
+      return
+    }
+    let modelTypes = currentVersion.models
     let actor = try BackgroundModelActor(modelContainer: container)
-    try await actor.deleteAllEntities()
+    try await actor.deleteAllEntities(modelTypes: modelTypes)
   }
 }
 
@@ -102,22 +116,25 @@ extension DependencyValues {
 /// `actor.modelContext` (which is isolated to this actor).
 @ModelActor
 actor BackgroundModelActor {
-  /// Drops every persisted row of every entity in this container by
-  /// iterating the schema's known `@Model` types. The Settings →
-  /// "Erase All My Data" flow (issue #329) uses this after the backend
-  /// `DELETE /portfolio` succeeds so the local SwiftData mirror reflects
-  /// the server-side erasure before onboarding re-fires.
+  /// Drops every persisted row of every passed-in `@Model` type by
+  /// calling `ModelContext.delete(model:includeSubclasses:)` per type.
+  /// The Settings → "Erase All My Data" flow (issue #329) uses this
+  /// after the backend `DELETE /portfolio` succeeds so the local
+  /// SwiftData mirror reflects the server-side erasure before
+  /// onboarding re-fires.
   ///
   /// `ModelContext.delete(model:where:includeSubclasses:)` is preferred
   /// over `ModelContainer.deleteAllData()` because the latter tears the
   /// container down and re-creates the store (forcing every observer of
   /// `\.modelContext` to re-resolve); per-entity batch deletes keep the
   /// container live and only invalidate the rows.
-  func deleteAllEntities() throws {
-    for entity in modelContainer.schema.entities {
-      guard let modelType = entity.mappedType as? any PersistentModel.Type else {
-        continue
-      }
+  ///
+  /// The model-type list is passed in (rather than read from
+  /// `modelContainer.schema.entities`) because `Schema.Entity` does not
+  /// expose its backing `PersistentModel.Type` on iOS 17 — see
+  /// `ModelContainerClient.wipe(container:)` for the call site.
+  func deleteAllEntities(modelTypes: [any PersistentModel.Type]) throws {
+    for modelType in modelTypes {
       try deleteAll(modelType)
     }
     try modelContext.save()
