@@ -135,7 +135,10 @@ PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
     ("/portfolio/status", "get"),
     ("/portfolio/data", "get"),
     ("/portfolio/export", "get"),
+    ("/portfolio", "patch"),
     ("/portfolio/holdings", "post"),
+    ("/portfolio/holdings/{ticker}", "patch"),
+    ("/portfolio/holdings/{ticker}", "delete"),
 )
 
 
@@ -193,22 +196,37 @@ def test_protected_routes_reject_missing_x_app_attest(client: TestClient) -> Non
         ("get", "/portfolio/status", None),
         ("get", "/portfolio/data", {"device_uuid": str(uuid.uuid4())}),
         ("get", "/portfolio/export", {"device_uuid": str(uuid.uuid4())}),
+        ("patch", "/portfolio", {"device_uuid": str(uuid.uuid4())}),
         (
             "post",
             "/portfolio/holdings",
             None,
+        ),
+        (
+            "patch",
+            "/portfolio/holdings/AAPL",
+            {"device_uuid": str(uuid.uuid4())},
+        ),
+        (
+            "delete",
+            "/portfolio/holdings/AAPL",
+            {"device_uuid": str(uuid.uuid4())},
         ),
     )
 
     for method, path, params in requests:
         if method == "get":
             response = client.get(path, params=params)
-        else:
+        elif method == "post":
             response = client.post(
                 path,
                 params=params,
                 json={"device_uuid": str(uuid.uuid4()), "ticker": "AAPL"},
             )
+        elif method == "patch":
+            response = client.patch(path, params=params, json={"name": "X"})
+        else:
+            response = client.delete(path, params=params)
         assert response.status_code == 401, (
             f"{method.upper()} {path} should reject missing X-App-Attest"
         )
@@ -793,4 +811,507 @@ def test_portfolio_export_omits_other_devices(
     tickers = {h["ticker"] for h in body["portfolio"]["holdings"]}
     assert tickers == {"VOO"}
     assert "SECRET" not in tickers
+
+
+# ---------------------------------------------------------------------------
+# GDPR Art. 16 / CCPA §1798.106 right-to-rectification — issue #374
+# ---------------------------------------------------------------------------
+def _seed_portfolio(
+    db_session: Session,
+    *,
+    device_uuid: uuid.UUID | None = None,
+    name: str = "Main",
+    monthly_budget: Decimal = Decimal("100"),
+    ma_window: int = 50,
+    holdings: tuple[tuple[str, Decimal], ...] = (),
+    last_seen_at: datetime | None = None,
+) -> tuple[uuid.UUID, Portfolio]:
+    """Insert a Portfolio (+ optional holdings) and return ids for assertions."""
+    device_uuid = device_uuid or uuid.uuid4()
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name=name,
+        monthly_budget=monthly_budget,
+        ma_window=ma_window,
+        created_at=datetime.now(UTC),
+        last_seen_at=last_seen_at,
+    )
+    for ticker, weight in holdings:
+        portfolio.holdings.append(
+            Holding(id=uuid.uuid4(), ticker=ticker, weight=weight)
+        )
+    db_session.add(portfolio)
+    db_session.commit()
+    return device_uuid, portfolio
+
+
+def test_patch_portfolio_404_for_unknown_device(client: TestClient) -> None:
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(uuid.uuid4())},
+        json={"name": "Renamed"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "portfolioNotFound",
+        "message": "Portfolio not found for device.",
+        "retry_after_seconds": None,
+    }
+
+
+def test_patch_portfolio_rejects_empty_body(
+    client: TestClient, db_session: Session
+) -> None:
+    """An empty PATCH body would no-op but still stamp activity — reject it."""
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["code"] == "schemaUnsupported"
+
+
+def test_patch_portfolio_rejects_unsupported_ma_window(
+    client: TestClient, db_session: Session
+) -> None:
+    """Disallowed ma_window emits the unsupportedMovingAverageWindow envelope.
+
+    The CheckConstraint on ``Portfolio.ma_window`` already rejects values
+    outside ``(50, 200)`` at the database; this assertion locks in the
+    earlier, more-specific error envelope so the iOS client can surface
+    a precise message rather than the generic ``schemaUnsupported``.
+    """
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"ma_window": 99},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "unsupportedMovingAverageWindow"
+
+
+def test_patch_portfolio_updates_name_only(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, name="Old", monthly_budget=Decimal("100"), ma_window=50
+    )
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"name": "New"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["portfolio_id"] == str(portfolio.id)
+    assert body["name"] == "New"
+    assert Decimal(body["monthly_budget"]) == Decimal("100")
+    assert body["ma_window"] == 50
+    # Sibling fields must not have changed.
+    refreshed = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert refreshed.name == "New"
+    assert refreshed.monthly_budget == Decimal("100")
+    assert refreshed.ma_window == 50
+
+
+def test_patch_portfolio_updates_all_scalar_fields(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, name="Old", monthly_budget=Decimal("100"), ma_window=50
+    )
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"name": "New", "monthly_budget": "250.50", "ma_window": 200},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["name"] == "New"
+    assert Decimal(body["monthly_budget"]) == Decimal("250.50")
+    assert body["ma_window"] == 200
+    assert body["portfolio_id"] == str(portfolio.id)
+
+
+def test_patch_portfolio_preserves_decimal_precision(
+    client: TestClient, db_session: Session
+) -> None:
+    """Rectified monthly_budget round-trips without IEEE-754 loss.
+
+    Pairs with test_portfolio_data_preserves_decimal_precision_in_monthly_budget
+    (#392) — Art. 16 corrections must persist exact values, not lossy
+    Doubles, or the next ``GET /portfolio/data`` would silently
+    re-introduce the drift the user just tried to correct.
+    """
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"monthly_budget": "99.99"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert isinstance(body["monthly_budget"], str)
+    assert Decimal(body["monthly_budget"]) == Decimal("99.99")
+
+    refreshed = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert refreshed.monthly_budget == Decimal("99.99")
+
+
+def test_patch_portfolio_stamps_last_seen_at_on_success(
+    client: TestClient, db_session: Session
+) -> None:
+    """Successful rectification stamps activity for the retention sweep."""
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    device_uuid, _ = _seed_portfolio(db_session, last_seen_at=stale)
+
+    before = datetime.now(UTC)
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"name": "Touched"},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 200
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_patch_portfolio_does_not_modify_other_devices(
+    client: TestClient, db_session: Session
+) -> None:
+    """Cross-device scoping: PATCH is invisible to other portfolios."""
+    caller_uuid, _ = _seed_portfolio(db_session, name="Mine", ma_window=50)
+    other_uuid, other_portfolio = _seed_portfolio(
+        db_session, name="Theirs", ma_window=200
+    )
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(caller_uuid)},
+        json={"name": "MineRenamed", "ma_window": 200},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+
+    other = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == other_uuid)
+    ).one()
+    assert other.name == "Theirs"
+    assert other.ma_window == 200
+    assert other.id == other_portfolio.id
+
+
+def test_patch_holding_404_for_unknown_device(client: TestClient) -> None:
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(uuid.uuid4())},
+        json={"weight": "0.5"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "portfolioNotFound"
+
+
+def test_patch_holding_404_for_unknown_ticker(
+    client: TestClient, db_session: Session
+) -> None:
+    """404 when the holding row does not exist on the resolved portfolio.
+
+    The error code is the canonical ``portfolioNotFound`` envelope —
+    we deliberately do not invent a new ``holdingNotFound`` code so
+    the client surface stays a closed enumeration.
+    """
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    resp = client.patch(
+        "/portfolio/holdings/MSFT",
+        params={"device_uuid": str(device_uuid)},
+        json={"weight": "0.5"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["code"] == "portfolioNotFound"
+    assert body["message"] == "Holding not found for portfolio."
+
+
+def test_patch_holding_rejects_out_of_range_weight(
+    client: TestClient, db_session: Session
+) -> None:
+    """Weight must be in (0, 1]; the validator surfaces the standard envelope."""
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    for invalid in ("0", "1.5", "-0.1"):
+        resp = client.patch(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": str(device_uuid)},
+            json={"weight": invalid},
+            headers=ATTEST,
+        )
+        assert resp.status_code == 422, invalid
+        assert resp.json()["code"] == "schemaUnsupported"
+
+
+def test_patch_holding_returns_updated_weight(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")), ("MSFT", Decimal("0.5")))
+    )
+
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(device_uuid)},
+        json={"weight": "0.6"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ticker"] == "AAPL"
+    assert Decimal(body["weight"]) == Decimal("0.6")
+
+    # Sibling holding's weight must remain untouched.
+    untouched = db_session.scalars(
+        select(Holding).where(
+            Holding.portfolio_id == portfolio.id, Holding.ticker == "MSFT"
+        )
+    ).one()
+    assert untouched.weight == Decimal("0.5")
+
+
+def test_patch_holding_preserves_decimal_precision(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(device_uuid)},
+        json={"weight": "0.123456789"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert isinstance(body["weight"], str)
+    assert Decimal(body["weight"]) == Decimal("0.123456789")
+
+
+def test_patch_holding_stamps_last_seen_at(
+    client: TestClient, db_session: Session
+) -> None:
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    device_uuid, _ = _seed_portfolio(
+        db_session,
+        holdings=(("AAPL", Decimal("0.5")),),
+        last_seen_at=stale,
+    )
+
+    before = datetime.now(UTC)
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(device_uuid)},
+        json={"weight": "0.7"},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 200
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_patch_holding_does_not_touch_other_devices(
+    client: TestClient, db_session: Session
+) -> None:
+    """A PATCH scoped to one device cannot mutate a same-ticker row elsewhere."""
+    caller_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    other_uuid, other_portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.25")),)
+    )
+
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(caller_uuid)},
+        json={"weight": "0.9"},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+
+    other_holding = db_session.scalars(
+        select(Holding).where(
+            Holding.portfolio_id == other_portfolio.id,
+            Holding.ticker == "AAPL",
+        )
+    ).one()
+    assert other_holding.weight == Decimal("0.25")
+
+
+def test_delete_holding_404_for_unknown_device(client: TestClient) -> None:
+    resp = client.delete(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(uuid.uuid4())},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "portfolioNotFound"
+
+
+def test_delete_holding_404_for_unknown_ticker(
+    client: TestClient, db_session: Session
+) -> None:
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    resp = client.delete(
+        "/portfolio/holdings/MSFT",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["code"] == "portfolioNotFound"
+    assert body["message"] == "Holding not found for portfolio."
+
+
+def test_delete_holding_removes_only_the_target_row(
+    client: TestClient, db_session: Session
+) -> None:
+    """DELETE removes exactly one holding and leaves siblings + portfolio intact.
+
+    Reinforces the issue-#374 separation between row-level rectification
+    (this DELETE) and the full-account erasure path tracked in issue
+    #329. A regression that cascade-deletes the parent portfolio would
+    be a privacy-significant data-loss bug.
+    """
+    device_uuid, portfolio = _seed_portfolio(
+        db_session,
+        holdings=(
+            ("AAPL", Decimal("0.3")),
+            ("MSFT", Decimal("0.4")),
+            ("VOO", Decimal("0.3")),
+        ),
+    )
+
+    resp = client.delete(
+        "/portfolio/holdings/MSFT",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 204
+    assert resp.content == b""
+
+    surviving = {
+        h.ticker
+        for h in db_session.scalars(
+            select(Holding).where(Holding.portfolio_id == portfolio.id)
+        )
+    }
+    assert surviving == {"AAPL", "VOO"}
+
+    # The portfolio row itself MUST still exist — DELETE on a holding
+    # is row-scoped, not account-scoped (#374 vs #329).
+    refreshed = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert refreshed.id == portfolio.id
+
+
+def test_delete_holding_stamps_last_seen_at(
+    client: TestClient, db_session: Session
+) -> None:
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    device_uuid, _ = _seed_portfolio(
+        db_session,
+        holdings=(("AAPL", Decimal("0.5")), ("MSFT", Decimal("0.5"))),
+        last_seen_at=stale,
+    )
+
+    before = datetime.now(UTC)
+    resp = client.delete(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 204
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_delete_holding_does_not_touch_other_devices(
+    client: TestClient, db_session: Session
+) -> None:
+    caller_uuid, caller_portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    other_uuid, other_portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.25")),)
+    )
+
+    resp = client.delete(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(caller_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 204
+
+    # Caller's holding removed; other device's same-ticker row untouched.
+    assert (
+        db_session.scalars(
+            select(Holding).where(Holding.portfolio_id == caller_portfolio.id)
+        ).first()
+        is None
+    )
+    other_row = db_session.scalars(
+        select(Holding).where(Holding.portfolio_id == other_portfolio.id)
+    ).one()
+    assert other_row.ticker == "AAPL"
+    assert other_row.weight == Decimal("0.25")
 

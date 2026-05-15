@@ -3,12 +3,20 @@
 Implements the endpoints documented in ``backend/api/README.md`` and the
 original services spec:
 
-* ``GET  /health``              — liveness + DB reachability
-* ``GET  /portfolio/status``    — last_modified / next_modified, cacheable
-* ``GET  /portfolio/data``      — full portfolio allocation for the device
-* ``GET  /portfolio/export``    — GDPR Art. 20 / CCPA §1798.100 data export
-* ``GET  /schema/version``      — current API schema version
-* ``POST /portfolio/holdings``  — add a ticker; queues a background fetch
+* ``GET    /health`` — liveness + DB reachability.
+* ``GET    /portfolio/status`` — ``last_modified`` / ``next_modified``, cacheable.
+* ``GET    /portfolio/data`` — full portfolio allocation for the device.
+* ``GET    /portfolio/export`` — GDPR Art. 20 / CCPA §1798.100 personal-data
+  export.
+* ``PATCH  /portfolio`` — GDPR Art. 16 / CCPA §1798.106 rectify scalar
+  portfolio fields (issue #374).
+* ``GET    /schema/version`` — current API schema version.
+* ``POST   /portfolio/holdings`` — add a ticker; queues a background fetch.
+* ``PATCH  /portfolio/holdings/{ticker}`` — GDPR Art. 16 / CCPA §1798.106
+  rectify holding weight (issue #374).
+* ``DELETE /portfolio/holdings/{ticker}`` — remove a single holding
+  (ticker-typo correction path; row-scoped, distinct from full-account
+  erasure tracked under issue #329).
 
 The app reads from Postgres only and **never** calls Polygon directly,
 with one explicit exception: ``POST /portfolio/holdings`` queues an
@@ -38,7 +46,14 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, WithJsonSchema
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    WithJsonSchema,
+    model_validator,
+)
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -388,6 +403,93 @@ class AddHoldingRequest(BaseModel):
     device_uuid: UUID
     ticker: str = Field(min_length=1, max_length=10)
     weight: float = Field(gt=0, le=1)
+
+
+# Moving-average windows accepted by the CheckConstraint on
+# ``Portfolio.ma_window`` (``backend/db/models.py``). Centralised here so
+# the API rejects unsupported values up-front with the documented
+# ``unsupportedMovingAverageWindow`` envelope rather than letting the
+# database raise a generic IntegrityError. Mirrors the iOS-side enum in
+# ``app/Sources/Backend/Models/MovingAverageWindow.swift``.
+SUPPORTED_MA_WINDOWS: frozenset[int] = frozenset({50, 200})
+
+
+class PatchPortfolioRequest(BaseModel):
+    """Request body for ``PATCH /portfolio``.
+
+    Implements the scalar half of the GDPR Art. 16 / CCPA §1798.106
+    right-to-rectification path (issue #374). Every field is optional
+    so the client can correct a single value without re-stating the
+    others, but the body **must** carry at least one non-null field —
+    an empty PATCH is rejected as ``schemaUnsupported`` so the wire
+    contract never accepts a no-op write that silently stamps activity.
+
+    ``ma_window`` accepts only the values enumerated in
+    :data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the
+    documented ``unsupportedMovingAverageWindow`` envelope so the iOS
+    client can surface a specific error rather than the generic
+    ``schemaUnsupported`` validation failure.
+    """
+
+    name: str | None = Field(default=None, min_length=1)
+    monthly_budget: DecimalString | None = Field(default=None, gt=Decimal("0"))
+    ma_window: int | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def _require_at_least_one_field(self) -> PatchPortfolioRequest:
+        """Reject empty PATCH bodies — they would no-op but stamp activity."""
+        if (
+            self.name is None
+            and self.monthly_budget is None
+            and self.ma_window is None
+        ):
+            raise ValueError(
+                "PatchPortfolioRequest requires at least one of "
+                "name, monthly_budget, ma_window."
+            )
+        return self
+
+
+class PatchPortfolioResponse(BaseModel):
+    """Response body for ``PATCH /portfolio``.
+
+    Returns the scalar portfolio fields after the correction commits so
+    the iOS client can confirm its local SwiftData state matches the
+    server. Excludes ``holdings`` and market-data joins (which are
+    served by ``GET /portfolio/data``) to keep the rectification
+    response cheap.
+    """
+
+    portfolio_id: UUID
+    name: str
+    monthly_budget: DecimalString
+    ma_window: int
+
+
+class PatchHoldingRequest(BaseModel):
+    """Request body for ``PATCH /portfolio/holdings/{ticker}``.
+
+    Only ``weight`` is mutable through PATCH. A ticker typo (`AAPL`
+    intended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/
+    {ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename
+    the row's primary key. ``DecimalString`` preserves exact precision
+    end-to-end (see #392).
+    """
+
+    weight: DecimalString = Field(gt=Decimal("0"), le=Decimal("1"))
+
+
+class PatchHoldingResponse(BaseModel):
+    """Response body for ``PATCH /portfolio/holdings/{ticker}``.
+
+    Mirrors the persisted ``Holding`` row rather than the enriched
+    :class:`HoldingOut` returned from ``/portfolio/data`` — market-data
+    fields are intentionally excluded so PATCH returns only the
+    rectified value the client wrote.
+    """
+
+    ticker: str
+    weight: DecimalString
 
 
 class PortfolioExportHolding(BaseModel):
@@ -795,6 +897,271 @@ def add_holding(
         )
 
     return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+# ---------------------------------------------------------------------------
+# Right-to-rectification (GDPR Art. 16 / CCPA §1798.106) — see issue #374
+# ---------------------------------------------------------------------------
+def _load_portfolio_or_503(db: Session, device_uuid: UUID) -> Portfolio | None:
+    """Resolve a portfolio by device UUID, raising 503 on DB failure.
+
+    Returns ``None`` when the row does not exist so the caller can emit
+    the canonical ``portfolioNotFound`` envelope. Keeps the rectification
+    handlers' error mapping consistent with the rest of the module.
+    """
+    try:
+        return db.execute(
+            select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("portfolio rectification lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+
+def _commit_or_503(db: Session, context: str) -> None:
+    """Commit the active transaction, mapping driver errors to 503."""
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        log.warning("%s failed: %s", context, exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+
+@app.patch(
+    "/portfolio",
+    response_model=PatchPortfolioResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def patch_portfolio(
+    device_uuid: UUID,
+    payload: PatchPortfolioRequest,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> PatchPortfolioResponse:
+    """Correct one or more scalar fields on the calling device's portfolio.
+
+    Implements the scalar half of GDPR Art. 16 (right to rectification),
+    CCPA §1798.106 (right to correct), and the rectification commitment
+    referenced in ``docs/legal/privacy-policy.md`` §6. The companion
+    holding-level path is ``PATCH /portfolio/holdings/{ticker}`` and the
+    typo-correction path is ``DELETE /portfolio/holdings/{ticker}``.
+
+    Only fields the client supplies are written; absent fields are
+    preserved verbatim. ``ma_window`` is validated against the
+    documented allow-list before the database CheckConstraint sees it
+    so the client receives a precise ``unsupportedMovingAverageWindow``
+    envelope rather than a generic 422.
+
+    On success ``last_seen_at`` is stamped so a rectification call
+    alone keeps the row out of the retention-purge sweep documented in
+    ``docs/legal/data-retention.md`` — consistent with every other
+    authenticated touch.
+    """
+    portfolio = _load_portfolio_or_503(db, device_uuid)
+    if portfolio is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Portfolio not found for device.",
+        )
+
+    if (
+        payload.ma_window is not None
+        and payload.ma_window not in SUPPORTED_MA_WINDOWS
+    ):
+        raise ApiError(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code=ErrorCode.UNSUPPORTED_MA_WINDOW,
+            message=(
+                "ma_window must be one of "
+                f"{sorted(SUPPORTED_MA_WINDOWS)}."
+            ),
+        )
+
+    if payload.name is not None:
+        portfolio.name = payload.name
+    if payload.monthly_budget is not None:
+        portfolio.monthly_budget = payload.monthly_budget
+    if payload.ma_window is not None:
+        portfolio.ma_window = payload.ma_window
+    portfolio.last_seen_at = datetime.now(UTC)
+    _commit_or_503(db, "portfolio rectification commit")
+
+    return PatchPortfolioResponse(
+        portfolio_id=portfolio.id,
+        name=portfolio.name,
+        monthly_budget=portfolio.monthly_budget,
+        ma_window=portfolio.ma_window,
+    )
+
+
+@app.patch(
+    "/portfolio/holdings/{ticker}",
+    response_model=PatchHoldingResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def patch_holding(
+    ticker: str,
+    device_uuid: UUID,
+    payload: PatchHoldingRequest,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> PatchHoldingResponse:
+    """Correct the weight on a single holding row.
+
+    Renaming a holding (typo on ``ticker``) goes through
+    ``DELETE /portfolio/holdings/{ticker}`` followed by
+    ``POST /portfolio/holdings``: ``ticker`` is part of the row's
+    natural key (unique within a portfolio) and changing it via PATCH
+    would conflict with the same uniqueness invariant guarded by
+    ``POST``'s 409 path.
+
+    Returns the persisted ``ticker`` + ``weight`` after commit so the
+    iOS client can confirm its local state. Market-data fields are
+    intentionally excluded — ``GET /portfolio/data`` is the canonical
+    enriched view.
+    """
+    portfolio = _load_portfolio_or_503(db, device_uuid)
+    if portfolio is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Portfolio not found for device.",
+        )
+
+    try:
+        holding = db.execute(
+            select(Holding).where(
+                Holding.portfolio_id == portfolio.id,
+                Holding.ticker == ticker,
+            )
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("holding rectification lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+    if holding is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Holding not found for portfolio.",
+        )
+
+    holding.weight = payload.weight
+    portfolio.last_seen_at = datetime.now(UTC)
+    _commit_or_503(db, "holding rectification commit")
+
+    return PatchHoldingResponse(ticker=holding.ticker, weight=holding.weight)
+
+
+@app.delete(
+    "/portfolio/holdings/{ticker}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
+            status.HTTP_401_UNAUTHORIZED
+        ],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES[status.HTTP_404_NOT_FOUND],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: ERROR_RESPONSES[
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+)
+def delete_holding(
+    ticker: str,
+    device_uuid: UUID,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_app_attest),
+) -> Response:
+    """Remove a single holding from the calling device's portfolio.
+
+    Supplies the ticker-typo correction path for GDPR Art. 16 /
+    CCPA §1798.106 (issue #374): a row whose ``ticker`` is wrong
+    cannot be PATCHed (``ticker`` is part of the row's natural key);
+    it must be removed and re-added via ``POST /portfolio/holdings``.
+    This DELETE is **not** the broader erasure mechanism tracked in
+    issue #329 — it scopes strictly to one ``(portfolio, ticker)``
+    pair and leaves every other row, including the parent portfolio,
+    untouched.
+    """
+    portfolio = _load_portfolio_or_503(db, device_uuid)
+    if portfolio is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Portfolio not found for device.",
+        )
+
+    try:
+        holding = db.execute(
+            select(Holding).where(
+                Holding.portfolio_id == portfolio.id,
+                Holding.ticker == ticker,
+            )
+        ).scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        log.warning("holding delete lookup failed: %s", exc)
+        raise ApiError(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=ErrorCode.SYNC_UNAVAILABLE,
+            message="Database is unreachable.",
+            retry_after_seconds=60,
+        ) from exc
+
+    if holding is None:
+        raise ApiError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.PORTFOLIO_NOT_FOUND,
+            message="Holding not found for portfolio.",
+        )
+
+    db.delete(holding)
+    portfolio.last_seen_at = datetime.now(UTC)
+    _commit_or_503(db, "holding delete commit")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------

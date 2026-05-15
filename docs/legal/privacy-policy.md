@@ -219,8 +219,25 @@ below for the technical contract and verification protocol).
 ### Right to rectification / correction (GDPR Art. 16; CCPA §1798.106 / CPRA)
 
 You can edit any portfolio, holding, target, or preference at any time
-in the app. When backend sync is active, a server-side correction path
-is being added under issue #374.
+in the app. When backend sync is active, the same corrections propagate
+to the server via:
+
+- `PATCH /portfolio` — corrects the scalar portfolio fields (display
+  name, monthly budget, moving-average window).
+- `PATCH /portfolio/holdings/{ticker}` — corrects a holding's weight.
+- `DELETE /portfolio/holdings/{ticker}` followed by
+  `POST /portfolio/holdings` — corrects a holding whose ticker symbol
+  itself is wrong, because the ticker is part of the row's natural key
+  and cannot be PATCHed in place.
+
+All three paths are authenticated by App Attest and scoped strictly to
+the calling device's portfolio. The technical contract is documented in
+the OpenAPI artifact at
+[`app/Sources/Backend/Networking/openapi.json`](../../app/Sources/Backend/Networking/openapi.json)
+under the `PatchPortfolioRequest`, `PatchPortfolioResponse`,
+`PatchHoldingRequest`, and `PatchHoldingResponse` schemas, and the
+consolidated DSR posture lives in
+[`docs/legal/data-subject-rights.md`](data-subject-rights.md).
 
 ### Right to erasure / deletion (GDPR Art. 17; CCPA §1798.105)
 
