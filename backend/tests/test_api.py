@@ -134,6 +134,7 @@ PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
     ("/schema/version", "get"),
     ("/portfolio/status", "get"),
     ("/portfolio/data", "get"),
+    ("/portfolio/export", "get"),
     ("/portfolio/holdings", "post"),
 )
 
@@ -191,6 +192,7 @@ def test_protected_routes_reject_missing_x_app_attest(client: TestClient) -> Non
         ("get", "/schema/version", None),
         ("get", "/portfolio/status", None),
         ("get", "/portfolio/data", {"device_uuid": str(uuid.uuid4())}),
+        ("get", "/portfolio/export", {"device_uuid": str(uuid.uuid4())}),
         (
             "post",
             "/portfolio/holdings",
@@ -570,3 +572,225 @@ def test_add_holding_duplicate_does_not_stamp_last_seen_at(
     assert untouched.last_seen_at.replace(tzinfo=None) == stale.replace(
         tzinfo=None
     )
+
+
+def test_portfolio_export_404_for_unknown_device(client: TestClient) -> None:
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(uuid.uuid4())},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {
+        "code": "portfolioNotFound",
+        "message": "Portfolio not found for device.",
+        "retry_after_seconds": None,
+    }
+
+
+def test_portfolio_export_returns_full_record(
+    client: TestClient, db_session: Session
+) -> None:
+    """The export must contain every X-Device-UUID-linked column.
+
+    Regression guard for issue #333: missing fields would silently
+    short-change a GDPR Art. 20 / CCPA §1798.100 request.
+    """
+    device_uuid = uuid.uuid4()
+    created_at = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
+    last_seen_at = datetime(2024, 12, 1, 12, 0, 0, tzinfo=UTC)
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="Long-term",
+        monthly_budget=Decimal("250.50"),
+        ma_window=200,
+        created_at=created_at,
+        last_seen_at=last_seen_at,
+    )
+    portfolio.holdings.extend(
+        [
+            Holding(id=uuid.uuid4(), ticker="VTI", weight=Decimal("0.6")),
+            Holding(id=uuid.uuid4(), ticker="BND", weight=Decimal("0.4")),
+        ]
+    )
+    db_session.add(portfolio)
+    # Add a StockCache row that must NOT appear in the export — it is
+    # ticker-keyed market data, not personal data.
+    db_session.add(
+        StockCache(
+            ticker="VTI",
+            current_price=Decimal("300"),
+            sma_50=Decimal("299"),
+            sma_200=Decimal("298"),
+            last_modified=datetime.now(UTC),
+            next_modified=None,
+            job_status="success",
+        )
+    )
+    db_session.commit()
+
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["format_version"] == 1
+    assert body["device_uuid"] == str(device_uuid)
+    assert "generated_at" in body
+
+    exported = body["portfolio"]
+    assert exported["portfolio_id"] == str(portfolio.id)
+    assert exported["name"] == "Long-term"
+    assert isinstance(exported["monthly_budget"], str)
+    assert Decimal(exported["monthly_budget"]) == Decimal("250.50")
+    assert exported["ma_window"] == 200
+    # Holdings come back in the same order they were appended.
+    exported_holdings = {
+        h["ticker"]: Decimal(h["weight"]) for h in exported["holdings"]
+    }
+    assert exported_holdings == {
+        "VTI": Decimal("0.6"),
+        "BND": Decimal("0.4"),
+    }
+    # Market-data fields must not leak into the personal-data export.
+    for holding in exported["holdings"]:
+        assert set(holding.keys()) == {"ticker", "weight"}
+
+
+def test_portfolio_export_preserves_decimal_precision(
+    client: TestClient, db_session: Session
+) -> None:
+    """Monetary and weight values must round-trip as exact decimal strings.
+
+    Regression guard parallels
+    test_portfolio_data_preserves_decimal_precision_in_monthly_budget
+    (#392): an export that silently downgrades to IEEE-754 would fail
+    the Art. 20 "structured, commonly used, machine-readable format"
+    requirement because the recipient could not reconstruct the
+    original values.
+    """
+    device_uuid = uuid.uuid4()
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="Precise",
+        monthly_budget=Decimal("99.99"),
+        ma_window=50,
+        created_at=datetime.now(UTC),
+    )
+    portfolio.holdings.append(
+        Holding(id=uuid.uuid4(), ticker="AAPL", weight=Decimal("0.123456789"))
+    )
+    db_session.add(portfolio)
+    db_session.commit()
+
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    exported = body["portfolio"]
+
+    assert isinstance(exported["monthly_budget"], str)
+    assert Decimal(exported["monthly_budget"]) == Decimal("99.99")
+    holding_weight = exported["holdings"][0]["weight"]
+    assert isinstance(holding_weight, str)
+    assert Decimal(holding_weight) == Decimal("0.123456789")
+
+
+def test_portfolio_export_stamps_last_seen_at_on_authenticated_touch(
+    client: TestClient, db_session: Session
+) -> None:
+    """``GET /portfolio/export`` records activity for the retention sweep.
+
+    Pairs with test_portfolio_data_stamps_last_seen_at_on_authenticated_touch:
+    a data-subject exercising the export right keeps their portfolio out
+    of the daily purge documented in ``docs/legal/data-retention.md``.
+    """
+    device_uuid = uuid.uuid4()
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    db_session.add(
+        Portfolio(
+            id=uuid.uuid4(),
+            device_uuid=device_uuid,
+            name="Stale",
+            monthly_budget=Decimal("100"),
+            ma_window=50,
+            created_at=stale,
+            last_seen_at=stale,
+        )
+    )
+    db_session.commit()
+
+    before = datetime.now(UTC)
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+    after = datetime.now(UTC)
+    assert resp.status_code == 200
+
+    stamped = db_session.scalars(
+        select(Portfolio).where(Portfolio.device_uuid == device_uuid)
+    ).one()
+    assert stamped.last_seen_at is not None
+    stamped_naive = stamped.last_seen_at.replace(tzinfo=None)
+    assert before.replace(tzinfo=None) <= stamped_naive <= after.replace(tzinfo=None)
+
+
+def test_portfolio_export_omits_other_devices(
+    client: TestClient, db_session: Session
+) -> None:
+    """Export must scope strictly to the calling device's portfolio.
+
+    Cross-device leakage in a DSR endpoint would be a per-row personal-data
+    breach under GDPR Art. 33/34; this guards the scoping invariant.
+    """
+    caller_uuid = uuid.uuid4()
+    other_uuid = uuid.uuid4()
+    caller_portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=caller_uuid,
+        name="Mine",
+        monthly_budget=Decimal("100"),
+        ma_window=50,
+        created_at=datetime.now(UTC),
+    )
+    caller_portfolio.holdings.append(
+        Holding(id=uuid.uuid4(), ticker="VOO", weight=Decimal("1.0"))
+    )
+    other_portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=other_uuid,
+        name="Theirs",
+        monthly_budget=Decimal("999"),
+        ma_window=200,
+        created_at=datetime.now(UTC),
+    )
+    other_portfolio.holdings.append(
+        Holding(id=uuid.uuid4(), ticker="SECRET", weight=Decimal("0.99"))
+    )
+    db_session.add_all([caller_portfolio, other_portfolio])
+    db_session.commit()
+
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(caller_uuid)},
+        headers=ATTEST,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["device_uuid"] == str(caller_uuid)
+    assert body["portfolio"]["name"] == "Mine"
+    tickers = {h["ticker"] for h in body["portfolio"]["holdings"]}
+    assert tickers == {"VOO"}
+    assert "SECRET" not in tickers
+

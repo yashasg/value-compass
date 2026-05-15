@@ -211,8 +211,11 @@ Every byte of personal data Investrum holds about you on your device is
 already visible to you in the app — portfolios, holdings, contribution
 history, preferences. The optional Massive API key is shown masked
 (suffix only) for security; the raw key is never displayed by Investrum
-after it is saved. When backend sync is active, a personal-data export
-mechanism is being added under issue #333.
+after it is saved. When backend sync is active, the `GET /portfolio/export`
+endpoint returns every `X-Device-UUID`-linked row the backend holds
+about you in a structured, machine-readable JSON document (see
+[Right to data portability](#right-to-data-portability-gdpr-art-20-ccpa-1798130a3)
+below for the technical contract and verification protocol).
 
 ### Right to rectification / correction (GDPR Art. 16; CCPA §1798.106 / CPRA)
 
@@ -248,9 +251,21 @@ suggestions you choose to act on.
 
 ### Right to data portability (GDPR Art. 20; CCPA §1798.130(a)(3))
 
-Tracked under issue #333. While sync is unwired, your data lives on
-your device and is portable by Apple's standard backup mechanisms
-(iCloud Backup, encrypted iTunes backup).
+When backend sync is active, `GET /portfolio/export` returns every
+`X-Device-UUID`-linked row the backend holds (portfolio name, monthly
+budget, moving-average window, every holding with ticker and weight,
+plus the timestamps that govern retention) as a structured,
+machine-readable JSON document. The format is documented in the
+OpenAPI contract at
+[`app/Sources/Backend/Networking/openapi.json`](../../app/Sources/Backend/Networking/openapi.json)
+under the `PortfolioExportResponse` schema; the response carries a
+`format_version` field so future additions are auditable. The endpoint
+is authenticated by App Attest and scoped strictly to the calling
+device's portfolio.
+
+While sync is unwired, your data lives on your device and is portable
+by Apple's standard backup mechanisms (iCloud Backup, encrypted iTunes
+backup).
 
 ### How to exercise these rights
 
