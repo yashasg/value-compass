@@ -1124,9 +1124,9 @@ def test_patch_holding_404_for_unknown_ticker(
 ) -> None:
     """404 when the holding row does not exist on the resolved portfolio.
 
-    The error code is the canonical ``portfolioNotFound`` envelope —
-    we deliberately do not invent a new ``holdingNotFound`` code so
-    the client surface stays a closed enumeration.
+    Returns the dedicated ``holdingNotFound`` envelope so iOS clients can
+    dispatch on ``code`` alone — distinct from ``portfolioNotFound``,
+    which the same surface emits when the parent portfolio is missing.
     """
     device_uuid, _ = _seed_portfolio(
         db_session, holdings=(("AAPL", Decimal("0.5")),)
@@ -1140,7 +1140,7 @@ def test_patch_holding_404_for_unknown_ticker(
     )
     assert resp.status_code == 404
     body = resp.json()
-    assert body["code"] == "portfolioNotFound"
+    assert body["code"] == "holdingNotFound"
     assert body["message"] == "Holding not found for portfolio."
 
 
@@ -1289,7 +1289,7 @@ def test_delete_holding_404_for_unknown_ticker(
     )
     assert resp.status_code == 404
     body = resp.json()
-    assert body["code"] == "portfolioNotFound"
+    assert body["code"] == "holdingNotFound"
     assert body["message"] == "Holding not found for portfolio."
 
 
