@@ -38,6 +38,14 @@ private struct PortfolioDetailContent: View {
         summarySection
         holdingsSection
         calculateSection
+        // #233: render `Disclaimer.text` on the surface that prints the
+        // calculate-section "Monthly contribution: $X" summary. Placed
+        // unconditionally (not gated on `store.calculationOutput`) so
+        // it is also present when the user lands on the screen before
+        // running Calculate — the calculate button is in view from
+        // first paint, and the disclaimer must accompany the action
+        // surface, not only the post-success summary.
+        CalculationOutputDisclaimerFooter()
       }
       .padding(AppLayoutMetrics.mainMargin)
       .frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)

@@ -148,11 +148,23 @@ final class SettingsFeatureTests: XCTestCase {
       }
     }
 
-    await store.send(.binding(.set(\.isDisclaimerExpanded, true))) {
-      $0.isDisclaimerExpanded = true
+    // Default is `true` (#233 remediation point 4 — keep the Settings
+    // disclosure expanded so the long-form copy is one tap closer to
+    // the dollar-amount surfaces). Toggle to `false` here so the
+    // binding actually mutates state and the no-persistence assertion
+    // still exercises the reducer path.
+    await store.send(.binding(.set(\.isDisclaimerExpanded, false))) {
+      $0.isDisclaimerExpanded = false
     }
 
     XCTAssertTrue(writes.value.isEmpty)
+  }
+
+  func testDisclaimerExpansionDefaultsToTrue() {
+    // #233: Settings > Legal disclosure ships expanded so the
+    // canonical disclaimer copy is visible without an extra tap.
+    let state = SettingsFeature.State()
+    XCTAssertTrue(state.isDisclaimerExpanded)
   }
 
   // MARK: - API key (issue #127)

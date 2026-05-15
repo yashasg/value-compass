@@ -33,6 +33,11 @@ struct ContributionResultContent: View {
           categoryBreakdown
           actions
         }
+        // #233: render `Disclaimer.text` alongside every computed
+        // dollar amount. Kept inside the same scroll container as the
+        // result summary so the disclaimer travels with the output and
+        // is not separated by a navigation push or a settings tap.
+        CalculationOutputDisclaimerFooter()
       }
       .padding()
       .frame(maxWidth: .infinity, alignment: .leading)

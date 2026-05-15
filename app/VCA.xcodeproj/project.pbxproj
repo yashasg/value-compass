@@ -117,6 +117,8 @@
 		C0000000000000000000B01E /* PortfolioDetailAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */; };
 		C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */; };
 		C0000000000000000000B020 /* MainAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F020 /* MainAccessibilityTests.swift */; };
+		C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */; };
+		A0000000000000000000B0C1 /* CalculationOutputDisclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -232,6 +234,8 @@
 		C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F020 /* MainAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAccessibilityTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerSurfaceTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationOutputDisclaimer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -387,6 +391,7 @@
 				A0000000000000000000F019 /* PortfolioDetailView.swift */,
 				A0000000000000000000F01A /* ContributionResultView.swift */,
 				A0000000000000000000F01B /* ContributionHistoryView.swift */,
+				A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -496,6 +501,7 @@
 				C0000000000000000000F01E /* PortfolioDetailAccessibilityTests.swift */,
 				C0000000000000000000F01F /* OnboardingAccessibilityTests.swift */,
 				C0000000000000000000F020 /* MainAccessibilityTests.swift */,
+				C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */,
 			);
 			path = VCATests;
 			sourceTree = "<group>";
@@ -643,6 +649,7 @@
 				A0000000000000000000B019 /* PortfolioDetailView.swift in Sources */,
 				A0000000000000000000B01A /* ContributionResultView.swift in Sources */,
 				A0000000000000000000B01B /* ContributionHistoryView.swift in Sources */,
+				A0000000000000000000B0C1 /* CalculationOutputDisclaimer.swift in Sources */,
 				A0000000000000000000B016 /* ValueCompassTypography.swift in Sources */,
 				A0000000000000000000B0C0 /* AccessibilityAnnouncements.swift in Sources */,
 				A0000000000000000000B020 /* Disclaimer.swift in Sources */,
@@ -727,6 +734,7 @@
 				C0000000000000000000B01E /* PortfolioDetailAccessibilityTests.swift in Sources */,
 				C0000000000000000000B01F /* OnboardingAccessibilityTests.swift in Sources */,
 				C0000000000000000000B020 /* MainAccessibilityTests.swift in Sources */,
+				C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
