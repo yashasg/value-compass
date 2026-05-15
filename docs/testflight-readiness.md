@@ -37,5 +37,6 @@ base64 -i path/to/file -o encoded.txt
 
 1. Confirm `./app/build.sh` and `./app/run.sh` pass locally.
 2. Confirm `app/Sources/App/Info.plist` declares `ITSAppUsesNonExemptEncryption=false` so App Store Connect skips the U.S. Encryption Registration Number (ERN) prompt. Background and re-classification triggers: `docs/legal/encryption-compliance.md`. (Re-validate with counsel whenever the cryptography surface changes.)
-3. Open **Actions > ios-deploy > Run workflow**, set `ref` to the commit SHA, release branch, or tag to upload, then run the workflow.
-4. After upload, wait for App Store Connect processing, assign the build to the internal tester group, and complete TestFlight compliance prompts if Apple requests them.
+3. Paste the canonical Notes-to-Reviewer block from `docs/legal/app-review-notes.md` into **App Store Connect → App Review Information → Notes**, filling in the bracketed placeholders (test API key, submitter / backup contacts). Confirm the Legal review log in that file has at least one attorney-approved row for the build being submitted before continuing — do not submit a build whose Notes language has not been attorney-reviewed (issue #254).
+4. Open **Actions > ios-deploy > Run workflow**, set `ref` to the commit SHA, release branch, or tag to upload, then run the workflow.
+5. After upload, wait for App Store Connect processing, assign the build to the internal tester group, and complete TestFlight compliance prompts if Apple requests them.
