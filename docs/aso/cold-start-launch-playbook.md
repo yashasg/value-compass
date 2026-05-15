@@ -80,12 +80,13 @@ responsiveness.
 | Field | Value |
 |---|---|
 | Cohort size | 50–100 qualified users (Danny picks within this band) |
-| Recruitment surfaces | r/Bogleheads, r/dividends, r/personalfinance, IndieHackers, HackerNews "Show HN", Mint/Personal Capital refugee threads |
+| Recruitment surfaces | **Hybrid funnel per `docs/aso/channel-feasibility.md` (#424):** volume funnel — HN Show HN + r/SideProject + IndieHackers Stories; persona-fit funnel — DM-seeded TestFlight invites off organic comment engagement on r/Bogleheads / r/dividends / r/personalfinance, single r/financialindependence Wednesday Self-Promotion thread, Bogleheads.org forum modmail petition. **Public posts to r/Bogleheads / r/dividends / r/personalfinance / r/investing are rules-banned** ("even if not monetized" / permanent-ban clauses); the original "r/Bogleheads, r/dividends, r/personalfinance" enumeration is superseded by the audit in #424 |
 | Qualification gate | (a) Self-identifies as DIY investor; (b) Currently uses Stock Events / Snowball / spreadsheet / no tracker; (c) Agrees in writing to leave an App Store review on public launch day |
 | Build flag | TestFlight build with v1 feature scope, "Beta" marker visible in onboarding (no production privacy-policy URL until #224 hosting lands; in-app link points to repo source-of-truth) |
 | Feedback channel | Discord server **or** Reddit megathread (single channel; not both — avoid splitting attention). Developer responds within 48 h |
 | Bug SLA | 48 h turnaround on crash reports; pre-public-launch fixes only |
 | Testimonial collection | Optional "What did you like?" email after week 1 and week 3; only verbatim quotes used downstream |
+| Cohort tagging | Manifest tags every recruit with funnel source per `docs/aso/channel-feasibility.md` §Cohort tagging schema (`persona-fit-dm-*` / `persona-fit-fire-wednesday` / `persona-fit-bogleheads-forum` / `volume-hn` / `volume-reddit` / `volume-ih`) so post-launch attribution (#347) can separate signals |
 
 ### Phase 2 — Public launch day (coordinated single-day flip)
 
@@ -93,7 +94,7 @@ responsiveness.
 |---|---|
 | TestFlight cohort updates to production binary | Beta users |
 | In-app SKStoreReviewController prompt fires **once** on launch day | App (per #345 prompt cadence) |
-| Launch post to r/Bogleheads, r/dividends, Show HN (with consented beta-tester quotes) | Frank / Saul co-author |
+| Launch post to **HN Show HN + r/SideProject** (volume funnel per `docs/aso/channel-feasibility.md`), plus an IndieHackers milestone story within 7 days. **No public posts to r/Bogleheads / r/dividends / r/personalfinance / r/investing** — rules-banned per #424. DM-seeded `persona-fit-*` recruits receive direct launch-day notification (1:1) | Frank / Saul co-author |
 | Frank's storefront copy (#220), screenshots (#246), promo text (#342) all go live simultaneously | Frank |
 | Privacy Policy hosting (#224), App Privacy nutrition label (#271 closed), age-rating questionnaire (#287), DSR paths (#329 / #333), retention schedule (#339), and EULA posture (#398) all confirmed green | Reuben |
 
@@ -150,8 +151,8 @@ ratings-prompt timing wrong (#345 re-tunes positive-moment trigger).
 
 | Issue | Direction |
 |---|---|
-| #240 (Bogleheads / FIRE / dividends persona) | Recruitment targets same communities |
-| #263 (channel-validation) | This playbook extends #263 with cold-start framing |
+| #240 (Bogleheads / FIRE / dividends persona) | Recruitment targets same persona; channel mix lives in `docs/aso/channel-feasibility.md` per #424 |
+| #263 (channel-validation) | This playbook extends #263 with cold-start framing; #424 records the public-post → DM-seeding pivot |
 | #274 (keyword-rank / rating telemetry) | Phase 3 measurement reads from #274 |
 | #277 (trust-cycle response) | Beta is the rehearsal; steady state post-launch |
 | #296 (manual-entry tier anchor) | Tier-mirror peer set (Stock Events / Snowball) sets engagement-quality benchmark |
@@ -159,9 +160,10 @@ ratings-prompt timing wrong (#345 re-tunes positive-moment trigger).
 | #313 (monthly retention loop) | Post-cold-start mechanism |
 | #322 (trust-commitment register) | Recruitment ad-copy leads with the #322 commitments |
 | #345 (ratings-prompt cadence) | Phase 2 + Phase 3 cadence |
-| #347 (observable-signal taxonomy) | Cold-start success criteria use #347's signal set |
+| #347 (observable-signal taxonomy) | Cold-start success criteria use #347's signal set; #424 cohort tagging adds a new `channel-mix accuracy` signal class |
 | #353 / #354 (Data Not Collected pairing) | Trust-signal stack in recruitment ad-copy |
 | #399 (subtitle lock) | TestFlight build ships with the locked subtitle if Apple's TestFlight metadata exposes it |
+| #424 (channel feasibility) | Source-of-truth for the recruitment-surfaces row in Phase 1 above |
 
 ## Honest evidence ceilings
 
