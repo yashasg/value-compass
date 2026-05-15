@@ -72,5 +72,37 @@ decisions.md: 29,775 bytes (over soft 20,480, under hard 51,200). All entries da
 - 1 session log (new)
 - 1 learnings entry (this)
 
+### 2026-05-15T02:30:03Z: Gitignore-Bypass Protocol Fix — PR #216 Cleanup Arc
+
+**Context:** Livingston-1 opened PR #216 with 15 files (team restructure + loop strategy). Livingston-2 discovered that 7 runtime files (orchestration logs, session logs, decision inbox stubs) had been unintentionally committed in Livingston-1's initial push because Scribe-1 used `git add -- <path>` (explicit per-file add), which **bypasses `.gitignore`** filtering.
+
+**Root Cause Analysis**
+- `.gitignore` only filters the *untracked* set during `git add .` (broad add)
+- Explicit `git add -- <path>` (per-file) ignores `.gitignore` entirely
+- Files at `.gitignore:18-22`: `.squad/orchestration-log/`, `.squad/log/`, `.squad/decisions/inbox/`
+- Livingston-2 fixed with `git rm --cached` on 7 files (commit `98ea5bc` → rebased to `fc45f9d`)
+
+**Protocol Fix — NEW RULE**
+Before staging ANY `.squad/` file:
+1. Run `git check-ignore -v <path>`
+2. If exit code 0 (file is gitignored) → **SKIP** (never override `.gitignore`)
+3. If exit code 1 (file is not ignored) → eligible for staging with `git add -- <path>`
+
+**Implementation**
+Applied this session:
+- Checked `.squad/agents/livingston/history.md` → exit 1 (not ignored) → staged ✅
+- Wrote 3 orchestration logs to `.squad/orchestration-log/` → checked → exit 0 (gitignored) → skipped ✅
+- Wrote 1 session log to `.squad/log/` → checked → exit 0 (gitignored) → skipped ✅
+
+**Files Created (Untracked, Diagnostic Reference Only)**
+- `.squad/orchestration-log/2026-05-15T02-30-00Z-livingston-{1|2|3}.md` (3 files, gitignored)
+- `.squad/log/2026-05-15T02-30-00Z-pr-216-cleanup.md` (1 file, gitignored)
+
+**Commits**
+- `513fbf2` — Scribe commit with this learning, updated `.squad/agents/livingston/history.md`
+
+**Key Takeaway**
+`.gitignore` is a passive filter on `git add .` operations only. To respect `.gitignore` in explicit-file workflows (`git add -- <path>`), **always** validate with `git check-ignore -v <path>` first. This is now the standard protocol for all Scribe staging operations and should be documented in team onboarding.
+
 <!-- Append learnings below -->
 
