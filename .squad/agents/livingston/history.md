@@ -62,3 +62,53 @@ iOS App Deployment decision archived to `.squad/decisions.md` as "iOS App Deploy
 5. **Document blockers prominently** — note missing project.pbxproj so next engineer understands xcodebuild will fail.
 
 **Result:** Commit 151a739 (PR #47): 147 files, 17.5K lines, clean staging with no scratch artifacts.
+
+### 2026-05-14T20:24:17-07:00: iOS CI Performance Audit — Build Time & CodeQL Bottlenecks
+
+**Context:** User reported "Analyze iOS" is slow and builds are ~6 minutes.
+
+**Measured timings (from actual GitHub Actions runs):**
+
+| Workflow | Run | Queue Wait | Job Execution | "Build" step |
+|---|---|---|---|---|
+| ios-ci | 25897741308 (success) | 18m28s | 9m25s | 7m25s |
+| ios-ci | 25895856554 (success) | 16m21s | 11m7s | 9m21s |
+| ios-ci | 25895119480 (success) | 1m33s | 7m16s | 5m44s |
+| codeql-ios | 25896830357 (cancelled) | 45m23s | 8m58s | 6m24s (cancelled mid-build) |
+
+**Key findings:**
+
+1. **"Analyze iOS" (codeql-ios.yml) has NEVER completed in recent history** — every single run is cancelled. Root causes:
+   - macOS runner queue wait: 10–45+ minutes waiting for a macos-26 runner
+   - High squad commit cadence (many PRs rapidly merged) triggers `concurrency.cancel-in-progress` before the 20+ minute CodeQL job finishes
+   - CodeQL requires: cache restore (~50s) + CodeQL init (~30s) + full xcodebuild build (~6-9min) + CodeQL static analysis (est. 8-15min for Swift) = estimated 16-26 minutes total if it ever ran
+
+2. **ios-ci build step (6-minute claim)** — floor is 5m44s, typical is 7-9min. Three sequential xcodebuild invocations:
+   - `xcodebuild analyze` (RUN_ANALYZE=true → adds 1-2 min, compiles whole app)
+   - `xcodebuild build` (full debug build)
+   - `xcodebuild test` (if testables present)
+   - Plus swift-format lint (recursive, parallel) upfront
+
+3. **Cache operations**: DerivedData cache restore takes 45-55s every run. Cache save takes 40-58s. Net: ~90s per run just in cache I/O. The cache key hashes all Swift files, so any PR with code changes falls back to the prefix restore key (partial hit), restoring only the module cache portion.
+
+4. **Wall-clock dominators**: macOS runner queue (1-45 min) >> build step (6-9 min) >> cache (90s) > everything else.
+
+**Recommended optimizations (ranked by impact):**
+
+1. Move CodeQL to nightly schedule on main only (not every PR) — fixes the "never completes" problem entirely
+2. Remove `RUN_ANALYZE=true` from ios-ci.yml (save ~1-2 min per build, since CodeQL handles analysis)
+3. Split xcodebuild into `build-for-testing` + `test-without-building` to avoid redundant compile pass
+4. Accept cache duplication cost or compress DerivedData before caching
+
+**Skill:** Wrote `ios-ci-optimization` SKILL.md. Decision recommendation written to inbox.
+
+### 2026-05-14T20:35:42-07:00: iOS CI/CD Findings Filed as P0 GitHub Issue
+
+Filed P0 GitHub issue #206 (`yashasg/value-compass`) to track iOS CI/CD findings from this session:
+- **Title:** "[P0] iOS CI/CD: Analyze workflow never completes; builds take 6-9 min — quick wins available"
+- **Issue URL:** https://github.com/yashasg/value-compass/issues/206
+- **Labels applied:** `squad`, `priority:p0`, `ci-cd`, `ios`
+- **Content:** Captures both CodeQL "never completes" problem and redundant 6-minute build steps with root cause analysis and ranked fixes
+- **Quick wins:** Flip `RUN_ANALYZE=true` to `false` in ios-ci.yml; move CodeQL to nightly cron on main only
+
+**Effect:** Squad Lead (danny) will triage via `squad` label; issue is now tracked and prioritized for implementation.
