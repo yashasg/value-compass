@@ -325,7 +325,8 @@ final class LocalSchemaMigrationTests: XCTestCase {
     let warmContext = ModelContext(warmContainer)
 
     XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Portfolio>()).first?.id, portfolioID)
-    XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Category>()).first?.id, categoryID)
+    XCTAssertEqual(
+      try warmContext.fetch(FetchDescriptor<LocalSchemaV2.Category>()).first?.id, categoryID)
     XCTAssertEqual(try warmContext.fetch(FetchDescriptor<Ticker>()).first?.id, tickerID)
     XCTAssertEqual(
       try warmContext.fetch(FetchDescriptor<ContributionRecord>()).first?.id, recordID)
