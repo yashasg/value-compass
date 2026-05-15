@@ -16,6 +16,8 @@ app/
   VCA.xcodeproj
   Sources/
     App/           # Entry point, app lifecycle
+                   #   AppFeature/     — TCA @Reducer features (root, navigation, screens)
+                   #   Dependencies/   — @DependencyClient interfaces injected into reducers
     Features/      # UI screens
     Backend/       # Backend boundary — only place active code may depend on
                    #   SwiftData, Keychain, Massive, indicators, or VCA engine
