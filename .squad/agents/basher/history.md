@@ -23,3 +23,6 @@
 - 2026-05-12T20:05:11.174-07:00 — Moved frontend/iOS generated build outputs to repo-root `build/frontend/` by default; `DERIVED_DATA_PATH` remains overridable and root `build/` is the canonical ignore target for generated artifacts.
 
 - 2026-05-13T03:07:05.152Z — Scribe Session: Root build folder decision archived to `.squad/decisions.md` as "Frontend Build Outputs — Root Build Folder Convention" (Adopted). Orchestration log written at `.squad/orchestration-log/2026-05-13T03-07-05-152Z-basher.md`.
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.

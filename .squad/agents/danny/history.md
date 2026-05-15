@@ -77,3 +77,29 @@
 - User Directives: Algorithm is user-owned; create GitHub issues for blockers assigned to yashasg
 
 Orchestration logs created in `.squad/orchestration-log/`. Session log at `.squad/log/2026-05-12T23-12-56-058Z-split-tech-specs.md`.
+
+### 2026-05-15T01:56:27-07:00 — Team Stream Label Rollout (team:frontend / team:backend / team:strategy)
+
+- **Task:** Create the `team:*` GitHub labels backing the new 3-stream scheme in `.squad/streams.json`, then triage all open issues against folder scope.
+- **Labels created (yashasg/value-compass):**
+  - `team:frontend` — `#1f6feb` (blue) — "Frontend stream — iOS/iPadOS UI, design system, features, tests"
+  - `team:backend` — `#8957e5` (purple) — "Backend stream — iOS data layer (Networking, Contracts, Models, Services, DI)"
+  - `team:strategy` — `#bf8700` (gold) — "Strategy stream — market, legal, accessibility audits, ASO, HIG, contract monitoring"
+- **Triage map applied (folder scope → keywords):**
+  - **frontend** ← `app/Sources/Features/**`, `app/Sources/App/AppFeature/**`, `app/Sources/DesignSystem/**`, `app/Sources/Assets/**`, `app/Tests/**`, `docs/design-system-colors.md` → screens, navigation, view models, tokens, snapshot/XCTest, accessibility on the iOS surface.
+  - **backend** ← `app/Sources/Backend/**`, `app/Sources/App/Dependencies/**` → SwiftData models, persistence, networking (URLSession/Massive client), Keychain/secret storage, calc engine (`ContributionCalculating`), market data providers, DI/composition root, TA-Lib/indicator packages.
+  - **strategy** ← `docs/audits/**`, `docs/research/**`, `docs/legal/**`, `docs/aso/**` → market/legal/accessibility/ASO/HIG/contract-monitoring docs.
+  - Multi-label = legitimate cross-stream work (e.g., a feature that ships a UI flow AND wires the data layer for it).
+  - **No label** = DevOps/CI, leadership specs, mothballed Python `backend/` — explicitly out of stream routing per user.
+- **Triage results (14 open issues, 14 labeled, 0 left unlabeled):**
+  - **backend-only (4):** #123 (SwiftData models), #127 (Keychain/API key storage), #128 (Massive EOD client), #129 (TA-Lib indicators package).
+  - **frontend-only (3):** #132 (Snapshot review + Swift Charts), #134 (NavigationStack/SplitView), #135 (MVP integration test pass — lives in `app/Tests/**`).
+  - **frontend + backend (7):** #124 (app shell + DI composition), #125 (editor UI + uniqueness/weight rules), #126 (typeahead UI + bundled metadata service), #130 (Invest UI + calc seam), #131 (Snapshot UI + persistence), #133 (Settings UI + Keychain/reset), #145 (TCA migration — Reducers in features + Dependency interfaces).
+  - **strategy:** zero hits this round — no audit/research/legal/ASO issues currently open.
+- **Edge cases / future-self notes:**
+  - **#135** is end-to-end regression. Marked **frontend-only** because the artifacts live in `app/Tests/**` (frontend folderScope). Even though it exercises the data layer, the file scope wins. If we ever split test ownership, revisit.
+  - **#145** is meta/architectural (TCA migration plan). Labeled both frontend + backend because TCA Reducers replace ViewModels in features (frontend) and Dependency interfaces are the backend composition root. The follow-up issues this spawns can be labeled more narrowly per phase.
+  - Several issues carry legacy `squad:virgil` (backend specialist) but are clearly UI work (e.g., #134). Don't trust legacy `squad:*` labels for stream routing — go off file scope and topic.
+  - Multi-label was the right call ~50% of the time for this MVP backlog because most user-facing features cross UI ↔ persistence. That is expected and not a smell.
+- **Decision drop:** `.squad/decisions/inbox/danny-team-label-rollout.md`
+- **Skill captured:** `.squad/skills/issue-triage-by-stream/SKILL.md`

@@ -9,14 +9,19 @@ The table below summarizes the policy for humans. `.squad/routing.json` is the m
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
 | Architecture, cross-cutting decisions | Danny | Tech specs, ADRs, domain boundaries, priorities, multi-domain trade-offs |
-| Backend APIs and service code | Rusty | FastAPI endpoints, `backend/api`, `backend/common`, service errors, request/response models |
-| Database and poller behavior | Rusty | SQLAlchemy models, Alembic migrations, `stock_cache`, scheduled refreshes, persistence invariants |
-| iOS implementation | Basher | Swift, SwiftUI, SwiftData, Xcode project changes, view models, calculator wiring |
+| iOS implementation (UI layer) | Basher | SwiftUI views, screens, navigation, view models, animations, design implementation |
+| iOS data & business logic | Virgil | SwiftData models, persistence, VCA calculator, `ContributionCalculating`, services, validation, future networking/sync |
 | iOS/iPadOS experience design | Tess | Onboarding, disclaimer/settings UX, adaptive iPad layouts, accessibility, Dynamic Type, empty states |
-| OpenAPI and sync contracts | Linus | `openapi.json`, generated Swift clients, backend/frontend contract tests, sync mapping |
+| Cross-cutting Dev QA & test strategy | Linus | XCTest organization, test plans, reviewer gate on test adequacy, cross-module tests, edge-case hunting |
 | Infrastructure and delivery | Livingston | GitHub Actions, TestFlight, Azure deploys, secrets wiring, build/release automation |
+| Market research & positioning | Saul | Competitive teardowns, personas, TAM/SAM/SOM, pricing, positioning briefs |
+| Legal & compliance | Reuben | Financial-advice disclaimer, App Privacy labels, ToS/EULA/privacy policy, license review, GDPR/CCPA |
+| Accessibility audit | Yen | VoiceOver / Dynamic Type / contrast / Switch Control audits, regression gating |
+| App Store optimization | Frank | App name/subtitle/keywords, screenshots, preview videos, listing copy, ASO iteration |
+| HIG compliance | Turk | Apple HIG audits, native control selection, iPadOS multitasking, keyboard shortcuts, pointer interactions |
+| API contract surveillance | Nagel | iOS-internal contracts (ContributionCalculating, SwiftData @Model schemas, public Swift declarations, service interfaces); future OpenAPI drift |
 | Code review | Danny | Review PRs, check quality, suggest reviewers |
-| Testing | Domain owner | Write tests, find edge cases, verify fixes in the touched area |
+| Testing | Domain owner writes; Linus gates | Domain owner writes tests for their area; Linus reviews adequacy and authors integration/contract tests |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 
@@ -50,8 +55,14 @@ The table below summarizes the policy for humans. `.squad/routing.json` is the m
 | Work Type | Primary | Secondary |
 |-----------|---------|----------|
 | Architecture, decisions | Danny | — |
-| APIs, data models | Rusty | — |
-| Swift, mobile UX | Basher | — |
+| Swift, mobile UX | Basher | Virgil (data ↔ UI seams) |
+| iOS data, persistence, VCA algorithm | Virgil | Basher (UI seams), Linus (test gates) |
+| Cross-cutting Dev QA, cross-module tests | Linus | Domain owner (writes their own unit/UI tests) |
 | iOS/iPadOS design, onboarding, usability | Tess | Basher |
-| OpenAPI, client sync | Linus | — |
 | Infra, deployment | Livingston | — |
+| Market research, personas, positioning | Saul | Danny (consumes for scope) |
+| Legal, compliance, privacy, licensing | Reuben | Frank (App Privacy labels), Tess (disclaimer placement) |
+| Accessibility audit & regression gating | Yen | Tess (designs to be accessible), Basher (implements), Turk (HIG overlap) |
+| App Store metadata, screenshots, ASO | Frank | Saul (positioning), Reuben (privacy labels), Tess (visual direction) |
+| Apple HIG conformance, iPadOS multitasking | Turk | Tess (design), Basher (implementation), Yen (a11y overlap) |
+| API contract surveillance (iOS protocols, SwiftData schemas, OpenAPI drift) | Nagel | Virgil (owns iOS contracts), Linus (owns OpenAPI spec) |

@@ -13,6 +13,42 @@
         "ralph"
       ],
       "universe": "Ocean's Eleven"
+    },
+    "amend-2026-05-15T00:58:45.054-07:00": {
+      "created_at": "2026-05-15T00:58:45.054-07:00",
+      "change": "retired rusty; added virgil (iOS Backend Engineer)",
+      "agents": [
+        "danny",
+        "basher",
+        "virgil",
+        "tess",
+        "linus",
+        "livingston",
+        "scribe",
+        "ralph"
+      ],
+      "universe": "Ocean's Eleven"
+    },
+    "amend-2026-05-15T01:06:03.449-07:00": {
+      "created_at": "2026-05-15T01:06:03.449-07:00",
+      "change": "added strategy & compliance subsquad: saul (market research), reuben (legal & compliance), yen (accessibility audit), frank (ASO), turk (HIG compliance), nagel (API contract monitor — diegetic expansion from Ocean's Twelve)",
+      "agents": [
+        "danny",
+        "basher",
+        "virgil",
+        "tess",
+        "linus",
+        "livingston",
+        "saul",
+        "reuben",
+        "yen",
+        "frank",
+        "turk",
+        "nagel",
+        "scribe",
+        "ralph"
+      ],
+      "universe": "Ocean's Eleven"
     }
   },
   "universe_usage_history": [

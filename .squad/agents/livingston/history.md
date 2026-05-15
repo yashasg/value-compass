@@ -112,3 +112,20 @@ Filed P0 GitHub issue #206 (`yashasg/value-compass`) to track iOS CI/CD findings
 - **Quick wins:** Flip `RUN_ANALYZE=true` to `false` in ios-ci.yml; move CodeQL to nightly cron on main only
 
 **Effect:** Squad Lead (danny) will triage via `squad` label; issue is now tracked and prioritized for implementation.
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.
+
+### 2026-05-15T02:18:00-07:00: Release — Squad Restructure (Commit 18bbfe3, PR #216)
+
+**Commit SHA:** `18bbfe3`
+**PR:** #216 — https://github.com/yashasg/value-compass/pull/216
+
+Landed trailing artifacts from the team-restructure work-stream: 7 new agent charters (Yen, Turk, Nagel, Saul, Reuben, Frank, Virgil), casting state, config overrides, routing domain expansion (13 domains), and `loop-strategy.md` for specialist parallel loop. All staged explicitly (15 files, 905 insertions).
+
+**Insight:** When squad-restructure work spans multiple Scribe-coordinated commits (e.g., `7790594` streams rollout, `1ad9c32` member onboarding, `18bbfe3` config+tooling), trailing config files (charters, casting/*.json, config.json, routing.*) often slip past staging because Scribe's HARD GATE rule restricts each spawn to specific file patterns. Future Scribe spawns should:
+1. Explicitly check for unstaged `.squad/` config files before committing
+2. Bundle trailing config into the same spawn manifest as the work that depends on them, or
+3. Coordinator should pre-stage config files before spinning Scribe
+
+**Outcome:** Clean release; Coordinator should restart session post-merge (routing.json, team.md, config.json affect agent model selection and routing behavior).

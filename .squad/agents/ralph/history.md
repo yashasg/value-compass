@@ -9,3 +9,6 @@
 ## Learnings
 
 <!-- Append learnings below -->
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.

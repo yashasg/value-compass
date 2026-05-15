@@ -15,3 +15,6 @@
 - 2026-05-12T23:27:45Z — Team Update: Tess (iOS/iPadOS Designer) onboarded for smooth app onboarding and usability. All decision inboxes merged. Services boundaries finalized for sync, market data caching, and async fetch architecture. See `.squad/orchestration-log/2026-05-12T23-27-45Z-linus.md`
 - 2026-05-12T23:32:06Z — Created services implementation backlog issues #21–#29 from the hybrid/offline-first services spec, explicitly excluding real VCA algorithm implementation and preserving local-only contribution history.
 - 2026-05-12T23:34:17.555Z — Scribe Inbox Merge: Decision inbox files merged into decisions.md. User directives captured (Tess UI/UX design, small incremental issues per user request). Backlog tracking added to decisions.md for Rusty DB issues #16-#20 and Linus services issues #21-#29. Session logged.
+
+
+**2026-05-15 — Cross-Agent Update:** Team:* label scheme is live on GitHub (team:frontend, team:backend, team:strategy). All 14 open issues triaged. See .squad/decisions.md for the triage map and rationale.

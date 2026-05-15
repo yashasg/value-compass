@@ -48,5 +48,29 @@ Merged 3 inbox files documenting frontend folder structure, build artifact manag
 
 **Key Decision:** App folder and build/run tooling now unified under `frontend/` directory with scoped gitignore rules preventing build artifacts from polluting the repository. All tech specs align on current architecture: local-first iOS/iPadOS app, optional backend sync via Azure Container Apps, Supabase as v1 database foundation, Stitch as functional scaffolding only, TDD-first implementation practices, and universal platform support (iPhone+iPad, light+dark modes).
 
+### 2026-05-15T09:03:47Z: Strategy & Compliance Squad Onboarding — 6-Agent Self-Onboarding Session
+
+**Context:** Three-stream rollout (Frontend, Backend, Strategy) completed with label triage of 14/14 open issues. The 6 newest members (Frank, Saul, Turk, Yen, Reuben, Nagel) — all joining the Strategy stream — needed product and architecture context. Spawned all 6 agents in parallel (claude-opus-4.7-xhigh) against canonical specs and roadmap.
+
+**Outcomes:**
+- All 6 agents appended a structured `## Onboarding — 2026-05-15` section to their own history.md only (frank: 12.3KB, saul: 14.4KB, turk: 14.8KB, yen: 13.1KB, reuben: 20.8KB, nagel: 17.0KB)
+- 6 orchestration-log entries created (one per agent, timestamp-staggered 2026-05-15T09:03:40–09:03:45Z)
+- 1 session log written (2026-05-15T09:03:46Z-strategy-compliance-onboarding.md)
+
+**Key Learning: Inbox-is-Empty-by-Design**
+Decision inbox is empty because onboarding is personal context, not a team decision. Each agent writes to their own history.md only. **Do not merge empty inbox to decisions.md** — there is no decision to record. The absence of inbox entries is the correct signal that onboarding was self-contained role learning, not a directive requiring consensus.
+
+**Key Learning: Size-Gate Deferral Pattern**
+Reuben (20.8KB) and Nagel (17.0KB) exceed the 15KB summarization threshold, but consist almost entirely of fresh onboarding context (+ small Core Context header). There is no accumulated history to summarize. **Deferring summarization — the gate is for pruning stale history growth, not truncating role-defining context.** Fresh onboarding entries are foundational and must remain intact. Summarization queued for next entry (when context becomes superseded or file grows past ~25KB).
+
+**Archive Decision**
+decisions.md: 29,775 bytes (over soft 20,480, under hard 51,200). All entries dated 2026-05-12 or later; none qualify for 30-day archive threshold (≤2026-04-15). **No archive action taken.**
+
+**Files Created/Modified**
+- 6 history.md files appended (no files deleted or restructured)
+- 6 orchestration-log entries (new)
+- 1 session log (new)
+- 1 learnings entry (this)
+
 <!-- Append learnings below -->
 

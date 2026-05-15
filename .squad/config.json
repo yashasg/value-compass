@@ -2,8 +2,14 @@
   "version": 1,
   "defaultModel": "claude-sonnet-4.6",
   "agentModelOverrides": {
-    "danny": "claude-opus-4.7",
-    "tess": "claude-opus-4.7",
+    "danny": "claude-opus-4.7-xhigh",
+    "tess": "claude-opus-4.7-xhigh",
+    "saul": "claude-opus-4.7-xhigh",
+    "reuben": "claude-opus-4.7-xhigh",
+    "yen": "claude-opus-4.7-xhigh",
+    "frank": "claude-opus-4.7-xhigh",
+    "turk": "claude-opus-4.7-xhigh",
+    "nagel": "claude-opus-4.7-xhigh",
     "scribe": "claude-haiku-4.5",
     "ralph": "claude-haiku-4.5"
   }

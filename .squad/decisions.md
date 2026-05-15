@@ -31,6 +31,142 @@ The iOS/iPadOS app folder is renamed from `frontend/` to `app/`. "App" is less a
 
 ---
 
+### 2026-05-15T01:13:56-07:00: User directive — Nagel (API Contract Monitor) is Active in v1
+**By:** yashasg (via Copilot)
+**What:** Nagel (API Contract Monitor) is NOT idle in v1. He keeps tabs on iOS-internal API contracts — `ContributionCalculating` protocol, SwiftData `@Model` schemas, public Swift declarations, and data-layer↔UI-layer service interfaces. OpenAPI/server-side contract surveillance still activates only when sync work begins post-MVP.
+**Why:** User correction to charter — the iOS app has internal contract surfaces (especially the user-swappable VCA algorithm seam) that need surveillance from day 1, even without a backend in the picture.
+
+### 2026-05-15T01:21:15-07:00: User directive — Linus (Dev QA) and Team Reorganization
+**By:** yashasg (via Copilot)
+**What:** Two-part scope adjustment:
+1. **Linus is Dev QA only.** He is no longer the "Integration Engineer & Tester." Drop integration from his charter. He keeps test plans, test strategy, reviewer-gate on test adequacy, edge-case hunting, and writing internal/integration tests within the iOS app.
+2. **Sub-team taxonomy:** Linus alone is QA (🧪 Dev QA). Yen, Turk, Nagel, Saul, Reuben, and Frank consolidate into a single **🔍 Strategy & Compliance** sub-team (compliance auditors + product strategists in one bucket). Compliance is NOT under QA.
+
+**Why:** User reorganization of the team chart. Integration as a domain is now effectively mothballed for v1 (backend unused; no sync work). Will need re-owning when sync begins post-MVP.
+
+### 2026-05-15T01:48:15-07:00: User directive — Streams.json Schema Enforcement
+**By:** yashasg (via Copilot)
+**What:** `streams.json` schema is fixed: only `name`, `labelFilter`, `folderScope`, and `description` per workstream (+ `defaultWorkflow` at top). Do NOT introduce new fields like `members`, `reviewScope`, or `status` — the consumer won't accept them.
+**Why:** User correction — added fields break the downstream tooling that reads streams.json. Reviewer-gate / member-roster info belongs in routing.md and charter.md, not the streams config.
+
+### 2026-05-15T01:54:01-07:00: User directive — Collapse streams.json to 3 workstreams
+**By:** yashasg (via Copilot)
+**What:** `streams.json` should only contain three workstreams: Frontend, Backend, Strategy. Drop Leadership, DevOps, Dev QA, and _mothballed. Folder ownership for those domains still lives in `routing.md` and individual agent charters.
+
+**Folding rules applied:**
+- Leadership tech-spec docs → uncovered by streams (Danny still owns via routing.md)
+- DevOps (`.github/**`, build scripts) → uncovered (Livingston still owns via routing.md)
+- Dev QA (`app/Tests/**`) → folded into Frontend (iOS test target lives next to UI code)
+- iOS-Backend → renamed to Backend (Python backend is mothballed and unreferenced anywhere in streams.json, so the name collision is moot in v1)
+- Strategy & Compliance → renamed to Strategy
+
+**Why:** User stated "all i care about is being able to split between frontend, backend and strategy" — too many streams was creating noise.
+
+### 2026-05-15T01:54:01-07:00: User directive — Drop _mothballed stream
+**By:** yashasg (via Copilot)
+**What:** Remove the `_mothballed` workstream from `.squad/streams.json`. Stated reason: too many teams. Mothballed paths (`backend/**`, `openapi.json`, `alembic.ini`, `pyproject.toml`) become explicitly uncovered by stream routing in v1 — no team filter targets them, which matches their unowned status.
+**Why:** User request — captured for team memory. Note: mothballed-state tracking still lives in `routing.json` (`integration` domain marked `status: "mothballed-v1"`), so the structural memory is not lost — just not duplicated as a stream.
+
+### 2026-05-15T01:56:27-07:00: Decision Drop — `team:*` Label Rollout & Initial Triage
+**Author:** Danny (Lead/Architect)
+**Status:** Adopted (executed)
+**Repo:** yashasg/value-compass
+
+`.squad/streams.json` defines three workstreams (Frontend / Backend / Strategy) with explicit `folderScope` arrays and `labelFilter` values (`team:frontend`, `team:backend`, `team:strategy`). The labels did not exist on GitHub yet, and no open issues were stream-routed. This decision records the labels created, the triage map used, and the resulting state — so future triage runs can be consistent without re-deriving the mapping.
+
+**Labels Created:**
+
+| Label | Color | Description |
+|---|---|---|
+| `team:frontend` | `#1f6feb` (blue) | Frontend stream — iOS/iPadOS UI, design system, features, tests |
+| `team:backend` | `#8957e5` (purple) | Backend stream — iOS data layer (Networking, Contracts, Models, Services, DI) |
+| `team:strategy` | `#bf8700` (gold) | Strategy stream — market, legal, accessibility audits, ASO, HIG, contract monitoring |
+
+Created via `gh label create` (with `gh label edit` as fallback). Verified via `gh label list --search "team:"`.
+
+**Triage Map (Authoritative):**
+
+This map collapses `streams.json#folderScope` into the heuristics applied during triage. Future triage runs should consult this map first.
+
+**`team:frontend` Folder scope:**
+- `app/Sources/Features/**`
+- `app/Sources/App/AppFeature/**`
+- `app/Sources/DesignSystem/**`
+- `app/Sources/Assets/**`
+- `app/Tests/**`
+- `docs/design-system-colors.md`
+
+Keyword/topic signals: screens, view models, navigation (`NavigationStack`, `NavigationSplitView`), design tokens, color/typography, XCTest, snapshot tests, accessibility (VoiceOver, Dynamic Type) **on the iOS surface**, onboarding flow UI, charts/UI rendering.
+
+**`team:backend` Folder scope:**
+- `app/Sources/Backend/**`
+- `app/Sources/App/Dependencies/**`
+
+Keyword/topic signals: SwiftData models, persistence/repositories, Networking (URLSession, Massive client), Contracts/protocols (`ContributionCalculating`, `MarketDataProviding`, `TickerMetadataProviding`, `MassiveAPIKeyStoring`), Keychain/secret storage, DI/composition root, calculation engine, indicator/TA packages, market data refresh, OpenAPI clients (when re-enabled).
+
+**Explicitly NOT covered:** the Python `backend/` directory. That tree is mothballed in v1 and intentionally unowned by any stream.
+
+**`team:strategy` Folder scope:**
+- `docs/audits/**`
+- `docs/research/**`
+- `docs/legal/**`
+- `docs/aso/**`
+
+Keyword/topic signals: market research, legal/compliance review, accessibility audit (WCAG documentation, not implementation), App Store optimization copy/metadata, HIG compliance audit, API contract monitoring (read-only review of supplier surfaces).
+
+**Multi-Label Rule:** Apply both `team:frontend` and `team:backend` (or other combos) when an issue's acceptance criteria legitimately span streams — e.g., a feature with both a screen and a new persistence/service seam. This is normal and expected for a full-stack iOS feature backlog; ~50% of the MVP issues hit both.
+
+**No-Label Rule:** Leave issues unlabeled (no `team:*`) when they fall into:
+- DevOps / CI (workflow files, build scripts, `.github/`).
+- Leadership / architecture specs (`docs/tech-spec*.md`, `docs/app-tech-spec.md`, etc.).
+- Mothballed Python `backend/` directory.
+- Other unowned zones.
+
+The user explicitly accepted that those zones are not stream-routed.
+
+**Triage Results — 2026-05-15:** 14 open issues triaged, 14 labeled, 0 left unlabeled.
+
+| # | Title | Labels Applied |
+|---|---|---|
+| #145 | p0: migrate the app from MVVM to TCA | `team:frontend`, `team:backend` |
+| #135 | Complete MVP integration and regression test pass | `team:frontend` |
+| #134 | iPhone NavigationStack and iPad NavigationSplitView workspace | `team:frontend` |
+| #133 | Settings, API key management, preferences, and full local reset | `team:frontend`, `team:backend` |
+| #132 | Snapshot review and per-ticker Swift Charts | `team:frontend` |
+| #131 | Explicit Portfolio Snapshot save and delete | `team:frontend`, `team:backend` |
+| #130 | Invest action with required capital and local VCA result | `team:frontend`, `team:backend` |
+| #129 | TA-Lib-backed TechnicalIndicators package | `team:backend` |
+| #128 | Massive client and shared local EOD market-data refresh | `team:backend` |
+| #127 | Massive API key validation and Keychain storage | `team:backend` |
+| #126 | Bundled NYSE equity and ETF metadata with typeahead | `team:frontend`, `team:backend` |
+| #125 | Portfolio, category, and symbol-only holding editor | `team:frontend`, `team:backend` |
+| #124 | Local-only app shell and onboarding gates | `team:frontend`, `team:backend` |
+| #123 | Local SwiftData models for portfolios, market data, settings, snapshots | `team:backend` |
+
+**Distribution:**
+- **Backend-only:** 4 issues (#123, #127, #128, #129)
+- **Frontend-only:** 3 issues (#132, #134, #135)
+- **Frontend + Backend:** 7 issues (#124, #125, #126, #130, #131, #133, #145)
+- **Strategy:** 0 issues — no audit/research/legal/ASO work currently in the open backlog.
+
+**No Issues Left Unlabeled:** Every open issue mapped cleanly to at least one stream. No DevOps/leadership/Python-backend issues were open at the time of this run.
+
+**Trade-offs Noted:**
+- **`squad:*` labels are not a substitute for `team:*`.** Several issues carry legacy `squad:virgil` (backend specialist) but are clearly UI work (e.g., #134). Triage drove off **file scope + topic**, not legacy specialist assignment. Future triage should follow the same rule.
+- **Test ownership:** `app/Tests/**` is in the frontend folderScope. End-to-end tests that exercise the data layer (e.g., #135) are still labeled frontend on that basis. If test ownership is later split, revisit `streams.json` and this decision.
+- **Meta/planning issues:** #145 (TCA migration) is itself a planning issue that will spawn child issues. Labeled both streams because the migration touches both. Child issues should be re-triaged at creation — most will be narrower (one stream).
+
+**Operational Notes for Future Triage:**
+1. List open issues: `gh issue list --repo yashasg/value-compass --state open --limit 100 --json number,title,labels,body`.
+2. For each issue, read the body — match against the **Folder scope** and **Keyword/topic signals** above.
+3. Apply with `gh issue edit <N> --add-label "team:..." --repo yashasg/value-compass`. **Never use `--remove-label` on existing `squad:*` / `priority:*` / domain labels — preserve them.**
+4. If an issue legitimately doesn't fit any stream, leave it unlabeled and note the reason in the triage report. Don't guess.
+5. If an issue is ambiguous, **flag it for human review** rather than assigning a label.
+
+**Affected:** All future issue authoring and triage for yashasg/value-compass. The Squad loop's stream-based routing (consumes `team:*` labels via `streams.json#labelFilter`).
+
+---
+
 ### 2026-05-12: V1 Architecture — Local-First iOS with Protocol Seams
 **Author:** Danny (Lead/Architect) | **Status:** Proposed
 
