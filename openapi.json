@@ -984,17 +984,6 @@
           "version": {
             "type": "integer",
             "title": "Version"
-          },
-          "min_app_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Min App Version"
           }
         },
         "type": "object",
@@ -1002,7 +991,7 @@
           "version"
         ],
         "title": "SchemaVersionResponse",
-        "description": "API schema-version response body."
+        "description": "API schema-version response body.\n\nThe minimum supported iOS app version is carried exclusively on the\n``X-Min-App-Version`` response header \u2014 declared on every operation by\n:func:`add_standard_headers` and consumed by\n``MinAppVersionClient.observe`` on the iOS side. The body intentionally\ndoes **not** duplicate that value: a dual-source contract (body field +\nresponse header from the same ``config.MIN_APP_VERSION``) has no defined\nprecedence rule, and shipping both invites future consumers to fork on\nwhich channel they trust. See issue #402."
       },
       "ValidationError": {
         "properties": {
