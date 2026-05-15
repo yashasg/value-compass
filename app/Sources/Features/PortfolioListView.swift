@@ -144,8 +144,8 @@ private struct PortfolioListContent: View {
 
     if store.showsSettingsLink {
       ToolbarItem(placement: .secondaryAction) {
-        NavigationLink {
-          SettingsView()
+        Button {
+          store.send(.settingsOpenTapped)
         } label: {
           Label("Settings", systemImage: "gear")
         }

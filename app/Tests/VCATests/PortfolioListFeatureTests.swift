@@ -390,6 +390,25 @@ final class PortfolioListFeatureTests: XCTestCase {
     }
   }
 
+  // MARK: - .settingsOpenTapped delegate routing
+
+  /// HIG → Launching → Quitting (#471): the iPhone toolbar Settings entry
+  /// dispatches `.settingsOpenTapped` instead of a SwiftUI
+  /// `NavigationLink { SettingsView() }`, so the resulting Settings
+  /// instance is scoped through the parent (`MainFeature.path`) and
+  /// `SettingsFeature.delegate(.dataErased)` can reach `AppFeature`.
+  /// This test pins the dispatch contract — no state changes, just a
+  /// `.delegate(.settingsOpenRequested)` emitted for the parent to
+  /// route through `MainFeature.path`.
+  func testSettingsOpenTappedEmitsDelegate() async {
+    let store = TestStore(initialState: PortfolioListFeature.State()) {
+      PortfolioListFeature()
+    }
+
+    await store.send(.settingsOpenTapped)
+    await store.receive(\.delegate.settingsOpenRequested)
+  }
+
   // MARK: - editor delegate(.saved) triggers reload
 
   func testEditorSavedDelegateRefreshesPortfolios() async throws {

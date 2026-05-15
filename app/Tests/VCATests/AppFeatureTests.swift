@@ -238,6 +238,30 @@ final class AppFeatureTests: XCTestCase {
     }
   }
 
+  /// Compact (iPhone) Settings is pushed onto `MainFeature.path` so the
+  /// data-erased delegate arrives wrapped in `.path(.element(_, .settings))`
+  /// instead of the directly-scoped `.settings` slot used by the iPad
+  /// split-view sidebar. `AppFeature` matches both shapes so the
+  /// HIG-compliant reroute fires from either entry point (#471).
+  func testSettingsDataErasedDelegateFromPathRoutesToOnboarding() async {
+    var mainState = MainFeature.State()
+    mainState.shellKind = .stack
+    mainState.path.append(.settings(SettingsFeature.State()))
+    let elementID: StackElementID = 0
+
+    let store = TestStore(
+      initialState: AppFeature.State(destination: .main(mainState))
+    ) {
+      AppFeature()
+    }
+
+    await store.send(
+      .destination(.main(.path(.element(id: elementID, action: .settings(.delegate(.dataErased))))))
+    ) {
+      $0.destination = .onboarding(OnboardingFeature.State())
+    }
+  }
+
   // The `if !state.requiresAppUpdate` guard in `AppFeature` is defensive:
   // by the time `requiresAppUpdate` is `true`, `destination` is already
   // `.forcedUpdate(...)` (set in the same `.minVersionEvent` reduction),
