@@ -47,7 +47,7 @@ implementation does not honor. This file is the map.
 | Rectification — ticker typo | GDPR Art. 16; CCPA §1798.106 | `DELETE /portfolio/holdings/{ticker}` + `POST /portfolio/holdings` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
 | Erasure (row-scoped) | GDPR Art. 17; CCPA §1798.105 (partial) | `DELETE /portfolio/holdings/{ticker}` | [#374](https://github.com/yashasg/value-compass/issues/374) | Shipped (PR #446) |
 | Erasure (full account, backend) | GDPR Art. 17; CCPA §1798.105 | `DELETE /portfolio` | [#450](https://github.com/yashasg/value-compass/issues/450) | This PR |
-| Erasure (full account, iOS surface) | GDPR Art. 17; CCPA §1798.105; App Store §5.1.1(v) | iOS Settings → "Erase All My Data" (calls `DELETE /portfolio` + rotates Keychain UUID) | [#329](https://github.com/yashasg/value-compass/issues/329) | Open — frontend Settings flow + UUID rotation still pending. |
+| Erasure (full account, iOS surface) | GDPR Art. 17; CCPA §1798.105; App Store §5.1.1(v) | iOS Settings → "Erase All My Data" (calls `DELETE /portfolio` + wipes SwiftData + wipes Massive API key + rotates Keychain UUID + resets onboarding gate) | [#329](https://github.com/yashasg/value-compass/issues/329) | Shipped — `SettingsFeature` drives the destructive flow; `AccountErasureClient` issues the backend call; `LocalDataResetClient` wipes the on-device store. |
 | Right to be informed | GDPR Art. 13; CCPA §1798.100(a) | The published Privacy Policy itself | [#224](https://github.com/yashasg/value-compass/issues/224) | Shipped (PR #417) |
 | Right to restrict / object | GDPR Art. 18 / Art. 21 | Settings → remove Massive API key + uninstall | n/a | Shipped |
 
@@ -251,6 +251,7 @@ Privacy Policy URL goes live with the App Store listing.
   processor chain a DSR has to flow through when sync is active.
 - [`app-review-notes.md`](app-review-notes.md) — Notes-to-Reviewer
   language references this document for §5.1.1(v) account-deletion
-  posture once issue #329 lands.
+  posture; the iOS Settings → Privacy & Data → Erase All My Data
+  control closing issue #329 satisfies the in-app requirement.
 - [`processor-register.csv`](processor-register.csv) — every entry
   with `personal_data = true` must reach a DSR path documented here.

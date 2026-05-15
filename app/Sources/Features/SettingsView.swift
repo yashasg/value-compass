@@ -77,10 +77,38 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings.privacyPolicy.link")
         .accessibilityHint("Opens the Investrum Privacy Policy in your browser.")
       }
+
+      accountErasureSection
     }
     .navigationTitle("Settings")
     .tint(Color.appPrimary)
     .task { store.send(.task) }
+    .confirmationDialog(
+      "Erase All My Data?",
+      isPresented: Binding(
+        get: { store.isErasureConfirmationPresented },
+        set: { isPresented in
+          if !isPresented { store.send(.eraseAllDataConfirmationDismissed) }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button("Erase Everything", role: .destructive) {
+        store.send(.eraseAllDataConfirmed)
+      }
+      .accessibilityIdentifier("settings.erase.confirm")
+
+      Button("Cancel", role: .cancel) {
+        store.send(.eraseAllDataConfirmationDismissed)
+      }
+      .accessibilityIdentifier("settings.erase.cancel")
+    } message: {
+      Text(
+        "This deletes every portfolio, holding, snapshot, and saved API key on this "
+          + "device, and asks the Investrum server to delete every record tied to your "
+          + "device identifier. This can't be undone."
+      )
+    }
   }
 
   // MARK: - Massive API key (issue #127)
@@ -264,6 +292,89 @@ struct SettingsView: View {
         .valueCompassTextStyle(.bodySmall)
         .foregroundStyle(Color.appPositive)
         .accessibilityIdentifier("settings.apiKey.request.saved")
+    }
+  }
+
+  // MARK: - Account erasure (issue #329)
+
+  /// Settings section that exposes the in-app "Erase All My Data" flow —
+  /// the GDPR Art. 17 / CCPA §1798.105 / App Store §5.1.1(v) right-to-
+  /// erasure path. Tapping the destructive button opens a confirmation
+  /// dialog wired on the parent `Form`; on confirm the reducer drives the
+  /// backend `DELETE /portfolio` → SwiftData wipe → Massive Keychain wipe
+  /// → device-UUID rotation → onboarding-gate reset pipeline, with inline
+  /// status messaging in `accountErasureStatusRow` for every intermediate
+  /// state.
+  @ViewBuilder
+  private var accountErasureSection: some View {
+    Section {
+      Button(role: .destructive) {
+        store.send(.eraseAllDataTapped)
+      } label: {
+        HStack {
+          Text("Erase All My Data")
+          Spacer()
+          if store.accountErasureStatus.isInFlight {
+            ProgressView()
+              .accessibilityHidden(true)
+          }
+        }
+        .contentShape(Rectangle())
+      }
+      .accessibilityIdentifier("settings.erase.row")
+      .accessibilityHint(
+        "Deletes every portfolio, holding, snapshot, and saved API key on this "
+          + "device, and removes the matching records from the Investrum server."
+      )
+      .disabled(store.accountErasureStatus.isInFlight || store.accountErasureStatus == .erased)
+
+      accountErasureStatusRow
+    } header: {
+      Text("Privacy & Data")
+    } footer: {
+      Text(
+        "Erasing your data deletes every record on this device and asks the "
+          + "Investrum server to delete every record tied to your device "
+          + "identifier. The Investrum app will return to the disclaimer screen "
+          + "on next launch, exactly like a fresh install."
+      )
+      .accessibilityIdentifier("settings.erase.footer")
+    }
+  }
+
+  @ViewBuilder
+  private var accountErasureStatusRow: some View {
+    switch store.accountErasureStatus {
+    case .idle:
+      EmptyView()
+    case .erasing:
+      HStack(spacing: 8) {
+        ProgressView()
+        Text("Erasing your data…")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appContentSecondary)
+      }
+      .accessibilityIdentifier("settings.erase.status.erasing")
+    case .erased:
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Your data has been erased.")
+          .valueCompassTextStyle(.bodySmall)
+          .foregroundStyle(Color.appPositive)
+        Text(
+          "Please force-quit Investrum from the App Switcher and reopen it to "
+            + "complete the reset."
+        )
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appContentSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+      }
+      .accessibilityIdentifier("settings.erase.status.erased")
+    case .failed(let reason):
+      Text(reason)
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityIdentifier("settings.erase.status.failed")
     }
   }
 }
