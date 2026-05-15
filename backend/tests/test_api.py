@@ -121,6 +121,89 @@ def test_checked_in_openapi_artifacts_match_fastapi() -> None:
         assert path.read_text(encoding="utf-8") == contract
 
 
+PROTECTED_OPERATIONS: tuple[tuple[str, str], ...] = (
+    ("/schema/version", "get"),
+    ("/portfolio/status", "get"),
+    ("/portfolio/data", "get"),
+    ("/portfolio/holdings", "post"),
+)
+
+
+def _x_app_attest_parameter(operation: dict) -> dict:
+    for parameter in operation.get("parameters", []):
+        if parameter.get("in") == "header" and parameter.get("name") == "X-App-Attest":
+            return parameter
+    operation_id = operation.get("operationId")
+    raise AssertionError(
+        f"X-App-Attest header parameter missing on operation: {operation_id}"
+    )
+
+
+def test_protected_routes_mark_x_app_attest_required(client: TestClient) -> None:
+    """Every protected operation must advertise X-App-Attest as required.
+
+    Regression guard for issue #225: generated clients otherwise emit
+    requests that deterministically fail with ``401 appAttestMissing``.
+    """
+    schema = client.get("/openapi.json").json()
+    paths = schema["paths"]
+
+    for path, method in PROTECTED_OPERATIONS:
+        parameter = _x_app_attest_parameter(paths[path][method])
+        assert parameter["required"] is True, (
+            f"X-App-Attest must be required on {method.upper()} {path}"
+        )
+        # The parameter schema should be a non-nullable string so generated
+        # clients emit a header value rather than serialising ``null``.
+        assert parameter["schema"].get("type") == "string"
+        assert "anyOf" not in parameter["schema"]
+
+    # /health must remain attestation-free; document the exemption.
+    health_get = paths["/health"]["get"]
+    assert all(
+        parameter.get("name") != "X-App-Attest"
+        for parameter in health_get.get("parameters", [])
+    )
+
+
+def test_protected_routes_reject_missing_x_app_attest(client: TestClient) -> None:
+    """Backend behaviour must continue to reject missing X-App-Attest.
+
+    The OpenAPI spec marks the header required so clients can never omit it,
+    but the runtime guarantee is what makes the contract enforceable.
+    """
+    expected_envelope = {
+        "code": "appAttestMissing",
+        "message": "Missing X-App-Attest header.",
+        "retry_after_seconds": None,
+    }
+
+    requests = (
+        ("get", "/schema/version", None),
+        ("get", "/portfolio/status", None),
+        ("get", "/portfolio/data", {"device_uuid": str(uuid.uuid4())}),
+        (
+            "post",
+            "/portfolio/holdings",
+            None,
+        ),
+    )
+
+    for method, path, params in requests:
+        if method == "get":
+            response = client.get(path, params=params)
+        else:
+            response = client.post(
+                path,
+                params=params,
+                json={"device_uuid": str(uuid.uuid4()), "ticker": "AAPL"},
+            )
+        assert response.status_code == 401, (
+            f"{method.upper()} {path} should reject missing X-App-Attest"
+        )
+        assert response.json() == expected_envelope
+
+
 def test_validation_errors_use_error_envelope(client: TestClient) -> None:
     resp = client.get(
         "/portfolio/data",

@@ -84,17 +84,10 @@
           {
             "name": "X-App-Attest",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-App-Attest"
+              "title": "X-App-Attest",
+              "type": "string"
             }
           }
         ],
@@ -201,17 +194,10 @@
           {
             "name": "X-App-Attest",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-App-Attest"
+              "title": "X-App-Attest",
+              "type": "string"
             }
           }
         ],
@@ -328,17 +314,10 @@
           {
             "name": "X-App-Attest",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-App-Attest"
+              "title": "X-App-Attest",
+              "type": "string"
             }
           }
         ],
@@ -505,17 +484,10 @@
           {
             "name": "X-App-Attest",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-App-Attest"
+              "title": "X-App-Attest",
+              "type": "string"
             }
           }
         ],

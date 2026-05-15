@@ -141,7 +141,18 @@ STANDARD_RESPONSE_HEADERS = {
 
 
 def custom_openapi() -> dict[str, Any]:
-    """Generate OpenAPI with middleware-provided standard response headers."""
+    """Generate OpenAPI with middleware-provided standard response headers.
+
+    Also marks the ``X-App-Attest`` header parameter as ``required: true`` on
+    every operation that declares it. The runtime dependency
+    ``require_app_attest`` accepts the header as ``Optional[str]`` so that a
+    missing value returns the documented 401 ``appAttestMissing`` envelope
+    instead of FastAPI's generic 422 validation error. The contract that
+    generated clients consume must still advertise the header as required —
+    backend rejects every protected route when it is absent — so we fix up
+    the spec here. ``/health`` does not declare the parameter and is left
+    untouched.
+    """
     if app.openapi_schema:
         return app.openapi_schema
 
@@ -160,6 +171,28 @@ def custom_openapi() -> dict[str, Any]:
                 if not isinstance(response, dict):
                     continue
                 response.setdefault("headers", {}).update(STANDARD_RESPONSE_HEADERS)
+            for parameter in operation.get("parameters", []):
+                if (
+                    isinstance(parameter, dict)
+                    and parameter.get("in") == "header"
+                    and parameter.get("name") == "X-App-Attest"
+                ):
+                    parameter["required"] = True
+                    schema = parameter.get("schema")
+                    if isinstance(schema, dict):
+                        any_of = schema.get("anyOf")
+                        if isinstance(any_of, list):
+                            non_null = [
+                                option
+                                for option in any_of
+                                if not (
+                                    isinstance(option, dict)
+                                    and option.get("type") == "null"
+                                )
+                            ]
+                            if len(non_null) == 1 and isinstance(non_null[0], dict):
+                                schema.pop("anyOf", None)
+                                schema.update(non_null[0])
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema

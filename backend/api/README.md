@@ -98,3 +98,10 @@ Never edit generated OpenAPI artifacts manually. Newly added response fields
 must remain optional unless a schema-versioned breaking change is intentional.
 The `X-Min-App-Version` response header and `/schema/version` endpoint are the
 machine-readable compatibility signals for clients.
+
+Generated clients see `X-App-Attest` as `required: true` on every protected
+route (`/schema/version`, `/portfolio/status`, `/portfolio/data`,
+`/portfolio/holdings`); `/health` is the only attestation-free endpoint.
+The runtime accepts the header as optional in code and rejects missing values
+with the documented `401 appAttestMissing` envelope so clients receive the
+contract error rather than a generic 422.
