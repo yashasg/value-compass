@@ -241,35 +241,36 @@ consolidated DSR posture lives in
 
 ### Right to erasure / deletion (GDPR Art. 17; CCPA §1798.105)
 
-You can clear all of Investrum's local data by:
+You can erase every Investrum-controlled record tied to your device by
+opening **Settings → Privacy & Data → Erase All My Data** and
+confirming the destructive prompt. In a single action this:
 
-1. Opening Settings → removing the saved Massive API key (clears the
-   Keychain entry).
-2. Deleting the app from your device (clears SwiftData, UserDefaults,
-   and, on iOS, the Keychain partition associated with the app).
+1. Calls the backend `DELETE /portfolio` endpoint, which removes every
+   `X-Device-UUID`-linked row the backend holds about you (the
+   `Portfolio` row itself and, via the cascade in
+   `PortfolioCascadeDeleter`, every `Holding`, `InvestSnapshot`, and
+   `AppSettings` row keyed to it).
+2. Wipes the on-device SwiftData store of the same record types.
+3. Removes the saved Massive API key from the iOS Keychain.
+4. Rotates the Keychain `X-Device-UUID` so future requests cannot be
+   linked back to the erased records.
+5. Resets the onboarding gate so the next launch returns Investrum to
+   the disclaimer screen, exactly like a fresh install.
 
-Both paths together leave no Investrum-controlled data on your device.
-The `X-Device-UUID` Keychain entry is removed when the app is deleted
-because the Keychain access group is scoped to the app bundle ID.
-
-When backend sync is active, the `DELETE /portfolio` endpoint erases
-every `X-Device-UUID`-linked row the backend holds about you in a
-single transaction: the `Portfolio` row itself and, via the model
-relationship cascade, every `Holding` keyed to it. Cache-only
-`StockCache` market data is intentionally not touched — ticker
-market data is shared across devices and is not personal data of the
-caller. The endpoint is authenticated by App Attest, scoped strictly
-to the calling device's portfolio, and returns `204 No Content` on
-success. The contract is documented in the OpenAPI artifact at
+The cache-only `StockCache` rows on the backend and the
+`MarketDataBar` / `TickerMetadata` cache rows on the device are
+intentionally not touched — ticker market data is shared across
+devices and is not personal data of the caller. The endpoint is
+authenticated by App Attest, scoped strictly to the calling device's
+portfolio, and returns `204 No Content` on success; the contract is
+documented in the OpenAPI artifact at
 [`app/Sources/Backend/Networking/openapi.json`](../../app/Sources/Backend/Networking/openapi.json)
-under the `DELETE /portfolio` operation, and the consolidated DSR
-posture lives in
-[`docs/legal/data-subject-rights.md`](data-subject-rights.md).
+under the `DELETE /portfolio` operation.
 
-The in-app "Erase All My Data" Settings control that calls this
-endpoint and rotates the Keychain `X-Device-UUID` is tracked under
-issue #329; until that lands, the endpoint is reachable to the iOS
-client but does not yet have a dedicated Settings row.
+Deleting the app from your device remains a complete-erasure fallback:
+SwiftData, UserDefaults, and the Keychain partition scoped to the app
+bundle ID are all removed by iOS. The consolidated DSR posture lives
+in [`docs/legal/data-subject-rights.md`](data-subject-rights.md).
 
 ### Right to restrict processing (GDPR Art. 18) and to object (GDPR Art. 21)
 

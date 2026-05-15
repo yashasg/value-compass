@@ -555,4 +555,323 @@ final class SettingsFeatureTests: XCTestCase {
     XCTAssertEqual(LegalLinks.massiveTermsOfService.host, "massive.com")
     XCTAssertEqual(LegalLinks.massivePrivacyPolicy.host, "massive.com")
   }
+
+  // MARK: - Account erasure (issue #329)
+
+  /// Tapping the destructive button only opens the confirmation dialog —
+  /// no network call, no Keychain mutation, no SwiftData wipe yet.
+  func testEraseAllDataTappedOpensConfirmationOnly() async {
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = {
+        XCTFail("Erasure must not start until the user confirms")
+        return .success
+      }
+    }
+
+    await store.send(.eraseAllDataTapped) {
+      $0.isErasureConfirmationPresented = true
+    }
+  }
+
+  /// Dismissing the confirmation closes the dialog without firing any
+  /// effect.
+  func testEraseAllDataConfirmationDismissedClosesDialog() async {
+    let store = TestStore(
+      initialState: SettingsFeature.State(isErasureConfirmationPresented: true)
+    ) {
+      SettingsFeature()
+    }
+
+    await store.send(.eraseAllDataConfirmationDismissed) {
+      $0.isErasureConfirmationPresented = false
+    }
+  }
+
+  /// Happy path: backend 204 → local wipe → Keychain wipe → UUID rotation →
+  /// onboarding reset, in that order. The reducer-state mirrors for the
+  /// API key reset alongside `.erased`.
+  func testEraseAllDataConfirmedRunsFullPipelineInOrder() async {
+    let callOrder = LockIsolated<[String]>([])
+    let userDefaultWrites = LockIsolated<[(value: Bool, key: String)]>([])
+    let initialState = SettingsFeature.State(
+      apiKeyStatus: .storedAndValid,
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
+      apiKeyDraft: "draft-key-text",
+      apiKeyRequestStatus: .savedSuccessfully,
+      isErasureConfirmationPresented: true
+    )
+
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = {
+        callOrder.withValue { $0.append("backend") }
+        return .success
+      }
+      $0.localDataReset.eraseAllPersonalData = {
+        callOrder.withValue { $0.append("localData") }
+      }
+      $0.massiveAPIKey.delete = {
+        callOrder.withValue { $0.append("massiveKey") }
+      }
+      $0.deviceID.rotate = {
+        callOrder.withValue { $0.append("rotate") }
+      }
+      $0.userDefaults.setBool = { value, key in
+        userDefaultWrites.withValue { $0.append((value, key)) }
+      }
+    }
+
+    await store.send(.eraseAllDataConfirmed) {
+      $0.isErasureConfirmationPresented = false
+      $0.accountErasureStatus = .erasing
+    }
+    await store.receive(\.accountErasureNetworkCompleted)
+    await store.receive(\.accountErasureLocalCleanupCompleted) {
+      $0.apiKeyStatus = .noStoredKey
+      $0.apiKeyMaskedDisplay = nil
+      $0.apiKeyMaskedAccessibilityLabel = nil
+      $0.apiKeyDraft = ""
+      $0.apiKeyRequestStatus = .idle
+      $0.apiKeyLoadError = nil
+      $0.accountErasureStatus = .erased
+    }
+
+    XCTAssertEqual(callOrder.value, ["backend", "localData", "massiveKey", "rotate"])
+
+    // Both onboarding-gate userDefault keys are reset so AppFeature.task
+    // re-fires onboarding on next launch.
+    let onboardingWrites = userDefaultWrites.value.filter { write in
+      write.key.contains("isclaimer") || write.key.contains("nboarding")
+    }
+    XCTAssertEqual(
+      onboardingWrites.map { $0.key }.sorted(),
+      [
+        AppPreferenceKeys.disclaimer,
+        AppPreferenceKeys.legacyOnboarding,
+      ].sorted()
+    )
+    XCTAssertTrue(onboardingWrites.allSatisfy { $0.value == false })
+  }
+
+  /// A 404 from the backend means "no rows existed" and should also
+  /// continue the local-cleanup pipeline. The backend rate-limits the
+  /// erasure endpoint to "device that has actually synced", so an early
+  /// adopter who never synced still needs the local wipe to fire.
+  func testEraseAllData404BackendStillRunsLocalCleanup() async {
+    let localDataCalls = LockIsolated<Int>(0)
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = { .success }
+      $0.localDataReset.eraseAllPersonalData = {
+        localDataCalls.withValue { $0 += 1 }
+      }
+      $0.massiveAPIKey.delete = {}
+      $0.deviceID.rotate = {}
+      $0.userDefaults.setBool = { _, _ in }
+    }
+
+    await store.send(.eraseAllDataConfirmed) {
+      $0.accountErasureStatus = .erasing
+    }
+    await store.receive(\.accountErasureNetworkCompleted)
+    await store.receive(\.accountErasureLocalCleanupCompleted) {
+      $0.accountErasureStatus = .erased
+    }
+    XCTAssertEqual(localDataCalls.value, 1)
+  }
+
+  /// Network failure aborts the pipeline BEFORE any local mutation so the
+  /// user can retry online instead of being left half-erased.
+  func testEraseAllDataNetworkUnavailableLeavesLocalStateIntact() async {
+    let localDataCalls = LockIsolated<Int>(0)
+    let keyDeletes = LockIsolated<Int>(0)
+    let rotations = LockIsolated<Int>(0)
+
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = { .networkUnavailable(reason: "offline") }
+      $0.localDataReset.eraseAllPersonalData = {
+        localDataCalls.withValue { $0 += 1 }
+        XCTFail("Local data MUST NOT be wiped when the backend call failed")
+      }
+      $0.massiveAPIKey.delete = {
+        keyDeletes.withValue { $0 += 1 }
+        XCTFail("Keychain MUST NOT be wiped when the backend call failed")
+      }
+      $0.deviceID.rotate = {
+        rotations.withValue { $0 += 1 }
+        XCTFail("Device UUID MUST NOT rotate when the backend call failed")
+      }
+    }
+
+    await store.send(.eraseAllDataConfirmed) {
+      $0.accountErasureStatus = .erasing
+    }
+    await store.receive(\.accountErasureNetworkCompleted) {
+      $0.accountErasureStatus = .failed(
+        reason:
+          "Could not reach the server: offline. Your data was not erased — "
+          + "please try again when you're online."
+      )
+    }
+    XCTAssertEqual(localDataCalls.value, 0)
+    XCTAssertEqual(keyDeletes.value, 0)
+    XCTAssertEqual(rotations.value, 0)
+  }
+
+  /// 5xx from backend aborts the pipeline before any local mutation.
+  func testEraseAllDataServerErrorLeavesLocalStateIntact() async {
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = { .serverError(status: 503) }
+      $0.localDataReset.eraseAllPersonalData = {
+        XCTFail("Local data MUST NOT be wiped when the backend call failed")
+      }
+      $0.massiveAPIKey.delete = {
+        XCTFail("Keychain MUST NOT be wiped when the backend call failed")
+      }
+      $0.deviceID.rotate = {
+        XCTFail("Device UUID MUST NOT rotate when the backend call failed")
+      }
+    }
+
+    await store.send(.eraseAllDataConfirmed) {
+      $0.accountErasureStatus = .erasing
+    }
+    await store.receive(\.accountErasureNetworkCompleted) {
+      $0.accountErasureStatus = .failed(
+        reason:
+          "Server returned HTTP 503. Your data was not erased — please try again."
+      )
+    }
+  }
+
+  /// SwiftData wipe failure must short-circuit the rest of the pipeline so
+  /// we never rotate the device UUID or wipe the API key while the local
+  /// store is still half-populated.
+  func testEraseAllDataLocalWipeFailureStopsBeforeKeychain() async {
+    let keyDeletes = LockIsolated<Int>(0)
+    let rotations = LockIsolated<Int>(0)
+    let userDefaultWrites = LockIsolated<Int>(0)
+
+    struct FakeError: Error, CustomStringConvertible { let description = "diskFull" }
+    let store = TestStore(initialState: SettingsFeature.State()) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = { .success }
+      $0.localDataReset.eraseAllPersonalData = { throw FakeError() }
+      $0.massiveAPIKey.delete = {
+        keyDeletes.withValue { $0 += 1 }
+        XCTFail("Keychain MUST NOT be wiped when local data wipe failed")
+      }
+      $0.deviceID.rotate = {
+        rotations.withValue { $0 += 1 }
+        XCTFail("Device UUID MUST NOT rotate when local data wipe failed")
+      }
+      $0.userDefaults.setBool = { _, _ in
+        userDefaultWrites.withValue { $0 += 1 }
+        XCTFail("Onboarding-gate userDefaults MUST NOT reset when wipe failed")
+      }
+    }
+
+    await store.send(.eraseAllDataConfirmed) {
+      $0.accountErasureStatus = .erasing
+    }
+    await store.receive(\.accountErasureNetworkCompleted)
+    await store.receive(\.accountErasureLocalCleanupCompleted) {
+      // `FakeError` conforms to `CustomStringConvertible`, so
+      // `String(describing:)` collapses to its `description` ("diskFull").
+      $0.accountErasureStatus = .failed(
+        reason: "Could not erase local data: diskFull."
+      )
+    }
+    XCTAssertEqual(keyDeletes.value, 0)
+    XCTAssertEqual(rotations.value, 0)
+    XCTAssertEqual(userDefaultWrites.value, 0)
+  }
+
+  /// While the pipeline is in flight, additional `eraseAllDataTapped` /
+  /// `eraseAllDataConfirmed` sends are no-ops so the user can't kick off a
+  /// duplicate erasure mid-flight.
+  func testEraseAllDataTappedIsNoOpWhileErasing() async {
+    let store = TestStore(
+      initialState: SettingsFeature.State(accountErasureStatus: .erasing)
+    ) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = {
+        XCTFail("Tapped is a no-op while erasing")
+        return .success
+      }
+    }
+
+    await store.send(.eraseAllDataTapped)
+  }
+
+  /// Confirmed mid-flight is also a no-op (defense in depth — the View
+  /// disables the row, but the reducer should not assume the View layer
+  /// got there in time). `isErasureConfirmationPresented` is already
+  /// `false` in the seeded state, so the reducer's idempotent reset
+  /// produces no observable state change.
+  func testEraseAllDataConfirmedIsNoOpWhileErasing() async {
+    let store = TestStore(
+      initialState: SettingsFeature.State(accountErasureStatus: .erasing)
+    ) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.accountErasure.eraseAccount = {
+        XCTFail("Confirmed is a no-op while erasing")
+        return .success
+      }
+    }
+
+    await store.send(.eraseAllDataConfirmed)
+  }
+
+  // MARK: - AccountErasureRequestFactory + outcome mapping
+
+  /// The DELETE request must carry the device UUID as `device_uuid` so the
+  /// backend's row selector can resolve the calling device.
+  func testAccountErasureRequestAttachesDeviceUUIDQueryItem() throws {
+    let baseURL = URL(string: "https://api.valuecompass.app")!
+    let request = AccountErasureRequestFactory.makeRequest(
+      baseURL: baseURL,
+      deviceID: "DEVICE-1234"
+    )
+
+    XCTAssertEqual(request.httpMethod, "DELETE")
+    XCTAssertEqual(request.url?.path, "/portfolio")
+
+    let components = try XCTUnwrap(
+      request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
+    )
+    let items = components.queryItems ?? []
+    XCTAssertEqual(items.count, 1)
+    XCTAssertEqual(items.first?.name, "device_uuid")
+    XCTAssertEqual(items.first?.value, "DEVICE-1234")
+  }
+
+  /// Outcome mapping: 2xx and 404 both fold to `.success` (rows deleted or
+  /// no rows existed) so the local-cleanup pipeline still fires.
+  func testAccountErasureOutcomeMapsSuccessAnd404ToSuccess() {
+    XCTAssertEqual(AccountErasureClient.outcome(for: 204), .success)
+    XCTAssertEqual(AccountErasureClient.outcome(for: 200), .success)
+    XCTAssertEqual(AccountErasureClient.outcome(for: 404), .success)
+  }
+
+  /// Outcome mapping: any other 4xx/5xx surfaces as `.serverError` so the
+  /// reducer can abort before the local mutation.
+  func testAccountErasureOutcomeMapsOtherStatusesToServerError() {
+    XCTAssertEqual(AccountErasureClient.outcome(for: 400), .serverError(status: 400))
+    XCTAssertEqual(AccountErasureClient.outcome(for: 401), .serverError(status: 401))
+    XCTAssertEqual(AccountErasureClient.outcome(for: 500), .serverError(status: 500))
+    XCTAssertEqual(AccountErasureClient.outcome(for: 503), .serverError(status: 503))
+  }
 }

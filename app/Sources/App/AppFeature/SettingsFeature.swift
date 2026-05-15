@@ -62,6 +62,22 @@ struct SettingsFeature {
     /// separate from `apiKeyRequestStatus` so a load failure doesn't get
     /// clobbered by a later save attempt.
     var apiKeyLoadError: String?
+
+    // MARK: Account erasure (issue #329)
+
+    /// Source-of-truth view of the in-app "Erase All My Data" flow. Idle
+    /// until the user taps the destructive button; then runs the
+    /// backend → SwiftData → Keychain → UUID-rotation → onboarding-gate
+    /// pipeline serially and reports the outcome inline. See
+    /// ``SettingsAccountErasureStatus``.
+    var accountErasureStatus: SettingsAccountErasureStatus = .idle
+    /// Whether the destructive confirmation dialog is currently showing.
+    /// Toggled by `eraseAllDataTapped` and reset by either
+    /// `eraseAllDataConfirmationDismissed` (cancel) or
+    /// `eraseAllDataConfirmed` (proceed). The View layer binds this to a
+    /// SwiftUI `.confirmationDialog` so the destructive choice is
+    /// explicitly confirmed before any network/Keychain side effect.
+    var isErasureConfirmationPresented: Bool = false
   }
 
   enum Action: BindableAction, Equatable, Sendable {
@@ -75,6 +91,25 @@ struct SettingsFeature {
     case apiKeyValidationCompleted(MassiveAPIKeyValidationOutcome, persistedKey: String)
     case apiKeyRevalidationCompleted(MassiveAPIKeyValidationOutcome)
     case apiKeyRemovalFailed(reason: String)
+
+    // MARK: Account erasure actions (issue #329)
+
+    /// User tapped the "Erase All My Data" row in Settings. Opens the
+    /// destructive confirmation dialog without firing any side effects.
+    case eraseAllDataTapped
+    /// User dismissed the confirmation dialog (Cancel, tap-out, etc.).
+    case eraseAllDataConfirmationDismissed
+    /// User confirmed inside the destructive dialog. Kicks off the
+    /// backend `DELETE /portfolio` → local cleanup pipeline.
+    case eraseAllDataConfirmed
+    /// Backend erasure call returned. Success continues the pipeline;
+    /// failure aborts before any local mutation so the user can retry
+    /// when connectivity returns.
+    case accountErasureNetworkCompleted(AccountErasureOutcome)
+    /// Local cleanup (SwiftData wipe → Massive key wipe → UUID rotation →
+    /// onboarding reset) finished. `localCleanupError` carries the first
+    /// failure reason or `nil` when every step succeeded.
+    case accountErasureLocalCleanupCompleted(localCleanupError: String?)
   }
 
   @Dependency(\.userDefaults) var userDefaults
@@ -82,6 +117,8 @@ struct SettingsFeature {
   @Dependency(\.deviceID) var deviceID
   @Dependency(\.massiveAPIKey) var massiveAPIKey
   @Dependency(\.massiveAPIKeyValidator) var massiveAPIKeyValidator
+  @Dependency(\.accountErasure) var accountErasure
+  @Dependency(\.localDataReset) var localDataReset
 
   /// `UserDefaults` keys mirrored from `AppState` so reducer reads/writes hit
   /// the same persisted values the legacy `AppState` does. #158 deletes
@@ -231,6 +268,106 @@ struct SettingsFeature {
           state.apiKeyStatus = .storedButLastCheckFailed(reason: reason)
           state.apiKeyRequestStatus = .networkError(reason: reason)
         }
+        return .none
+
+      // MARK: Account erasure (issue #329)
+
+      case .eraseAllDataTapped:
+        guard !state.accountErasureStatus.isInFlight else { return .none }
+        state.isErasureConfirmationPresented = true
+        return .none
+
+      case .eraseAllDataConfirmationDismissed:
+        state.isErasureConfirmationPresented = false
+        return .none
+
+      case .eraseAllDataConfirmed:
+        state.isErasureConfirmationPresented = false
+        guard !state.accountErasureStatus.isInFlight else { return .none }
+        state.accountErasureStatus = .erasing
+        return .run { [accountErasure] send in
+          let outcome = await accountErasure.eraseAccount()
+          await send(.accountErasureNetworkCompleted(outcome))
+        }
+
+      case .accountErasureNetworkCompleted(let outcome):
+        switch outcome {
+        case .success:
+          // Run the rest of the pipeline as a single serial effect so a
+          // failure in any step short-circuits the remaining steps and
+          // the user sees one inline message instead of a half-finished
+          // erase. Captured dependencies are `Sendable` so the closure
+          // is safe to run off the main actor.
+          return .run {
+            [localDataReset, massiveAPIKey, deviceID, userDefaults] send in
+            do {
+              try await localDataReset.eraseAllPersonalData()
+            } catch {
+              await send(
+                .accountErasureLocalCleanupCompleted(
+                  localCleanupError:
+                    "Could not erase local data: \(String(describing: error))."
+                ))
+              return
+            }
+            do {
+              try massiveAPIKey.delete()
+            } catch {
+              await send(
+                .accountErasureLocalCleanupCompleted(
+                  localCleanupError:
+                    "Local data was cleared but the Massive API key could not be removed: "
+                    + "\(String(describing: error))."
+                ))
+              return
+            }
+            do {
+              try deviceID.rotate()
+            } catch {
+              await send(
+                .accountErasureLocalCleanupCompleted(
+                  localCleanupError:
+                    "Local data and the API key were cleared but the device identifier "
+                    + "could not be rotated: \(String(describing: error))."
+                ))
+              return
+            }
+            userDefaults.setBool(value: false, forKey: AppPreferenceKeys.disclaimer)
+            userDefaults.setBool(value: false, forKey: AppPreferenceKeys.legacyOnboarding)
+            await send(.accountErasureLocalCleanupCompleted(localCleanupError: nil))
+          }
+        case .networkUnavailable(let reason):
+          state.accountErasureStatus = .failed(
+            reason:
+              "Could not reach the server: \(reason). Your data was not erased — "
+              + "please try again when you're online."
+          )
+          return .none
+        case .serverError(let status):
+          state.accountErasureStatus = .failed(
+            reason:
+              "Server returned HTTP \(status). Your data was not erased — please try again."
+          )
+          return .none
+        }
+
+      case .accountErasureLocalCleanupCompleted(let error):
+        if let error {
+          state.accountErasureStatus = .failed(reason: error)
+          return .none
+        }
+        // Clear reducer-state mirrors of state we just wiped on disk so
+        // the Settings screen reflects the erased posture without
+        // needing a re-`.task` round trip. The View layer disables
+        // every other interactive row while `accountErasureStatus`
+        // is `.erased` and surfaces a relaunch prompt.
+        state.apiKeyStatus = .noStoredKey
+        state.apiKeyMaskedDisplay = nil
+        state.apiKeyMaskedAccessibilityLabel = nil
+        state.apiKeyDraft = ""
+        state.apiKeyRequestStatus = .idle
+        state.apiKeyLoadError = nil
+        state.accountErasureStatus = .erased
         return .none
       }
     }

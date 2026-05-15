@@ -53,6 +53,8 @@
 		A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F088 /* ContributionCalculatorClient.swift */; };
 		A0000000000000000000B089 /* MassiveAPIKeyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F089 /* MassiveAPIKeyClient.swift */; };
 		A0000000000000000000B08A /* MassiveAPIKeyValidatorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */; };
+		A0000000000000000000B08B /* AccountErasureClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F08B /* AccountErasureClient.swift */; };
+		A0000000000000000000B08C /* LocalDataResetClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F08C /* LocalDataResetClient.swift */; };
 		A0000000000000000000B090 /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F090 /* AppFeature.swift */; };
 		A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F091 /* ForcedUpdateFeature.swift */; };
 		A0000000000000000000B092 /* OnboardingFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F092 /* OnboardingFeature.swift */; };
@@ -184,6 +186,8 @@
 		A0000000000000000000F088 /* ContributionCalculatorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F089 /* MassiveAPIKeyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassiveAPIKeyValidatorClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F08B /* AccountErasureClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountErasureClient.swift; sourceTree = "<group>"; };
+		A0000000000000000000F08C /* LocalDataResetClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDataResetClient.swift; sourceTree = "<group>"; };
 		A0000000000000000000F090 /* AppFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F091 /* ForcedUpdateFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForcedUpdateFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F092 /* OnboardingFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFeature.swift; sourceTree = "<group>"; };
@@ -378,6 +382,8 @@
 				A0000000000000000000F088 /* ContributionCalculatorClient.swift */,
 				A0000000000000000000F089 /* MassiveAPIKeyClient.swift */,
 				A0000000000000000000F08A /* MassiveAPIKeyValidatorClient.swift */,
+				A0000000000000000000F08B /* AccountErasureClient.swift */,
+				A0000000000000000000F08C /* LocalDataResetClient.swift */,
 			);
 			path = Dependencies;
 			sourceTree = "<group>";
@@ -685,6 +691,8 @@
 				A0000000000000000000B088 /* ContributionCalculatorClient.swift in Sources */,
 				A0000000000000000000B089 /* MassiveAPIKeyClient.swift in Sources */,
 				A0000000000000000000B08A /* MassiveAPIKeyValidatorClient.swift in Sources */,
+				A0000000000000000000B08B /* AccountErasureClient.swift in Sources */,
+				A0000000000000000000B08C /* LocalDataResetClient.swift in Sources */,
 				A0000000000000000000B090 /* AppFeature.swift in Sources */,
 				A0000000000000000000B091 /* ForcedUpdateFeature.swift in Sources */,
 				A0000000000000000000B092 /* OnboardingFeature.swift in Sources */,
