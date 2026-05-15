@@ -75,14 +75,22 @@ enum LocalSchemaMigrationPlan: SchemaMigrationPlan {
   /// v1 → v2 migration that backfills a fresh `UUID` for every persisted
   /// ``CategoryContribution`` and ``TickerAllocation`` row.
   ///
-  /// SwiftData's lightweight pass populates the new `id: UUID` column with
-  /// the property's default initializer expression (`UUID()`). The
-  /// `didMigrate` block then walks every row in the v2 context and assigns a
-  /// fresh `UUID()` regardless, which makes the per-row uniqueness invariant
-  /// independent of how SwiftData evaluates the default expression during
-  /// the lightweight pass — even if the bridge happened to seed the column
-  /// with a single shared UUID, the explicit reassignment guarantees the
-  /// `@Attribute(.unique)` constraint is satisfied for every row.
+  /// Step one is provided by SwiftData's lightweight schema bridge: the new
+  /// `id: UUID` column carries an inline `= UUID()` default on its
+  /// declaration (see ``CategoryContribution`` and ``TickerAllocation``),
+  /// which SwiftData uses to populate the column for every pre-existing row
+  /// before this stage's `didMigrate` block ever runs. Without the inline
+  /// default the bridge would fail on a non-optional required column, and
+  /// `didMigrate` would never get a chance to fix it (issue #298 — the
+  /// reviewer note that was missed when #249 landed).
+  ///
+  /// Step two — `didMigrate` — then walks every row in the v2 context and
+  /// reassigns a fresh `UUID()`. That belt-and-suspenders pass makes the
+  /// per-row uniqueness invariant independent of how SwiftData evaluates the
+  /// default expression during the lightweight pass: even if the bridge
+  /// seeded the column with a single shared UUID across rows, the explicit
+  /// reassignment guarantees the `@Attribute(.unique)` constraint holds for
+  /// every row before the migrated store is handed back to the app.
   static let migrateV1toV2 = MigrationStage.custom(
     fromVersion: LocalSchemaV1.self,
     toVersion: LocalSchemaV2.self,
