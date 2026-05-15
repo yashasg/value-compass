@@ -67,7 +67,9 @@ final class NavigationShellTests: XCTestCase {
       canCalculate: false
     )
     state.detailPortfolio = loaded
-    state.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: id)))
+    state.path.append(
+      .contributionHistory(ContributionHistoryFeature.State(portfolioID: id))
+    )
     let snapshotBefore = state.detailPortfolio
     let pathBefore = state.path
 

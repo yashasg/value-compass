@@ -71,11 +71,14 @@ struct MainFeature {
 
   /// Pushable destinations rendered on top of the compact stack root or the
   /// iPad detail column root. The `@Reducer` macro generates `Path.State` /
-  /// `Path.Action` automatically.
+  /// `Path.Action` enums automatically.
+  ///
+  /// `holdingsEditor` lives on `PortfolioDetailFeature.holdingsEditor`
+  /// (`@Presents` + `.sheet(item:)`) instead of on this stack so the
+  /// editor is presented modally per HIG (issue #229).
   @Reducer
   enum Path {
     case portfolioDetail(PortfolioDetailFeature)
-    case holdingsEditor(HoldingsEditorFeature)
     case contributionResult(ContributionResultFeature)
     case contributionHistory(ContributionHistoryFeature)
     case settings(SettingsFeature)
@@ -157,12 +160,6 @@ struct MainFeature {
       // PortfolioDetailFeature delegates from inside the path stack
       // (compact mode and iPad pushes off the detail root).
       case .path(
-        .element(let id, .portfolioDetail(.delegate(.openHoldingsEditor(let portfolioID))))):
-        _ = id
-        state.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID)))
-        return .none
-
-      case .path(
         .element(let id, .portfolioDetail(.delegate(.openCalculationResult(let output))))):
         if let element = state.path[id: id],
           case .portfolioDetail(let detailState) = element
@@ -182,10 +179,6 @@ struct MainFeature {
 
       // PortfolioDetailFeature delegates from the iPad detail column root
       // (`detailPortfolio`, never reached on iPhone compact).
-      case .detailPortfolio(.delegate(.openHoldingsEditor(let portfolioID))):
-        state.path.append(.holdingsEditor(HoldingsEditorFeature.State(portfolioID: portfolioID)))
-        return .none
-
       case .detailPortfolio(.delegate(.openCalculationResult(let output))):
         if let detailState = state.detailPortfolio {
           state.path.append(
@@ -213,14 +206,6 @@ struct MainFeature {
       // PortfolioDetail so the user can run the calculator again.
       case .path(.element(_, .contributionHistory(.delegate(.openCalculate)))):
         while let last = state.path.last, !last.isPortfolioDetail {
-          state.path.removeLast()
-        }
-        return .none
-
-      // HoldingsEditorFeature → pop after save / cancel so the surrounding
-      // PortfolioDetail picks up the refreshed snapshot via its `.task`.
-      case .path(.element(_, .holdingsEditor(.delegate))):
-        if state.path.last?.isHoldingsEditor == true {
           state.path.removeLast()
         }
         return .none
@@ -287,11 +272,6 @@ extension MainFeature.Path.State {
   /// the reducer body avoids long inline pattern matches and stays readable.
   fileprivate var isPortfolioDetail: Bool {
     if case .portfolioDetail = self { return true }
-    return false
-  }
-
-  fileprivate var isHoldingsEditor: Bool {
-    if case .holdingsEditor = self { return true }
     return false
   }
 }

@@ -13,7 +13,10 @@ import SwiftData
 ///
 /// `MainFeature.path` consumes the `Delegate` cases below to drive the
 /// surrounding `NavigationStack` / `NavigationSplitView`; the reducer no
-/// longer carries a Phase-1 navigation latch.
+/// longer carries a Phase-1 navigation latch. The holdings editor is
+/// presented as a sheet on this reducer (issue #229) — see `holdingsEditor`
+/// below — rather than pushed onto `MainFeature.path`, so the parent only
+/// sees Calculate/History delegates.
 @Reducer
 struct PortfolioDetailFeature {
   @ObservableState
@@ -22,17 +25,26 @@ struct PortfolioDetailFeature {
     var snapshot: PortfolioDetailSnapshot
     var calculationOutput: ContributionOutput?
     var lastError: String?
+    /// Presentation slot for the holdings editor sheet (issue #229). HIG
+    /// Modality + Sheets: the editor is a self-contained edit-and-commit
+    /// task, so it's presented modally from this screen instead of pushed
+    /// onto the parent's `NavigationStack`. Non-nil while the sheet is
+    /// visible; cleared by `.holdingsEditor(.dismiss)` (swipe-down /
+    /// outside-tap) or by `.delegate(.saved | .canceled)` from the editor.
+    @Presents var holdingsEditor: HoldingsEditorFeature.State?
 
     init(
       portfolioID: UUID,
       snapshot: PortfolioDetailSnapshot,
       calculationOutput: ContributionOutput? = nil,
-      lastError: String? = nil
+      lastError: String? = nil,
+      holdingsEditor: HoldingsEditorFeature.State? = nil
     ) {
       self.portfolioID = portfolioID
       self.snapshot = snapshot
       self.calculationOutput = calculationOutput
       self.lastError = lastError
+      self.holdingsEditor = holdingsEditor
     }
   }
 
@@ -44,11 +56,11 @@ struct PortfolioDetailFeature {
     case calculationCompleted(ContributionOutput)
     case viewResultTapped
     case openHistoryTapped
+    case holdingsEditor(PresentationAction<HoldingsEditorFeature.Action>)
     case delegate(Delegate)
 
     @CasePathable
     enum Delegate: Equatable {
-      case openHoldingsEditor(portfolioID: UUID)
       case openCalculationResult(ContributionOutput)
       case openHistory(portfolioID: UUID)
     }
@@ -75,8 +87,14 @@ struct PortfolioDetailFeature {
         return .none
 
       case .editHoldingsTapped:
+        // HIG Modality + Sheets (#229): present the holdings editor as a
+        // sheet on this reducer instead of pushing it onto the parent's
+        // `NavigationStack`. The editor handles its own Cancel/Save and
+        // discard-confirmation flows (#325); we just clear the
+        // presentation slot once it delegates `.saved | .canceled`.
         let id = state.portfolioID
-        return .send(.delegate(.openHoldingsEditor(portfolioID: id)))
+        state.holdingsEditor = HoldingsEditorFeature.State(portfolioID: id)
+        return .none
 
       case .calculateTapped:
         guard state.snapshot.canCalculate else { return .none }
@@ -114,9 +132,29 @@ struct PortfolioDetailFeature {
         let id = state.portfolioID
         return .send(.delegate(.openHistory(portfolioID: id)))
 
+      case .holdingsEditor(.presented(.delegate(.saved))):
+        // Editor saved a successful draft. Clear the sheet so SwiftUI
+        // dismisses it (the view's `@Environment(\.dismiss)` call is a
+        // safety net for direct view-driven dismissals; both routes end
+        // here) and re-run `.task` so the summary picks up the persisted
+        // changes via `loadSnapshot`.
+        state.holdingsEditor = nil
+        return .send(.task)
+
+      case .holdingsEditor(.presented(.delegate(.canceled))):
+        // Clean / confirmed-discard cancel. Just clear the sheet.
+        state.holdingsEditor = nil
+        return .none
+
+      case .holdingsEditor:
+        return .none
+
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$holdingsEditor, action: \.holdingsEditor) {
+      HoldingsEditorFeature()
     }
   }
 

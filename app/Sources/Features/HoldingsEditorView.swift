@@ -475,10 +475,8 @@ struct HoldingsEditorView: View {
     case tickerMovingAverage(UUID)
   }
 
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
   @State private var store: StoreOf<HoldingsEditorFeature>
-  @State private var selectedCategoryID: UUID?
   @FocusState private var focusedField: FocusedField?
 
   init(store: StoreOf<HoldingsEditorFeature>) {
@@ -487,111 +485,102 @@ struct HoldingsEditorView: View {
 
   var body: some View {
     @Bindable var store = store
-    Group {
-      if horizontalSizeClass == .regular {
-        splitEditor(store: store)
-      } else {
-        compactEditor(store: store)
-      }
-    }
-    .navigationTitle("Edit Holdings")
-    .toolbar {
-      ToolbarItem(placement: .cancellationAction) {
-        Button("Cancel") {
-          // Route through the reducer so dirty-state inspection + the
-          // discard-confirmation dialog stay testable from `TestStore`.
-          // When the draft matches `baseline` the reducer emits
-          // `.delegate(.canceled)` (clean dismiss); when dirty it sets
-          // `pendingCancellation = true` and the `.confirmationDialog`
-          // below takes over — see #325.
-          Task {
-            await store.send(.cancelTapped).finish()
-            if !store.pendingCancellation {
-              dismiss()
+    NavigationStack {
+      compactEditor(store: store)
+        .navigationTitle("Edit Holdings")
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") {
+              // Route through the reducer so dirty-state inspection + the
+              // discard-confirmation dialog stay testable from `TestStore`.
+              // When the draft matches `baseline` the reducer emits
+              // `.delegate(.canceled)` (clean dismiss); when dirty it sets
+              // `pendingCancellation = true` and the `.confirmationDialog`
+              // below takes over — see #325.
+              Task {
+                await store.send(.cancelTapped).finish()
+                if !store.pendingCancellation {
+                  dismiss()
+                }
+              }
             }
+            .accessibilityIdentifier("holdings.editor.cancel")
+          }
+
+          ToolbarItem(placement: .primaryAction) {
+            addCategoryButton
+          }
+
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Save") {
+              Task {
+                await store.send(.saveTapped).finish()
+                if store.saveError == nil {
+                  dismiss()
+                }
+              }
+            }
+            .accessibilityIdentifier("holdings.editor.save")
+          }
+
+          ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button("Done") { focusedField = nil }
+              .accessibilityIdentifier("holdings.editor.keyboard.doneButton")
           }
         }
-        .accessibilityIdentifier("holdings.editor.cancel")
-      }
-
-      if horizontalSizeClass != .regular {
-        ToolbarItem(placement: .primaryAction) {
-          addCategoryButton
-        }
-      }
-
-      ToolbarItem(placement: .confirmationAction) {
-        Button("Save") {
-          Task {
-            await store.send(.saveTapped).finish()
-            if store.saveError == nil {
-              dismiss()
+        .alert(
+          "Could Not Save Holdings",
+          isPresented: Binding(
+            get: { store.saveError != nil },
+            set: { isPresented in
+              if !isPresented {
+                store.send(.saveErrorDismissed)
+              }
             }
-          }
-        }
-        .accessibilityIdentifier("holdings.editor.save")
-      }
-
-      ToolbarItemGroup(placement: .keyboard) {
-        Spacer()
-        Button("Done") { focusedField = nil }
-          .accessibilityIdentifier("holdings.editor.keyboard.doneButton")
-      }
-    }
-    .alert(
-      "Could Not Save Holdings",
-      isPresented: Binding(
-        get: { store.saveError != nil },
-        set: { isPresented in
-          if !isPresented {
+          ),
+          presenting: store.saveError
+        ) { _ in
+          Button("OK", role: .cancel) {
             store.send(.saveErrorDismissed)
           }
+        } message: { message in
+          Text(message)
         }
-      ),
-      presenting: store.saveError
-    ) { _ in
-      Button("OK", role: .cancel) {
-        store.send(.saveErrorDismissed)
-      }
-    } message: { message in
-      Text(message)
-    }
-    .confirmationDialog(
-      "Discard Changes?",
-      isPresented: Binding(
-        get: { store.pendingCancellation },
-        set: { newValue in
-          // The dialog drives `isPresented = false` on outside-tap or back
-          // gesture. Route that through `.keepEditing` so the reducer stays
-          // the single source of truth for `pendingCancellation` (#325).
-          if !newValue { store.send(.keepEditing) }
+        .confirmationDialog(
+          "Discard Changes?",
+          isPresented: Binding(
+            get: { store.pendingCancellation },
+            set: { newValue in
+              // The dialog drives `isPresented = false` on outside-tap or
+              // back gesture. Route that through `.keepEditing` so the
+              // reducer stays the single source of truth for
+              // `pendingCancellation` (#325).
+              if !newValue { store.send(.keepEditing) }
+            }
+          ),
+          titleVisibility: .visible
+        ) {
+          Button("Discard Changes", role: .destructive) {
+            Task {
+              await store.send(.confirmDiscard).finish()
+              dismiss()
+            }
+          }
+          .accessibilityIdentifier("holdings.editor.discardConfirm")
+          Button("Keep Editing", role: .cancel) {
+            store.send(.keepEditing)
+          }
+          .accessibilityIdentifier("holdings.editor.keepEditing")
+        } message: {
+          Text("Your unsaved edits will be lost.")
         }
-      ),
-      titleVisibility: .visible
-    ) {
-      Button("Discard Changes", role: .destructive) {
-        Task {
-          await store.send(.confirmDiscard).finish()
-          dismiss()
-        }
-      }
-      .accessibilityIdentifier("holdings.editor.discardConfirm")
-      Button("Keep Editing", role: .cancel) {
-        store.send(.keepEditing)
-      }
-      .accessibilityIdentifier("holdings.editor.keepEditing")
-    } message: {
-      Text("Your unsaved edits will be lost.")
-    }
-    // HIG Sheets: block accidental swipe-down dismissal when there is
-    // unsaved content. Currently HoldingsEditor is presented as a push so
-    // this is a no-op today, but pre-wires the modality fix for #229 when
-    // the screen flips to a sheet (#325 coordination note).
-    .interactiveDismissDisabled(store.hasUnsavedChanges)
-    .task { await store.send(.task).finish() }
-    .onAppear(perform: selectInitialCategoryIfNeeded)
-    .onChange(of: store.draft.categories.map(\.id)) { _, _ in
-      selectInitialCategoryIfNeeded()
+        // HIG Sheets: block accidental swipe-down dismissal when there is
+        // unsaved content. The editor is now presented as a sheet from
+        // `PortfolioDetailFeature` (#229), so this finally engages the
+        // interactive-dismissal gate that was pre-wired in #325.
+        .interactiveDismissDisabled(store.hasUnsavedChanges)
+        .task { await store.send(.task).finish() }
     }
   }
 
@@ -616,89 +605,14 @@ struct HoldingsEditorView: View {
     }
   }
 
-  private func splitEditor(store: StoreOf<HoldingsEditorFeature>) -> some View {
-    @Bindable var store = store
-    return NavigationSplitView {
-      List(selection: $selectedCategoryID) {
-        if store.draft.categories.isEmpty {
-          ContentUnavailableView {
-            Label("No Categories", systemImage: "folder.badge.plus")
-          } description: {
-            Text("Add a category to start organizing tickers.")
-          } actions: {
-            addCategoryButton
-          }
-        } else {
-          validationSummaryRow
-
-          ForEach(store.draft.categories) { category in
-            VStack(alignment: .leading, spacing: 6) {
-              Text(category.displayName)
-                .valueCompassTextStyle(.bodyLarge)
-              HStack {
-                Text("\(category.weightPercentText)% target")
-                Spacer()
-                Text("\(category.tickers.count) tickers")
-              }
-              .valueCompassTextStyle(.labelCaps)
-              .foregroundStyle(Color.appContentSecondary)
-            }
-            .padding(.vertical, 6)
-            .tag(category.id)
-            .accessibilityIdentifier("holdings.category.sidebarRow")
-          }
-          .onDelete(perform: deleteCategories)
-        }
-      }
-      .navigationTitle("Categories")
-      .toolbar {
-        ToolbarItem(placement: .primaryAction) {
-          addCategoryButton
-        }
-      }
-      .navigationSplitViewColumnWidth(
-        min: AppLayoutMetrics.sidebarMinWidth,
-        ideal: AppLayoutMetrics.sidebarIdealWidth,
-        max: AppLayoutMetrics.sidebarMaxWidth)
-    } detail: {
-      if store.draft.categories.isEmpty {
-        ContentUnavailableView {
-          Label("No Categories", systemImage: "folder.badge.plus")
-        } description: {
-          Text("Add a category to edit target weights and ticker market data.")
-        } actions: {
-          addCategoryButton
-        }
-      } else if let selectedIndex = selectedCategoryIndex {
-        categoryDetail(category: $store.draft.categories[selectedIndex])
-      } else {
-        ContentUnavailableView {
-          Label("Select a Category", systemImage: "sidebar.leading")
-        } description: {
-          Text("Choose a category from the sidebar.")
-        }
-      }
-    }
-  }
-
   private var addCategoryButton: some View {
     Button {
-      addCategory()
+      store.send(.addCategoryTapped)
     } label: {
       Label("Add Category", systemImage: "plus")
     }
     .appMinimumTouchTarget()
     .accessibilityIdentifier("holdings.category.add")
-  }
-
-  @ViewBuilder
-  private var validationSummaryRow: some View {
-    let issues = store.issues
-    if !issues.isEmpty {
-      Label("\(issues.count) warnings", systemImage: "exclamationmark.triangle")
-        .foregroundStyle(validationSummaryColor(for: issues))
-        .accessibilityIdentifier("holdings.validation.summary")
-    }
   }
 
   @ViewBuilder
@@ -819,110 +733,6 @@ struct HoldingsEditorView: View {
     .buttonStyle(.borderless)
   }
 
-  private var selectedCategoryIndex: Int? {
-    guard let selectedCategoryID,
-      let index = store.draft.categories.firstIndex(where: { $0.id == selectedCategoryID })
-    else {
-      return nil
-    }
-    return index
-  }
-
-  private func categoryDetail(category: Binding<CategoryDraft>) -> some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
-        validationSection
-
-        VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
-          Text("Category")
-            .valueCompassTextStyle(.headlineMedium)
-
-          HStack(spacing: AppLayoutMetrics.gridGutter) {
-            TextField("Category name", text: category.name)
-              .textInputAutocapitalization(.words)
-              .accessibilityIdentifier("holdings.category.name")
-
-            TextField("Weight %", text: category.weightPercentText)
-              .keyboardType(.decimalPad)
-              .focused($focusedField, equals: .categoryWeight(category.wrappedValue.id))
-              .frame(width: 120)
-              .accessibilityIdentifier("holdings.category.weight")
-
-            categoryControls(
-              categoryID: category.wrappedValue.id,
-              categoryName: category.wrappedValue.displayName
-            )
-          }
-        }
-        .padding()
-        .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
-
-        VStack(alignment: .leading, spacing: AppLayoutMetrics.stackGap) {
-          HStack {
-            Text("Tickers")
-              .valueCompassTextStyle(.headlineMedium)
-            Spacer()
-            Button {
-              store.send(.addTicker(categoryID: category.wrappedValue.id))
-            } label: {
-              Label("Add Ticker", systemImage: "plus")
-            }
-            .buttonStyle(.borderedProminent)
-            .appMinimumTouchTarget()
-            .accessibilityIdentifier("holdings.ticker.add")
-          }
-
-          if category.wrappedValue.tickers.isEmpty {
-            Label("Warning: no tickers", systemImage: "exclamationmark.circle")
-              .foregroundStyle(Color.appWarning)
-              .accessibilityIdentifier("holdings.category.warning")
-          } else {
-            ForEach(category.tickers) { $ticker in
-              VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: AppLayoutMetrics.gridGutter) {
-                  TextField("Ticker symbol", text: $ticker.symbol)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                    .frame(width: 120)
-                    .accessibilityIdentifier("holdings.ticker.symbol")
-
-                  tickerMarketDataFields(ticker: $ticker)
-
-                  tickerControls(
-                    categoryID: category.wrappedValue.id,
-                    tickerID: ticker.id,
-                    categoryName: category.wrappedValue.displayName,
-                    tickerSymbol: ticker.displaySymbol
-                  )
-                }
-
-                if let message = ticker.marketDataStatusMessage {
-                  Label(
-                    message,
-                    systemImage: ticker.hasInvalidMarketData
-                      ? "exclamationmark.triangle.fill" : "exclamationmark.circle"
-                  )
-                  .valueCompassTextStyle(.labelCaps)
-                  .foregroundStyle(ticker.hasInvalidMarketData ? Color.appError : Color.appWarning)
-                  .accessibilityIdentifier("holdings.ticker.marketDataWarning")
-                }
-              }
-              .padding()
-              .background(Color.appSurface, in: RoundedRectangle(cornerRadius: 12))
-              .accessibilityIdentifier("holdings.ticker.editorRow")
-            }
-          }
-        }
-        .padding()
-        .background(Color.appSurfaceElevated, in: RoundedRectangle(cornerRadius: 16))
-      }
-      .padding(AppLayoutMetrics.mainMargin)
-      .frame(maxWidth: AppLayoutMetrics.wideContentMaxWidth, alignment: .leading)
-      .frame(maxWidth: .infinity, alignment: .center)
-    }
-    .navigationTitle(category.wrappedValue.displayName)
-  }
-
   private func tickerMarketDataFields(ticker: Binding<TickerDraft>) -> some View {
     HStack(spacing: AppLayoutMetrics.gridGutter) {
       TextField("Current Price", text: ticker.currentPriceText)
@@ -980,37 +790,5 @@ struct HoldingsEditorView: View {
 
   private func lastTickerID(in categoryID: UUID) -> UUID? {
     store.draft.categories.first(where: { $0.id == categoryID })?.tickers.last?.id
-  }
-
-  private func addCategory() {
-    store.send(.addCategoryTapped)
-    selectedCategoryID = store.draft.categories.last?.id
-  }
-
-  private func deleteCategories(at offsets: IndexSet) {
-    let deletedIDs = offsets.map { store.draft.categories[$0].id }
-    for id in deletedIDs {
-      store.send(.deleteCategory(id: id))
-    }
-    if let selectedCategoryID, deletedIDs.contains(selectedCategoryID) {
-      self.selectedCategoryID = store.draft.categories.first?.id
-    }
-  }
-
-  private func selectInitialCategoryIfNeeded() {
-    guard !store.draft.categories.isEmpty else {
-      selectedCategoryID = nil
-      return
-    }
-
-    if selectedCategoryID == nil
-      || !store.draft.categories.contains(where: { $0.id == selectedCategoryID })
-    {
-      selectedCategoryID = store.draft.categories.first?.id
-    }
-  }
-
-  private func validationSummaryColor(for issues: [HoldingsDraftIssue]) -> Color {
-    issues.contains(where: \.blocksSaving) ? Color.appError : Color.appWarning
   }
 }
