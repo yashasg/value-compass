@@ -123,6 +123,13 @@ nutrition label must be updated together, and a Privacy Policy update
   This manifest only describes the **app-side** declaration; the
   processor-side accountability gate is enforced via the TestFlight
   readiness checklist (#391).
+- **Coordinated vulnerability disclosure intake** — the GDPR Art. 32(1)(d)
+  organizational-measure record (intake channel, scope, response SLAs,
+  and safe harbor for researchers who find a flaw in the
+  `X-Device-UUID` or financial-info flows described above) lives in
+  [`/SECURITY.md`](../../SECURITY.md) (issue #385). This manifest
+  declares **what is collected**; `SECURITY.md` declares **how to
+  report a flaw in the collection or transmission machinery**.
 - **Per-data-category retention windows** — `PrivacyInfo.xcprivacy`
   does not carry a retention-period field, but the App Store Connect
   *App Privacy → Data Retention* answer set for every entry above must
