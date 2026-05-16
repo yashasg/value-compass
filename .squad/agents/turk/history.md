@@ -221,3 +221,62 @@ Off-HEAD merges accumulate when the local worktree's `main` lags origin between 
 Pipeline of 3 deferred post-merge audits (PR #509, #512, #507) — all stalled on local HEAD advance. Watchlist intact. No file requests.
 
 (end Turk cycle #42)
+
+---
+
+## Cycle #43 — 2026-05-16T01:40:16Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `54d9df5` (`aso(frank): cycle #42 — full 6-peer probe restored ...`).
+**Window:** `1662b32..54d9df5` (Turk cycle #42 anchor → HEAD) per orchestrator spawn instructions.
+
+### Window scan — HISTORY-ONLY (6 commits, 0 code delta)
+`git --no-pager log --oneline 1662b32..54d9df5`:
+- `54d9df5` aso(frank): cycle #42 history
+- `5e58594` research(saul): cycle #42 history
+- `5f7e774` compliance(reuben): cycle #42 history
+- `4eba7dd` chore(yen): cycle #42 history
+- `5dd6585` chore(turk): cycle #42 history
+- `0928cf8` chore(nagel): cycle #42 history
+
+`git --no-pager diff --stat 1662b32..54d9df5` → 7 files, 677 insertions — **all** under `.squad/agents/{frank,nagel,reuben,saul,turk,yen}/`. Zero touches to `app/Sources/**`, `Info.plist`, `Assets.xcassets`, design-system primitives, or any HIG surface. No code-side regression possible by construction.
+
+### Off-HEAD deferred audits — still stalled
+All 3 carry-forwards from cycle #42 remain not-yet-ancestors of HEAD:
+- `f5cba107` (PR #509, ContributionResultView 'Saved' badge → #328) — `git merge-base --is-ancestor` = NO.
+- `ec23e07` (PR #512, `.contextMenu` mirror → #341) — NO.
+- `2e69ed0` (PR #507, OnboardingView motion → #360) — NO.
+
+Local worktree still lags origin/main on these three merges. Audits remain deferred; no line-number citations possible against a tree that's not in HEAD.
+
+### Four-issue regression watchlist — 4/4 PASS at HEAD `54d9df5`
+
+| # | Concern | HIG section | Evidence (file:line at HEAD 54d9df5) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts (destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog("Erase All My Data?",`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog("Discard Changes?",` | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheet compact context) | `app/Sources/Features/PortfolioEditorView.swift:50` `.navigationBarTitleDisplayMode(.inline)`; `app/Sources/Features/HoldingsEditorView.swift:491` `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width) | `app/Sources/Features/ContributionResultView.swift:43` `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` | **PASS** |
+| #471 | Settings → Erase routes in-process (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100–101` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` + `MainFeature.path` element variant; `app/Sources/App/AppFeature/MainFeature.swift:25–27` doc-confirms compact toolbar path-scoping, `:168` `state.path.append(.settings(...))` for iPhone entry point; `app/Sources/App/AppFeature/SettingsFeature.swift:392` `return .send(.delegate(.dataErased))` after Keychain wipe | **PASS** |
+
+### Adjacent HIG-surface regression scan — N/A in window
+Window diff touches only `.squad/agents/**/history.md`. No `.confirmationDialog`, `.alert`, `.sheet`, `.fullScreenCover`, `.navigationBarTitleDisplayMode`, `.toolbar`, SF Symbol substitution, app-icon variant, launch screen change, or `Info.plist` mutation introduced. No new HIG surface to scan.
+
+### Duplicate-check evidence (mandatory pre-filing audit, performed even though no candidate)
+- `gh issue list --label "squad:turk" --state open --limit 200 --json number,title` → 13 open: #222, #231, #234, #259, #291, #300, #319, #320, #323, #358, #373, #376, #403.
+- `gh issue list --label "squad:turk" --state closed --limit 20` → most-recent closures #486 (2026-05-15T23:05:56Z), #480, #471, #462, #459, #426, #414, #389, #361, #360. No new closures since cycle #42 close (#341/#360 already booked there).
+- Roster delta vs cycle #42 close: **0** (13 → 13).
+
+### Filing decision: **NO_OP**
+- Rationale: window is pure cross-specialist history append; zero `app/Sources/**` delta; watchlist 4/4 PASS; roster unchanged; three deferred post-merge audits still stalled on local HEAD lag. No candidate finding → no `gh issue create` and no targeted dedup queries needed beyond the standing roster sweep.
+
+### Carry-forward to cycle #44
+1. **Three deferred post-merge audits** (all still off-HEAD): PR #509 (`f5cba107` → #328 'Saved' badge), PR #512 (`ec23e07` → context-menu mirror), PR #507 (`2e69ed0` → onboarding motion). Re-check ancestry at top of #44; perform whichever has entered HEAD.
+2. Watchlist remains 4 items (#389, #361, #426, #471) — all PASSing. Continue per-cycle.
+3. Deferred raster `AppLogoMark` decision: still Tess/Basher-owned.
+
+### New learning
+Three consecutive cycles (#41 history-only-window, #42 empty-window, #43 history-only-window) have produced NO_OP for Turk while origin/main has accepted at least 3 HIG-surface PRs. The local-worktree-lag pattern is now a stable signal, not noise: orchestrator-driven cycles increment faster than the worktree pulls. Tracking deferred audits by merge-oid (rather than issue number) ensures audits resume the moment HEAD advances, without needing a fresh dedup pass.
+
+### Forward watch / handoff
+Roster 13 stable. Three deferred PR audits queued. Watchlist 4/4 PASS. No file requests, no engineer routing.
+
+(end Turk cycle #43)
