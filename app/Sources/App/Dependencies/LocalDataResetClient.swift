@@ -10,9 +10,10 @@ import SwiftData
 /// portfolios, holdings, snapshots, contribution history, and per-device
 /// app settings — while intentionally leaving the shared market-data cache
 /// (`MarketDataBar`, `TickerMetadata`) untouched. Market-data rows are
-/// keyed by ticker, not by `X-Device-UUID`, so they are not personal data
-/// of the caller (matches the backend's `StockCache` carve-out documented
-/// in `docs/legal/data-subject-rights.md` "Erasure — full account").
+/// keyed by ticker, not by the per-install `device_uuid`, so they are not
+/// personal data of the caller (matches the backend's `StockCache`
+/// carve-out documented in `docs/legal/data-subject-rights.md` "Erasure —
+/// full account").
 ///
 /// Reducers consume this via `@Dependency(\.localDataReset)`; the
 /// macro-synthesized `testValue` fails any unstubbed call so reducer tests

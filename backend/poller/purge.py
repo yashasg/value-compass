@@ -12,8 +12,10 @@ Distinct from user-triggered erasure (GDPR Art. 17, tracked in #329):
 
 * This sweep enforces **storage limitation** (Art. 5(1)(e)) — it runs
   whether or not a data subject ever asks.
-* The Art. 17 path will use a different entry point (a request that
-  includes the ``X-Device-UUID``); the two paths share no transactional
+* The Art. 17 path will use a different entry point (a ``DELETE
+  /portfolio?device_uuid=...`` request that names the persisted
+  identifier on the declared ``device_uuid`` query-parameter surface
+  per the OpenAPI contract); the two paths share no transactional
   state and never race because both ultimately resolve to
   ``DELETE FROM portfolios WHERE id = ...`` under SQLAlchemy's cascade.
 

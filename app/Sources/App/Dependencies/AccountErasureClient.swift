@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
 
-/// Outcome of issuing `DELETE /portfolio?device_uuid=<X-Device-UUID>` for the
+/// Outcome of issuing `DELETE /portfolio?device_uuid=<device-uuid>` for the
 /// "Erase All My Data" flow (issue #329).
 ///
 /// The backend honors GDPR Art. 17 / CCPA §1798.105 by removing the calling
@@ -33,10 +33,12 @@ enum AccountErasureOutcome: Equatable, Sendable {
 ///
 /// Kept separate from `AccountErasureClient.liveValue` so reducer tests can
 /// assert on the URL/method/query-string the request would carry without
-/// spinning up a real `URLSession`. The `X-Device-UUID` and `X-App-Attest`
-/// headers are attached by the shared `APIClient.send` transport at dispatch
-/// time — this builder only owns the path, the method, and the
-/// `device_uuid` query parameter that the backend uses as its row selector.
+/// spinning up a real `URLSession`. The `X-App-Attest` header is attached
+/// by the shared `APIClient.send` transport at dispatch time — this builder
+/// owns the path, the method, and the `device_uuid` query parameter that
+/// the backend uses as its row selector (which is also the wire conveyance
+/// of device identity per the OpenAPI contract; the historical
+/// `X-Device-UUID` request header was removed in #348).
 enum AccountErasureRequestFactory {
   /// Path component that the backend mounts the `DELETE /portfolio` handler
   /// on. Pinned here so a regression that renames it surfaces as a test
@@ -72,13 +74,15 @@ enum AccountErasureRequestFactory {
 /// endpoint (`DELETE /portfolio`) for issue #329.
 ///
 /// The live implementation routes through `@Dependency(\.apiClient)` so the
-/// standard `X-Device-UUID` / `X-App-Attest` headers and forced-update
-/// observation continue to apply. Reducers consume this via
-/// `@Dependency(\.accountErasure)`; the macro-synthesized `testValue` fails
-/// any unstubbed call so reducer tests have to inject the outcome they want.
+/// standard `X-App-Attest` header and forced-update observation continue to
+/// apply. Device identity rides in the `device_uuid` query parameter (the
+/// declared OpenAPI surface), not a request header. Reducers consume this
+/// via `@Dependency(\.accountErasure)`; the macro-synthesized `testValue`
+/// fails any unstubbed call so reducer tests have to inject the outcome
+/// they want.
 @DependencyClient
 struct AccountErasureClient: Sendable {
-  /// Issues `DELETE /portfolio?device_uuid=<X-Device-UUID>` and maps the
+  /// Issues `DELETE /portfolio?device_uuid=<device-uuid>` and maps the
   /// HTTP outcome to an `AccountErasureOutcome`. Never throws — transport
   /// errors are funneled into `.networkUnavailable`.
   var eraseAccount: @Sendable () async -> AccountErasureOutcome = {
