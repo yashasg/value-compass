@@ -112,3 +112,55 @@ Value Compass is a **local-first iOS/iPadOS app** that helps a single user pract
 - **Forced-update screen (`ForcedUpdateView`/`ForcedUpdateFeature`):** Not in any v1 issue I can see — what triggers it, and how is it presented? If it's a hard gate, full-screen cover is correct; if it's advisory, an alert/banner. Need clarification from Danny on intended UX.
 - **Charts color semantics in dark mode (#132):** `appPositive` / `appNegative` resolve to lighter pastel tones in dark mode for contrast — need Tess to confirm those are the chart series colors (vs. system green/red) and that chart legends carry text labels (HIG: "Don't rely on color alone").
 - **TCA migration impact on review cadence (#145):** When child issues land, every Feature file in `app/Sources/App/AppFeature/**` will churn. Coordinate with Danny on whether HIG re-audit is per-feature or one sweep at the end of the migration.
+
+---
+
+## Cycle #41 — 2026-05-16T00:47:17Z (Specialist Parallel Loop)
+
+**Window:** `98424f0..9ba571e` (prior anchor → HEAD at cycle start). Commits in window: 2 — `9e344ad` (saul cycle #40 history), `9ba571e` (nagel cycle #40 history). Both are `.squad/agents/*/history.md` appends only.
+
+### Window scan — CLEAN
+- `git --no-pager diff --stat 98424f0..HEAD` → 3 files, all under `.squad/agents/{frank,nagel,saul}/`. **Zero touches** under `app/` or `docs/`.
+- `git --no-pager diff 98424f0..HEAD -- app/ docs/` → empty (0 bytes).
+- Therefore no new modality, navigation, toolbar, SF Symbol, app-icon, or `Info.plist` delta in window.
+
+### Roster reconciliation — 16 → 15 (delta −1)
+- Cycle #39 close: 16 open `squad:turk`. Current `gh issue list --label squad:turk --state open` → 15 open.
+- **Closed in window:** **#328** `hig(alerts): ContributionResultView uses a modal alert to confirm a successful save`.
+  - Closed at 2026-05-16T00:45:46Z by **PR #509** (`hig(alerts): replace ContributionResultView success modal with inline 'Saved' badge + AT announcement`), merged 00:45:45Z onto `main` (merge commit `f5cba107`).
+  - Note: PR #509 merge commit is **not yet fetched** into this worktree's main (still at 9ba571e); the closure is visible on GitHub but the new "inline Saved badge" code is not yet in window-diff scope. Will re-audit the post-#509 code path in the next cycle once main advances.
+- #459 (launch screen) was already attributed to cycle #39 closure (closed 00:03:53Z, pre-cycle-39-log timestamp 00:22:37Z) — not double-counted here.
+- Remaining 15 open: #222, #231, #234, #259, #291, #300, #319, #320, #323, #341, #358, #360, #373, #376, #403.
+
+### Four-issue regression watchlist — 4/4 PASS
+
+| # | Concern | HIG section | Evidence (file:line at HEAD 9ba571e) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts ("use alerts sparingly"; destructive confirmations use action sheets / confirmation dialogs) | `app/Sources/Features/ContributionHistoryView.swift:92` `.confirmationDialog(…)`; reducer plumb at `PortfolioListFeature.swift:28` and `SettingsFeature.swift:78` doc-comments | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheets present compact context; inline title preserves vertical space) | `app/Sources/Features/PortfolioEditorView.swift:50` + `HoldingsEditorView.swift:491` both `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width on wide canvases) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; consumed at `ContributionResultView.swift:43` + `PortfolioDetailView.swift:71` via `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` | **PASS** |
+| #471 | Settings → Erase All My Data reroutes **in-process** (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-106` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` and reroutes to welcome; `SettingsAccessibility.swift:39-42` documents post-#471/PR #475 swap of force-quit copy; `SettingsFeature.swift:126-129` doc-comment confirms `dataErased` programmatic dispatch | **PASS** |
+
+### Adjacent-surface scan — clean (as expected for history-only window)
+- `git --no-pager diff 98424f0..HEAD -- app/` → empty. No new `.confirmationDialog`, `.alert`, `.sheet`, `.fullScreenCover`, `.navigationBarTitleDisplayMode`, `.toolbar`, SF Symbol substitution, app-icon variant, or `Info.plist` mutation introduced in window. Verified by inspection: window diff touches only `.squad/agents/{frank,nagel,saul}/`.
+- Total `.confirmationDialog | .alert( | .sheet( | .fullScreenCover | navigationBarTitleDisplayMode` occurrences across `app/Sources` at HEAD = 21 — same set audited in cycle #39; no delta.
+
+### Deferred raster `AppLogoMark` — still OUT-OF-LANE
+- `AppLogoMark` remains a SwiftUI gradient vector at `app/Sources/App/AppBrand.swift:7` (consumed at line 84 by `AppBrandHeader`); no migration to raster asset.
+- Issue search `gh issue list --state all --search "AppLogoMark in:title,body"` returns only #346 (closed, Yen lane — smart-invert), #326 (closed, Yen lane — brand-header subtitle), #366 (open, Yen lane — increase-contrast), #459 (closed, Turk lane — launch screen). **No open issue carrying the deferred raster decision exists on the Turk lane** — correctly sitting with Tess (design system) / Basher (asset catalog). Not filing under `squad:turk`.
+
+### Duplicate-check — N/A (NO_OP cycle)
+- No new finding to file (window is history-only, watchlist 4/4 PASS, adjacent scan clean). Duplicate-check normally required only before filing; documented here for completeness:
+  - Watchlist coverage probed with `grep -RIn` in `app/Sources` for `confirmationDialog`, `navigationBarTitleDisplayMode`, `readable`, `Erase|forceQuit|relaunch|reopen` — all evidence still present.
+  - AppLogoMark probe via `gh issue list --search "AppLogoMark in:title,body"` confirmed no Turk-lane duplicate would be needed even hypothetically.
+
+### Filing decision: **NO_OP**
+- Rationale: window diff is empty for `app/` and `docs/`; the only behavioral movement (#328 → PR #509) closed cleanly with no Turk-lane regression and the merge commit hasn't yet entered this worktree's main, so any audit of the post-PR-#509 inline-saved-badge surface is deferred to the next cycle when HEAD advances past `f5cba107`. No new HIG finding warranted.
+
+### Carry-forward to cycle #42
+1. Re-audit `ContributionResultView` post-PR-#509: confirm the "Saved" inline badge is `Label`-shaped (icon+text, not color-only), respects Dynamic Type, and is announced via `AccessibilityNotification.Announcement` (co-sign with Yen) — HIG → Feedback ("communicate state changes without interrupting").
+2. Watchlist now 4 items — all PASSing as of cycle #41. Continue per-cycle.
+3. Deferred raster `AppLogoMark` decision: still Tess/Basher-owned; revisit only if they file a design-system issue tagging `squad:turk`.
+
+### New learning
+When a PR merges on GitHub between orchestrator anchor and cycle spawn but the merge commit hasn't been pulled into the local worktree, `gh issue list` will report the issue as closed while `git diff` against the orchestrator anchor will show no code delta. Reconcile both views explicitly — count the closure against the GitHub-side roster, but defer code-side regression audit to the next cycle when the merge commit enters HEAD.
