@@ -308,6 +308,17 @@ statutory window (30 days under GDPR Art. 12(3); 45 days under CCPA
 ask only for the `X-Device-UUID` displayed under Settings → About →
 Device ID — we do not request government identification.
 
+When we honor a request under any of the rights above, our backend
+records a structured log entry (redacted to the last-4 hex characters
+of the device identifier, never the raw value) so we can demonstrate
+to a supervisory authority on inspection that the request was honored
+(GDPR Art. 5(2) accountability; CCPA Regulations 11 CCR §7102(a)
+records-of-requests-honored). The log entry never contains the
+rectified or deleted personal-data values themselves. The retention
+window for this record is documented in
+[`docs/legal/data-retention.md`](data-retention.md) under the
+"DSR-fulfillment audit log" row.
+
 You have the right to lodge a complaint with your data protection
 authority. EU/EEA users may contact the supervisory authority in their
 member state. UK users may contact the Information Commissioner's

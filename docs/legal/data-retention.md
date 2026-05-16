@@ -55,7 +55,7 @@ from here.
 | `portfolios.device_uuid` + cascaded `holdings` | Device ID + Other Financial Info + Other User Content | **540 days of inactivity** (≈18 months) | `backend/poller/purge.py` daily APScheduler job (see [Database rows](#database-rows)) |
 | `stock_cache` | None (ticker-keyed; not personal data) | Indefinite — until the ticker is delisted or the row is manually evicted | Manual; no scheduled purge required |
 | Application logs (`vca.api`, `vca.poller`, `vca.poller.purge`, `vca.apns`) | Redacted device-id suffix only (last-4 hex characters); no raw UUID | **30 days** | `backend/infra/systemd/journald-vca-retention.conf` (`MaxRetentionSec=30day`) |
-| DSR-fulfillment audit log (`vca.api` `event=dsr.*` lines — GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a) records-of-requests-honored) | Redacted device-id suffix only (last-4 hex characters); operation event name; affected-row count; portfolio_id | **30 days** (journald floor — inherited from Application logs row) | `backend/infra/systemd/journald-vca-retention.conf`; `backend/common/logging_utils.py` `redact_device_uuid` enforces the suffix-only surface |
+| DSR-fulfillment audit log (`vca.api` `event=dsr.*` lines — GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a) records-of-requests-honored) | Redacted device-id suffix only (last-4 hex characters); operation event name; affected-row count or rectified-field list; portfolio_id; per-handler key (ticker, fields-changed) | **30 days** (journald floor — inherited from Application logs row) | `backend/infra/systemd/journald-vca-retention.conf`; `backend/common/logging_utils.py` `redact_device_uuid` enforces the suffix-only surface |
 | Cloudflare access logs | Raw `X-Device-UUID` header + request URL | **30 days** (Cloudflare plan default ≤ 30 days at submission time; tighter overrides via Logpush if the active plan exceeds 30 days) | Cloudflare retention configuration (verified at deploy and at every plan change) |
 
 ### Database rows
@@ -98,16 +98,23 @@ a single bug-report device but far too few to re-identify across the
 user base.
 
 The DSR-fulfillment audit log surface
-(`event=dsr.export.portfolio` and the sibling write-side
-`event=dsr.*` lines tracked under #457) inherits the same redaction
-floor from `redact_device_uuid` and the same 30-day journald window:
-they exist to demonstrate that the controller honored a data-subject
-request (GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR
-§7102(a) records-of-requests-honored), not to widen the application-log
-surface. If counsel determines the CCPA §7102(a) "24 months" record is
-required as a persisted store, that becomes a separate retention row
-(its own audit-only table or S3/R2 sink) and must be added here at the
-same time.
+(`event=dsr.export.portfolio` for the read-side data-portability
+trail; `event=dsr.rectification.portfolio`,
+`event=dsr.rectification.holding`, `event=dsr.row_delete.holding`,
+`event=dsr.erasure.full_account` for the four write-side handlers under
+#457) inherits the same redaction floor from `redact_device_uuid` and
+the same 30-day journald window: they exist to demonstrate that the
+controller honored a data-subject request (GDPR Art. 5(2)
+accountability + CCPA Regulations 11 CCR §7102(a)
+records-of-requests-honored), not to widen the application-log
+surface. Every line is emitted **after** the commit succeeds so a
+failed transaction never produces a misleading "honored" record, and
+the personal-data values themselves (rectified weight, monthly budget,
+…) stay in the database — the system of record — rather than being
+re-quoted into journald. If counsel determines the CCPA §7102(a) "24
+months" record is required as a persisted store, that becomes a
+separate retention row (its own audit-only table or S3/R2 sink) and
+must be added here at the same time.
 
 The 30-day journald retention floor is enforced by
 `backend/infra/systemd/journald-vca-retention.conf`. Deploy automation

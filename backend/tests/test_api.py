@@ -1871,3 +1871,368 @@ def test_delete_portfolio_documented_in_openapi(client: TestClient) -> None:
     parameter = _x_app_attest_parameter(operation)
     assert parameter["required"] is True
 
+
+# ---------------------------------------------------------------------------
+# DSR write-side audit log (issue #457) — GDPR Art. 5(2) accountability +
+# CCPA Regulations 11 CCR §7102(a) records-of-requests-honored for the
+# four PATCH/DELETE handlers (write-side counterpart to the
+# `GET /portfolio/export` audit-log surface in #445).
+#
+# Each handler ships with three regression guards mirroring the export
+# surface so the shared ``redact_device_uuid`` floor and the
+# "honored-requests only" boundary stay locked in:
+#
+#   1. on-success emission with the structured field set
+#   2. redaction floor (raw UUID never lands in a ``vca.api`` record)
+#   3. 404 / failure path emits no audit line
+#
+# Field shape parity with ``dsr.export.portfolio`` is intentional so a
+# single grep (``event=dsr.``) yields the entire records-of-requests
+# surface for a journald window.
+# ---------------------------------------------------------------------------
+def _audit_records_for(
+    caplog: pytest.LogCaptureFixture, event: str
+) -> list[str]:
+    """Return ``vca.api`` log messages matching a structured DSR event."""
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "vca.api"
+        and f"event={event}" in record.getMessage()
+    ]
+
+
+def test_patch_portfolio_emits_audit_log_on_success(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Successful rectification emits ``event=dsr.rectification.portfolio``."""
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, name="Old", monthly_budget=Decimal("100"), ma_window=50
+    )
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio",
+            params={"device_uuid": str(device_uuid)},
+            json={"name": "New", "ma_window": 200},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    messages = _audit_records_for(caplog, "dsr.rectification.portfolio")
+    assert len(messages) == 1, (
+        "Exactly one dsr.rectification.portfolio audit line must be "
+        "emitted on the 200 success path (GDPR Art. 5(2) accountability)."
+    )
+    message = messages[0]
+    assert f"device_uuid_suffix=…{str(device_uuid)[-4:]}" in message
+    assert f"portfolio_id={portfolio.id}" in message
+    # Field list must be sorted + comma-joined so an inspector can grep.
+    assert "fields=ma_window,name" in message
+
+
+def test_patch_portfolio_audit_log_redacts_device_uuid(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The raw ``device_uuid`` must never appear in any ``vca.api`` record."""
+    device_uuid, _ = _seed_portfolio(db_session)
+    raw_uuid = str(device_uuid)
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio",
+            params={"device_uuid": raw_uuid},
+            json={"name": "Redacted"},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert raw_uuid not in record.getMessage(), (
+            "Raw device_uuid must not appear in any vca.api log line "
+            "(see docs/legal/data-retention.md Application logs row)."
+        )
+
+
+def test_patch_portfolio_does_not_emit_audit_log_on_404(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A 404 rectification leaves no records-of-requests trail."""
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio",
+            params={"device_uuid": str(uuid.uuid4())},
+            json={"name": "Ghost"},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 404
+    assert _audit_records_for(caplog, "dsr.rectification.portfolio") == [], (
+        "No dsr.rectification.portfolio audit line should be emitted on a "
+        "404 — the request was not honored."
+    )
+
+
+def test_patch_holding_emits_audit_log_on_success(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Successful holding correction emits ``event=dsr.rectification.holding``."""
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": str(device_uuid)},
+            json={"weight": "0.6"},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    messages = _audit_records_for(caplog, "dsr.rectification.holding")
+    assert len(messages) == 1
+    message = messages[0]
+    assert f"device_uuid_suffix=…{str(device_uuid)[-4:]}" in message
+    assert f"portfolio_id={portfolio.id}" in message
+    assert "ticker=AAPL" in message
+    # The corrected weight is the personal data being rectified; logging
+    # it would re-quote the rectified field into journald. Regression
+    # guard for the "system of record is the DB, not the log" boundary
+    # in docs/legal/data-retention.md.
+    assert "0.6" not in message
+
+
+def test_patch_holding_audit_log_redacts_device_uuid(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The raw ``device_uuid`` must never appear in any ``vca.api`` record."""
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    raw_uuid = str(device_uuid)
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": raw_uuid},
+            json={"weight": "0.7"},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert raw_uuid not in record.getMessage(), (
+            "Raw device_uuid must not appear in any vca.api log line "
+            "(see docs/legal/data-retention.md Application logs row)."
+        )
+
+
+def test_patch_holding_does_not_emit_audit_log_on_404(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A 404 (unknown ticker) rectification leaves no audit trail."""
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.patch(
+            "/portfolio/holdings/MSFT",
+            params={"device_uuid": str(device_uuid)},
+            json={"weight": "0.5"},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 404
+    assert _audit_records_for(caplog, "dsr.rectification.holding") == []
+
+
+def test_delete_holding_emits_audit_log_on_success(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Successful row-scoped delete emits ``event=dsr.row_delete.holding``.
+
+    The event name is deliberately distinct from
+    ``dsr.erasure.full_account`` (``DELETE /portfolio``) so an inspector
+    can separate row-scoped ticker-typo corrections (Art. 16 path) from
+    full-account erasures (Art. 17 path) in the same journald window.
+    """
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": str(device_uuid)},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 204
+
+    messages = _audit_records_for(caplog, "dsr.row_delete.holding")
+    assert len(messages) == 1
+    message = messages[0]
+    assert f"device_uuid_suffix=…{str(device_uuid)[-4:]}" in message
+    assert f"portfolio_id={portfolio.id}" in message
+    assert "ticker=AAPL" in message
+    # The row_delete event must NOT also stamp the account-level
+    # erasure event — they describe distinct DSR scopes.
+    assert _audit_records_for(caplog, "dsr.erasure.full_account") == []
+
+
+def test_delete_holding_audit_log_redacts_device_uuid(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The raw ``device_uuid`` must never appear in any ``vca.api`` record."""
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    raw_uuid = str(device_uuid)
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio/holdings/AAPL",
+            params={"device_uuid": raw_uuid},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 204
+
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert raw_uuid not in record.getMessage(), (
+            "Raw device_uuid must not appear in any vca.api log line "
+            "(see docs/legal/data-retention.md Application logs row)."
+        )
+
+
+def test_delete_holding_does_not_emit_audit_log_on_404(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A 404 (unknown ticker) delete leaves no audit trail."""
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio/holdings/MSFT",
+            params={"device_uuid": str(device_uuid)},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 404
+    assert _audit_records_for(caplog, "dsr.row_delete.holding") == []
+
+
+def test_delete_portfolio_emits_audit_log_on_success(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Successful full-account erasure emits ``event=dsr.erasure.full_account``.
+
+    ``holdings_count`` captures cascaded ``Holding`` rows so an
+    inspector can correlate the erasure scope against a complainant's
+    recollection without the controller having to re-quote the deleted
+    personal data. The snapshot is taken **before** the ORM-level
+    delete because the relationship cascade detaches the holdings from
+    the session at commit.
+    """
+    device_uuid, portfolio = _seed_portfolio(
+        db_session,
+        holdings=(
+            ("AAPL", Decimal("0.3")),
+            ("MSFT", Decimal("0.4")),
+            ("VOO", Decimal("0.3")),
+        ),
+    )
+    portfolio_id = portfolio.id
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio",
+            params={"device_uuid": str(device_uuid)},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 204
+
+    messages = _audit_records_for(caplog, "dsr.erasure.full_account")
+    assert len(messages) == 1
+    message = messages[0]
+    assert f"device_uuid_suffix=…{str(device_uuid)[-4:]}" in message
+    assert f"portfolio_id={portfolio_id}" in message
+    assert "holdings_count=3" in message
+
+
+def test_delete_portfolio_audit_log_redacts_device_uuid(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The raw ``device_uuid`` must never appear in any ``vca.api`` record.
+
+    Regression guard against the "system of record is the DB, not the
+    log" boundary specifically at the highest-stakes DSR path — an
+    Art. 17 full-account erasure that re-quoted the raw identifier into
+    journald would re-open the surface that issue #339 closed.
+    """
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+    raw_uuid = str(device_uuid)
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio",
+            params={"device_uuid": raw_uuid},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 204
+
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert raw_uuid not in record.getMessage(), (
+            "Raw device_uuid must not appear in any vca.api log line "
+            "(see docs/legal/data-retention.md Application logs row)."
+        )
+
+
+def test_delete_portfolio_does_not_emit_audit_log_on_404(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A 404 full-account erasure leaves no records-of-requests trail.
+
+    The records-of-requests surface tracks *honored* requests only; a
+    404 was not honored (no rows changed hands), so an audit line would
+    mislead a CCPA §7102(a) inspector by overstating the controller's
+    activity.
+    """
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.delete(
+            "/portfolio",
+            params={"device_uuid": str(uuid.uuid4())},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 404
+    assert _audit_records_for(caplog, "dsr.erasure.full_account") == []
+
