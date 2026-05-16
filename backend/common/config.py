@@ -21,8 +21,15 @@ SCHEMA_VERSION: int = 1
 # every response.
 MIN_APP_VERSION: str = os.getenv("VCA_MIN_APP_VERSION", "1.0.0")
 
-# ``Cache-Control: max-age=`` value (seconds). Cloudflare honours this on
-# the edge — see backend/api/README.md.
+# ``Cache-Control: max-age=`` value (seconds) for the one route whose
+# success response is shared and cacheable on the edge: ``GET
+# /schema/version``. This is the only operation whose ``Cache-Control``
+# directive references this constant — the per-(method, path) policy in
+# ``backend/api/main.py::_CACHE_POLICY`` decides every other surface.
+# Personalised reads (`/portfolio/data`, `/portfolio/export`), writes,
+# liveness, and every error envelope use ``no-store`` so transient 5xx
+# are never amplified into hour-long URLCache/Cloudflare blackouts (see
+# issue #416 and backend/api/README.md).
 CACHE_MAX_AGE: int = 3600
 
 # ---------------------------------------------------------------------------
