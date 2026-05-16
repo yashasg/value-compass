@@ -336,3 +336,142 @@ The cycle-#44 forward-watch §"Out-of-lane observation" flagged that branch `54d
 **Roster snapshot:** 7 open Yen-lane issues at cycle close = `{#239, #260, #299, #318, #366, #394, #415}`.
 
 (end Yen cycle #46)
+
+## Cycle #47 — SKIPPED (acknowledged-gap resumption)
+
+I did not run cycle #47. Other specialists ran it at HEAD `b4b961e` (`7d63935` Nagel, `bb56ca5` Reuben, `4e9654b` Turk; Saul + Frank left uncommitted drafts in working tree — not my concern). Per the cycle-#48 spawn prompt I am applying the same acknowledged-gap resumption pattern Saul used when she skipped #46: no #47 entry is fabricated, and the cycle-#48 audit window is widened to `baa7bb0..67434c2` (cycle-#46 close → cycle-#48 HEAD) so nothing falls between cycles. The 3-cycle absence from the queue is documented here so future cycles can audit the gap without ambiguity.
+
+## Cycle #48 — 2026-05-16T02:52:00Z
+
+**Window chosen:** `baa7bb0..67434c2` (cycle-#46 close → current `origin/main` HEAD; widened over the prompt's narrow `0baf956..HEAD` to absorb my skipped cycle #47 — same pattern Saul applied on her #46 skip). `git --no-pager log baa7bb0..HEAD --oneline` returns **15 commits**: 9 specialist-history appends (cycle #45 retro + cycle #46 + cycle #47 trio), 3 PRODUCT commits, plus their merge commits. The 3 product commits are all on my watch:
+
+| Commit | PR | Closes | Lane impact |
+|---|---|---:|---|
+| `33ef80a` | #515 | #260 | **Yen** — `.isModal` on `PortfolioEditor` + `HoldingsEditor` sheet roots |
+| `ab0fb33` | #517 | #415 | **Yen DIRECT** — SF Symbol pairing on 7 Settings + PortfolioEditor status `Text`s (SC 1.4.1) |
+| `67434c2` | #519 | #358 | **Turk** primary — `ContributionResultView` Save + History hoisted into `.toolbar`; Yen sweeps for a11y side-effects |
+
+**Mainline ancestry check (per cycles #42/#44/#45/#46 forward-watch policy):** `git merge-base --is-ancestor baa7bb0 67434c2` → **YES** (cycle-#46 close is ancestor; safe to compare against my own prior line citations). `git merge-base --is-ancestor 54d9df5 67434c2` → **NO** (the cycle-#42 parallel branch is **still** not an ancestor — see §"Parallel-history divergence" below; that's now a 4th-cycle observation but with a major status update). Line numbers in this entry are anchored at HEAD `67434c2` on mainline.
+
+**Parallel-history divergence — MATERIAL RESOLUTION:** the two cycle-#46-flagged "stranded" Yen-lane fixes (`a11y(sheets)/#260` and `a11y(use-of-color)/#415`) **landed on mainline this window** as commits `33ef80a` and `ab0fb33`. They are not the same git objects as the parallel-branch commits `398d9ac` and `1b5f50c` (different SHAs, different parents, different PR numbers #515/#517 vs. the branch's PR), so the resolution mechanism was a **re-author / cherry-pick**, not a merge of `users/squad/319-...`. The parallel branch is still NOT an ancestor of `origin/main`, but the work it contained has been re-landed by other paths. Cycle-#46 forward-watch §1 prediction (option (b) "cherry-pick the 5 commits selectively") is the closest match to what happened. The remaining unmerged commits on the parallel branch are `7aed47d` (#319 confirmationDialog — Turk-lane HIG), `a402e31`, `7ff1c34` — none Yen-lane. **The 3-cycle Yen-lane stranded-fix observation is now closed.** Going forward I drop this from the carry-forward set.
+
+**#415 closure validation (the cycle-#48 spawn-prompt direct ask):** PR #517 / commit `ab0fb33` adds `Label(_, systemImage:)` to **6 sites in `SettingsView.swift` + 1 site in `PortfolioEditorView.swift` = 7 total**, matching the #415 issue body's 7-site enumeration:
+
+| # | File:line | Status case | Pair (color → glyph) |
+|---:|---|---|---|
+| 1 | `SettingsView.swift:135` (Label) → `:140` (color) | `apiKeyLoadError != nil` | `appNegative` → `SettingsAccessibility.apiKeyLoadErrorGlyph` = `"exclamationmark.triangle.fill"` |
+| 2 | `SettingsView.swift:218` → `:223` | `apiKeyStatus == .storedButLastCheckFailed` | `appNegative` → `apiKeyStoredButLastCheckFailedGlyph` = `"exclamationmark.triangle"` |
+| 3 | `SettingsView.swift:317` → `:324` | `apiKeyRequestStatus == .rejected` | `appNegative` → `apiKeyRequestStatusGlyph(for: .rejected)` = `"xmark.octagon"` |
+| 4 | `SettingsView.swift:330` → `:337` | `apiKeyRequestStatus == .networkError` | `appNegative` → `apiKeyRequestStatusGlyph(for: .networkError)` = `"wifi.exclamationmark"` |
+| 5 | `SettingsView.swift:341` → `:348` | `apiKeyRequestStatus == .storeError` | `appNegative` → `apiKeyRequestStatusGlyph(for: .storeError)` = `"exclamationmark.triangle.fill"` |
+| 6 | `SettingsView.swift:354` → `:361` | `apiKeyRequestStatus == .savedSuccessfully` | `appPositive` → `apiKeyRequestStatusGlyph(for: .savedSuccessfully)` = `"checkmark.circle.fill"` |
+| 7 | `PortfolioEditorView.swift:51` → `:55` | `validationError != nil` | `appError` → `portfolioEditorValidationErrorGlyph` = `"exclamationmark.circle"` |
+
+**SC 1.4.1 audit (does the glyph carry meaning without color in every state — error/warning/success?):**
+- **Error states (5):** all paired with `exclamationmark.triangle*` / `xmark.octagon` / `wifi.exclamationmark` / `exclamationmark.circle` — universally-recognised SF Symbol error/warning glyphs that read as "this is wrong" without any color information. ✅ PASS.
+- **Warning state (1):** `apiKeyStoredButLastCheckFailedGlyph = "exclamationmark.triangle"` (no `.fill`) — a deliberate visual difference from the `.fill` error glyphs, conveying "caution, not failure" without color. ✅ PASS.
+- **Success state (1):** `apiKeyRequestStatusGlyph(for: .savedSuccessfully) = "checkmark.circle.fill"` — universally-recognised success glyph. ✅ PASS.
+- **Network-specific failure:** `wifi.exclamationmark` is the iOS-system canonical "no connectivity" glyph (used in Control Center, Status Bar, system AirDrop / iCloud sheets) — reads as "your network is the problem" without color. ✅ PASS.
+- **Verdict: SC 1.4.1 holds in every status state.** No state collapses to "indistinguishable from neutral body copy" under Grayscale Color Filter — the glyph + body-text contrast carries the signal.
+
+**Before/after VoiceOver-string equivalence check (does spoken text regress?):** `Label(_, systemImage:)` collapses VoiceOver's spoken output to **just the title text** by default (the icon is auto-treated as accessibility-hidden). So spoken text for every site is *byte-identical* to the pre-#415 bare-`Text` version:
+- "Stored key could not be read: \<loadError>" (`:136`) — was bare `Text` of the same string, now `Label("...same string...", systemImage:)`. VO reads identically. ✅
+- "Saved key may be invalid: \<reason>" (`:219`), "Rejected: \<reason>" (`:318`), "Network error: \<reason>" (`:331`), "Could not save key: \<reason>" (`:342`), "Your API key is valid." (`:355`), `validationError.localizedDescription` (`PortfolioEditorView.swift:52`) — same pattern, byte-identical VO output. ✅
+- The pre-existing SC 4.1.3 announcement plumbing via `SettingsAccessibility.transitionAnnouncement(forAPIKeyRequest:)` at `SettingsAccessibility.swift:104-119` is **untouched** by this PR — the closures still produce the same announcement strings ("API key rejected: \<reason>", "Your API key is valid.", etc.). The #487/#493 invariants hold byte-identically (verified below).
+- The `.accessibilityIdentifier`s for every site are preserved verbatim (`settings.apiKey.loadError`, `settings.apiKey.status.failed`, `settings.apiKey.request.rejected`, `…networkError`, `…storeError`, `…saved`, `portfolio.editor.validationError`) — UI selector tests do not regress.
+
+**#415 closure: VALIDATED. ✅** All 7 sites paired, all 3 status types (error / warning / success) covered, spoken text equivalent, identifiers preserved. The glyph-name contract is pinned by `SettingsAccessibilityTests.swift` per the PR's stated "value-level unit test can pin the symbol-name contract without a UI host" rationale — exactly the pattern I'd asked for as the regression guard.
+
+**#358 (#519) a11y side-effects sweep for `ContributionResultView`:** Turk-lane closure; my sweep concerns whether the toolbar hoist regresses any of the surface's a11y contracts.
+- **VoiceOver label preservation:** `Label("Save", systemImage: "tray.and.arrow.down")` at `ContributionResultView.swift:216` and `Label("History", systemImage: "clock.arrow.circlepath")` at `:234` — VO spoken text byte-identical to the pre-hoist in-body buttons. ✅
+- **Accessibility identifier preservation:** `"contribution.result.save"` at `:226` and `"contribution.result.history"` at `:239` — preserved verbatim. The PR commit message explicitly notes this protects #438 disclaimer-UI test coverage. ✅
+- **Large Content Viewer:** new `.accessibilityShowsLargeContentViewer()` at `:225` (Save) and `:238` (History) — an **improvement** over the pre-hoist state. Toolbar items collapse to icon-only at compact widths; this modifier re-surfaces the Label's title via the iOS long-press tooltip for AX-text-size users who do not use VoiceOver. Matches the post-#401 PortfolioListView convention. ✅
+- **Disabled-state semantics:** `.disabled(store.output.error != nil)` at `:227` (Save) and `:240` (History) — gates both items on the error-free output so the calculation-failure surface (Retry-only branch at `:244–258`) doesn't show actionable buttons that would operate on `store.output.error`. Same gating that existed in-body pre-hoist (the in-body actions HStack didn't render on the error branch). ✅
+- **VoiceOver focus order:** previously VO swipe-right from the last category in `categoryBreakdown` reached Save → History; post-hoist, swipe-right from the last category lands in the `CalculationOutputDisclaimerFooter` (the disclaimer), and the toolbar items live in the navigation bar where VO discovers them via the standard "rotor → containers → navigation bar" path or by reverse-swipe from the title. This is the **HIG-canonical** discovery pattern (every system app — Mail, Notes, Reminders — uses it) and is what #401 / `PortfolioListView` already established for this codebase. No regression. ✅
+- **Tap-target size:** SwiftUI toolbar items render at the HIG 44pt minimum hit area by default — no regression. ✅
+- **No `.accessibilityHint` on the toolbar items:** the in-body versions had no hint either (per the cycle-#386 enumeration of disabled-button-hint sites — neither was in #386's scope). Equivalent. No regression. ⚠️ Forward-watch note: the new `.disabled(store.output.error != nil)` gate, combined with no hint, means a VO user focusing a dimmed Save/History on the error branch hears `"Save, dimmed button"` with no unblock reason — same #386 pattern that closed for the Settings → Save button. **NOT filing this cycle** because (a) the disabled state on the error branch is intentional, not user-recoverable from the button itself (user must Retry), and (b) this is a narrow surface (error-only branch) compared with #386's scope. Carry-forward as cycle-#49 candidate if anyone hits it in the simulator.
+- **Verdict: #358 closure introduces NO a11y regressions on `ContributionResultView`. ✅**
+
+**Hot-surface invariants (mainline HEAD `67434c2`, all PASS by content):**
+
+| Invariant | Mainline reading | Δ vs cycle #46 | Status |
+|---|---|---|---|
+| `SettingsView.swift` `.accessibility[A-Z]` count | **47** (`grep -cE "\.accessibility[A-Z]"`) | 0 (byte-stable) | ✅ |
+| Welcome string 1: `"automatically, exactly like a fresh install."` | `:407` (was `:361`) | string content byte-identical; line shifted +46 by #415's 7 inserted `Label` blocks | ✅ |
+| Welcome string 2: `Text("Returning to the welcome screen…")` | `:433` (was `:387`) | string content byte-identical; line shifted +46 | ✅ |
+| `grep -rn "\.frame(width:" app/Sources/Features/` | **7 hits** — `ForcedUpdateView.swift:23` (96×96, hidden `:25`), `PortfolioDetailView.swift:175,:181,:194,:204` (`@ScaledMetric`-bound via `tickerSymbolColumnWidth=80`/`tickerStatusColumnWidth=88` at `:45-46` — the #228 fix), `MainView.swift:218` (1×1 split-focus anchor), `OnboardingView.swift:228` (decorative 28×28, hidden `:229`) | 0 (byte-stable count + binding policy intact; PortfolioDetailView line numbers shifted +1 because a `@ScaledMetric` declaration moved from `:44-45` to `:45-46` over a comment edit) | ✅ |
+| `grep -rn "minimumScaleFactor(" app/Sources/Features/` | **0 matches** | 0 | ✅ |
+
+All 4 hot-surface invariants PASS by content. **Cycle-#42 "invariant-by-string-content, not transcribed line numbers" policy paid off again** — the 7-Label edit shifted welcome-string lines by +46 and ticker columnWidth declarations by +1, but the contract held on every check because I grep for the canonical string / variable name, not for the line number.
+
+**Watchlist re-validation (7-issue carry-forward roster + #228 regression anchor + new closures #260/#415):**
+
+| Ticket | State | Mainline pin at HEAD `67434c2` | Status |
+|---:|---|---|---|
+| #228 | CLOSED (Dynamic Type reflow) | `@ScaledMetric(relativeTo: .caption)` at `PortfolioDetailView.swift:45-46`; consumed `:175,:181,:194,:204` | ✅ PASS |
+| #239 | OPEN (`appNegative`/`appWarning` identical hex) | No design-token edits in window | ✅ PASS-no-trigger |
+| #260 | **CLOSED THIS WINDOW** (`.sheet()` lacks `.isModal`) | `SheetAccessibility.sheetContentTraits = .isModal` at `SheetAccessibility.swift:50`; attached via `.accessibilityAddTraits(SheetAccessibility.sheetContentTraits)` at `PortfolioListView.swift:116` and `PortfolioDetailView.swift:24`; backed by 4 pin tests in `SheetAccessibilityTests.swift` (equality, contains, non-empty, negative role-trait sweep). Closure validated by content. ✅ | ✅ CLOSED (post-validation) |
+| #299 | OPEN (section titles lack `.isHeader`) | No `.isHeader` additions in window | ✅ PASS-no-trigger |
+| #318 | OPEN (HoldingsEditor iPad sidebar split rows) | No `HoldingsEditorView` diff in window | ✅ PASS-no-trigger |
+| #366 | OPEN (Increase Contrast asset variants) | No `*.xcassets` diff in window | ✅ PASS-no-trigger |
+| #394 | OPEN (PortfolioDetailView iPad ticker rows split into 4 VO elements) | In-place composer pin held: `:212` `.accessibilityElement(children: .ignore)` + `:213` `.accessibilityLabel(FinancialRowAccessibility.label(forTicker:))` + `:214–215` `.accessibilityValue(FinancialRowAccessibility.value(forTicker:maWindow:))` (regular-width) and `:232–235` (compact). Same composer call, byte-stable. | ✅ PASS |
+| #415 | **CLOSED THIS WINDOW** (use-of-color, 7 status `Text`s) | Validated above in full §"#415 closure validation". ✅ | ✅ CLOSED (post-validation) |
+| #487 | CLOSED (erase-flow VO announcement) | `SettingsAccessibility.swift:57` `transitionAnnouncement(forAccountErasure: .erased)` returns `"Your data has been erased. Returning to the welcome screen\u{2026}"` — byte-identical. | ✅ PASS |
+| #493 | CLOSED (API-key valid announcement) | `SettingsAccessibility.swift:119` `transitionAnnouncement(forAPIKeyRequest: .savedSuccessfully)` returns `"Your API key is valid."` — byte-identical. | ✅ PASS |
+
+**Roster reconciliation (live = 6, delta −1 vs cycle-#46 close):** `gh issue list --label squad:yen --state open --limit 50 --json number -q '[.[].number] | sort'` returns `[239, 299, 318, 366, 394, 523]`. Composition:
+- −#260 (CLOSED via #515 / `33ef80a`, validated above)
+- −#415 (CLOSED via #517 / `ab0fb33`, validated above)
+- +#523 (NEW this cycle, my filing — see §"NEW_ISSUE this cycle" below)
+- Net: 7 → 6 (Δ −1).
+
+**Dedup-check before filing #523 (the SC 1.4.1 gap I'm about to open — protocol-compliance sweeps, all run before filing):**
+- Sweep 1 `"erase status SF Symbol"` → 0 hits.
+- Sweep 2 `"account erasure use of color"` → 0 hits.
+- Sweep 3 `"SC 1.4.1 account erasure"` → 0 hits.
+- Sweep 4 `"appPositive appNegative"` → 1 hit (#239, the token-collision issue — adjacent but distinct: #239 is "two tokens with identical hex", my finding is "color-only differentiator on accountErasureStatusRow, fix pattern not extended from #415"). Not a duplicate.
+- Sweep 5 `"use of color"` → 5 hits: #415 (just-CLOSED, the parent fix), #473 (CLOSED, SC 4.1.3 announcement — adjacent but distinct AT path), #487 (CLOSED, post-#471 announcement), #386 (CLOSED, disabled-button-hint), #479 (CLOSED, API-key announcement). None cover the SC 1.4.1 erasure-status visual gap.
+- Sweep 6 `"settings erase status"` → 7 hits, all CLOSED or unrelated; closest is #473 (SC 4.1.3 announcement path for the same status surface) — explicitly distinguished in the new issue body: VoiceOver users hear the announcement via #473's `.appAnnounceOnChange`, but Color-Filter / Grayscale / Smart-Invert / sighted color-blind users get no signal because they don't run VoiceOver and lose the chromatic differentiator.
+- **Decision: novel finding, not a duplicate of any open or closed ticket. File.**
+
+**NEW_ISSUE this cycle: #523** — `a11y(use-of-color): Settings → Privacy & Data accountErasureStatusRow .erased + .failed states still use color as sole differentiator — #415 fix pattern not extended to GDPR Art. 17 erasure status (SC 1.4.1)`.
+- **Routing label (exactly one per loop-strategy rule 6):** `team:frontend` (UI fix lives in `app/Sources/Features/SettingsView.swift` + helper extension in `app/Sources/App/AppFeature/SettingsAccessibility.swift`).
+- **Priority:** `priority:p2` — matches #415's class (Moderate severity polish, MVP-scope because the erasure flow is GDPR Art. 17 / CCPA §1798.105 / App Store §5.1.1(v) legally-significant per #329, but VoiceOver users are still served by the SC 4.1.3 announcement — gap is specifically sighted-Color-Filter / Grayscale / Smart-Invert users).
+- **Other labels:** `mvp`, `ios`, `settings`, `polish`, `squad:yen` — full set byte-identical to #415's label set so dashboard filters that bucketed #415 also bucket this.
+- **Sites cited:** `SettingsView.swift:430–432` (`.erased` success state, `appPositive` color-only) and `:440–444` (`.failed(reason)` error state, `appNegative` color-only). Both wrapped in `accountErasureStatusRow` (`:413–446`).
+- **Proposed fix:** mechanical extension of the just-merged #415 pattern — two new glyph constants on `SettingsAccessibility` (`accountErasureErasedGlyph = "checkmark.circle.fill"`, `accountErasureFailedGlyph = "exclamationmark.triangle.fill"`, both already in #415's vocabulary) plus `Label(_, systemImage:)` wrappers preserving every existing `.foregroundStyle` / `.fixedSize` / `.accessibilityIdentifier` decoration, plus two new value-level pin tests in `SettingsAccessibilityTests.swift` mirroring #415's testing approach.
+- **Acceptance criteria** (in issue body): glyph survives Grayscale Color Filter + Increase Contrast; visible string content unchanged so SC 4.1.3 announcement composer at `SettingsAccessibility.swift:57` still matches visible text per #487/#493; identifiers preserved; new glyph-name constants pinned by unit test.
+
+**Filing decision this cycle: NEW_ISSUE × 1 (#523).** Rationale: (a) cycle-#48 window contains 3 product commits — 2 directly Yen-lane closures (#260, #415), 1 Turk-lane closure with a11y sweep responsibility (#358); (b) **#415 closure VALIDATED in full** (7 sites paired, glyph contract pinned by `SettingsAccessibility` constants + `SettingsAccessibilityTests`, VO strings byte-identical, identifiers preserved, all 3 status-state types covered); (c) **#260 closure VALIDATED** (sheet-content traits attached, 4 unit-test pins in place); (d) **#358 a11y side-effects sweep: NO regression** (label / identifier / large-content viewer / disabled-state / focus order all clean); (e) all 4 hot-surface invariants PASS by content (count + welcome strings + frame(width:) sites + 0 minimumScaleFactor); (f) all 4 retained-watchlist tickets PASS by content (#228/#394/#487/#493); (g) the sighted-Color-Filter SC 1.4.1 gap on `accountErasureStatusRow` is novel (6 dedup sweeps confirm no existing ticket), evidence-backed (file:line cited, fix pattern in-codebase, 7 prior sites prove the pattern works), and properly Yen-lane (visual-signal SC 1.4.1, not announcement plumbing); (h) ending **6-cycle NO_OP streak** (#41/#42/#43/#44/#45/#46) — first cycle since #40 with a NEW_ISSUE filing, only because cycle #48 is the first non-product-empty window in 7 cycles.
+
+**Forward watch:**
+1. **3-cycle stranded-fix carry-forward NOW CLOSED.** Cycles #44/#45/#46 flagged that the parallel branch `users/squad/319-...` contained 2 Yen-lane fixes (`398d9ac`/#260 + `1b5f50c`/#415) stranded off mainline. Both are now re-landed via different SHAs (`33ef80a`/#515 + `ab0fb33`/#517) — different paths, same coverage. Dropping from carry-forward. (The remaining parallel-branch commits are #319 confirmation-dialog — Turk-lane — and 2 unrelated; nothing further Yen-lane to track.)
+2. **Carry-forward — Dimmed Save/History on `ContributionResultView` error branch.** New `.disabled(store.output.error != nil)` gate on the hoisted toolbar items (`:227`, `:240`) means VO users on the calculation-failure branch hear `"Save, dimmed button"` / `"History, dimmed button"` with no `.accessibilityHint` explaining how to unblock (Retry). Same pattern #386 closed for `SettingsView.Save`. NOT filing this cycle — narrow surface, intentional gating, user-recovery is via Retry not via the dimmed button — but cycle-#49 should re-evaluate after one round of simulator exposure.
+3. **#394 simulator-confirmation still pending** (carried from cycles #38→#46, now #48). Composer mitigation at `PortfolioDetailView.swift:212–215/:232–235` is byte-stable across 10+ cycles. Orchestrator/Basher: please confirm on simulator or split into a residual follow-up; I will not close unilaterally.
+4. **XCUITest accessibility-snapshot infra still missing — FINAL Yen-lane restatement.** Per cycle-#46 §4 ("Cycle #47 will be the last time I carry this"), this is now off my forward-watch. If the orchestrator wants it tracked it belongs in `squad:nagel` (test-infra) or under a `meta:qa-infra` label, not on Yen entries. The value-level pin tests in `SettingsAccessibilityTests` and `SheetAccessibilityTests` (now both established via #415 + #260) plus `FinancialRowAccessibilityTests` (existing) substantially close the regression-guard gap without an XCUITest target — view-tree introspection-free, runs in the unit-test suite. Cycle #47's other specialists' cycle-#47 logs already noted similar test-infra deferrals so my restatement is no longer load-bearing.
+5. **Parallel-history divergence (cycle #44/#45/#46 carry-forward) — status update.** Per §"Parallel-history divergence — MATERIAL RESOLUTION" above: the Yen-lane consequence (2 stranded fixes) is resolved by re-author / cherry-pick onto mainline. The branch itself is still not an ancestor of `origin/main`, but the remaining stranded work is non-Yen (Turk-lane #319 confirmation-dialog, plus 2 unrelated). Dropping from Yen carry-forward; if Turk wants to track #319's stranding that's their forward-watch.
+
+**Regression-guard counters (post-#48):**
+- **Hot-surface invariant byte-stability streak:** 8 cycles (#41→#48) — `.accessibility[A-Z]` count = 47, welcome strings present by content, 7 known-safe `.frame(width:)` sites, 0 `.minimumScaleFactor`. Held through 3 product commits this window.
+- **#487 announcement-content streak:** 8 cycles byte-identical (no "force-quit" / "App Switcher" / "reopen" in any spoken string).
+- **#493 announcement-content streak:** 7 cycles byte-identical ("Your API key is valid." at `SettingsAccessibility.swift:119`).
+- **#394 composer-pin byte-stability streak:** 10 cycles (#38→#48) — `FinancialRowAccessibility.label(forTicker:)` + `.value(forTicker:maWindow:)` wired identically on both size-class variants.
+- **Yen-lane NEW_ISSUE filings since onboarding:** the count resumes after a 6-cycle NO_OP streak. #523 is the first since cycle #40's filing.
+- **Yen-lane closures absorbed correctly this cycle:** 2 (#260 + #415), both validated by content before being credited to the closure column.
+
+**Δ vs cycle #46 (last Yen-active cycle):**
+
+| Dimension | Cycle #46 close | Cycle #48 close | Δ |
+|---|---|---|---|
+| Roster size (open Yen-lane) | 7 | 6 | −1 |
+| Roster set | `{239,260,299,318,366,394,415}` | `{239,299,318,366,394,523}` | −260, −415, +523 |
+| Filing decision | NO_OP | NEW_ISSUE × 1 | filing resumes |
+| Hot-surface invariants | 4/4 PASS | 4/4 PASS | 0 |
+| Watchlist tickets | 8 PASS | 10 PASS (added #260 + #415 to validated-closures set) | +2 |
+| Stranded-on-parallel-branch | 2 (#260, #415) | 0 | −2 |
+| Cycle SettingsView `.accessibility[A-Z]` count | 47 | 47 | 0 |
+| Cycle product-commit count in window | 0 | 3 (#515/#517/#519) | +3 |
+
+**Roster snapshot:** 6 open Yen-lane issues at cycle close = `{#239, #299, #318, #366, #394, #523}`.
+
+(end Yen cycle #48)
