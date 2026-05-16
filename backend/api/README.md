@@ -27,7 +27,10 @@ X-Min-App-Version: <minimum supported iOS app version>
 `Cache-Control` is emitted per (method, path, status) by an explicit
 policy table in `api/main.py::_CACHE_POLICY` so error envelopes are
 never edge-cached and personalised reads never spill to a shared cache
-(see issue #416):
+(see issue #416). The same policy is consulted by `api_error_handler`
+when it emits an `ApiError` envelope, so the wire-level header for a
+404 / 503 on a personalised route matches the directive advertised in
+OpenAPI for that operation (no drift between docs and runtime):
 
 | Operation                             | 200 / 202 / 204                                | All other statuses |
 |---------------------------------------|------------------------------------------------|--------------------|

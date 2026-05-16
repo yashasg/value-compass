@@ -2359,7 +2359,7 @@ def test_portfolio_status_omits_last_modified_when_cache_empty(
     assert "Last-Modified" not in resp.headers
 
 
-def test_portfolio_data_404_is_no_store(client: TestClient) -> None:
+def test_portfolio_data_404_is_private_no_store(client: TestClient) -> None:
     """A 404 portfolio lookup must not be edge-cached for an hour.
 
     Under the previous blanket ``max-age=3600`` policy, an iOS client
@@ -2367,7 +2367,8 @@ def test_portfolio_data_404_is_no_store(client: TestClient) -> None:
     would cache the 404 envelope for an hour — so the UI stayed empty
     well after the user had created the portfolio. The issue #416 fix
     pins ``private, no-store`` on every status of this personalised
-    read, success or error.
+    read, success or error, so the privacy directive in OpenAPI and the
+    wire-level header agree.
     """
     resp = client.get(
         "/portfolio/data",
@@ -2376,7 +2377,7 @@ def test_portfolio_data_404_is_no_store(client: TestClient) -> None:
     )
 
     assert resp.status_code == 404
-    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.headers["Cache-Control"] == "private, no-store"
     assert "Last-Modified" not in resp.headers
 
 
@@ -2479,7 +2480,12 @@ def test_delete_portfolio_204_is_no_store(
 
 
 def test_validation_422_is_no_store(client: TestClient) -> None:
-    """RequestValidationError 422 envelopes are never cached."""
+    """RequestValidationError 422 envelopes are never cached.
+
+    The route here is ``POST /portfolio/holdings`` which the policy
+    table pins to ``no-store`` for all statuses; the wire header must
+    match.
+    """
     resp = client.post(
         "/portfolio/holdings",
         json={"device_uuid": "not-a-uuid"},
@@ -2488,6 +2494,28 @@ def test_validation_422_is_no_store(client: TestClient) -> None:
 
     assert resp.status_code == 422
     assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_validation_422_on_personalised_route_is_private_no_store(
+    client: TestClient,
+) -> None:
+    """422 on a personalised route emits ``private, no-store``.
+
+    Locks in the issue #416 fix that resolves the validation handler's
+    ``Cache-Control`` via :data:`_CACHE_POLICY` (rather than hardcoding
+    ``no-store``) so a 422 from ``PATCH /portfolio/holdings/{ticker}``
+    carries the same privacy directive the OpenAPI contract advertises
+    for that operation.
+    """
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": "not-a-uuid"},
+        json={"weight": 0.5},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.headers["Cache-Control"] == "private, no-store"
 
 
 def test_503_emits_retry_after_header(client: TestClient) -> None:
@@ -2510,6 +2538,68 @@ def test_503_emits_retry_after_header(client: TestClient) -> None:
     assert resp.status_code == 503
     assert resp.headers["Cache-Control"] == "no-store"
     assert resp.headers["Retry-After"] == "60"
+
+
+def test_503_on_personalised_route_emits_private_no_store(
+    client: TestClient,
+) -> None:
+    """503 on a personalised route carries ``private, no-store``.
+
+    Locks in the issue #416 fix: ``api_error_handler`` resolves the
+    ``Cache-Control`` value from :data:`_CACHE_POLICY` so an outage on
+    ``GET /portfolio/data`` emits ``private, no-store`` (matching the
+    OpenAPI contract for the route) rather than the hardcoded
+    ``no-store`` an earlier implementation produced.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    def _broken_db():
+        class _BrokenSession:
+            def execute(self, *_args, **_kwargs):  # noqa: ANN001
+                raise OperationalError("SELECT 1", {}, Exception("db down"))
+
+        yield _BrokenSession()
+
+    app.dependency_overrides[get_db] = _broken_db
+    try:
+        resp = TestClient(app).get(
+            "/portfolio/data",
+            params={"device_uuid": str(uuid.uuid4())},
+            headers=ATTEST,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 503
+    assert resp.headers["Cache-Control"] == "private, no-store"
+    assert resp.headers["Retry-After"] == "60"
+
+
+def test_http_date_format_is_locale_independent() -> None:
+    """Locale-independent ``format_http_date`` output.
+
+    Locks in the locale-independence fix: switching from
+    ``strftime("%a, %d %b ...")`` to ``email.utils.format_datetime`` so
+    a non-C ``LC_TIME`` (e.g. ``fr_FR.UTF-8``) cannot emit a
+    non-compliant ``Last-Modified`` like ``"lun., 14 mai 2026 ..."``.
+    """
+    import locale
+
+    from api.main import format_http_date
+
+    stamp = datetime(2026, 5, 14, 21, 5, 0, tzinfo=UTC)
+    saved = locale.setlocale(locale.LC_TIME)
+    try:
+        for candidate in ("fr_FR.UTF-8", "de_DE.UTF-8", "ja_JP.UTF-8"):
+            try:
+                locale.setlocale(locale.LC_TIME, candidate)
+            except locale.Error:
+                continue
+            assert format_http_date(stamp) == "Thu, 14 May 2026 21:05:00 GMT"
+    finally:
+        locale.setlocale(locale.LC_TIME, saved)
+
+    assert format_http_date(stamp) == "Thu, 14 May 2026 21:05:00 GMT"
 
 
 def test_openapi_declares_retry_after_on_503_responses(

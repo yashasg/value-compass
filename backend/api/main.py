@@ -33,6 +33,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from decimal import Decimal
+from email.utils import format_datetime
 from enum import StrEnum
 from typing import Annotated, Any
 from uuid import UUID
@@ -231,19 +232,22 @@ def _resolve_cache_control(
     return operation.get("*", "no-store")
 
 
-# RFC 7231 GMT formatter used by ``portfolio_status`` to emit a
-# ``Last-Modified`` header sourced from ``StockCache.last_modified`` — the
-# canonical resource time for the cached aggregate. Centralised so any
-# future endpoint that gains a real validator stamp can reuse the same
-# format.
-_HTTP_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+# RFC 7231 §7.1.1.1 IMF-fixdate formatter used by ``portfolio_status`` to
+# emit a ``Last-Modified`` header sourced from ``StockCache.last_modified``
+# — the canonical resource time for the cached aggregate. Centralised so
+# any future endpoint that gains a real validator stamp can reuse the same
+# format. Uses :func:`email.utils.format_datetime` (with ``usegmt=True``)
+# rather than :meth:`datetime.strftime` because ``strftime("%a", "%b")``
+# is locale-sensitive (e.g. ``LC_TIME=fr_FR.UTF-8`` would emit
+# ``"lun., 14 mai 2026 ..."``) while RFC 7231 mandates the English tokens
+# emitted by the email-utils formatter regardless of locale.
 
 
 def format_http_date(value: datetime) -> str:
-    """Return a UTC RFC 7231 timestamp suitable for ``Last-Modified``."""
+    """Return a UTC RFC 7231 IMF-fixdate suitable for ``Last-Modified``."""
     if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
-    return value.astimezone(UTC).strftime(_HTTP_DATE_FORMAT)
+    return format_datetime(value.astimezone(UTC), usegmt=True)
 
 
 def custom_openapi() -> dict[str, Any]:
@@ -518,18 +522,30 @@ app.openapi = custom_openapi
 
 
 @app.exception_handler(ApiError)
-async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
+async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
     """Render API errors as the documented top-level envelope.
 
-    Also forces ``Cache-Control: no-store`` and, when the envelope carries
-    ``retry_after_seconds``, emits the RFC 7231 §7.1.3 ``Retry-After``
-    response header. The middleware's per-route policy already sets
-    ``no-store`` on every error status, but :class:`JSONResponse` is
-    constructed here with the values present in the envelope so the retry
-    signal mirrors the body field even before the middleware runs (issue
-    #416).
+    Resolves ``Cache-Control`` from :data:`_CACHE_POLICY` keyed by the
+    matched route and the envelope's status code, so a 404 / 503 raised
+    by a personalised route (e.g. ``GET /portfolio/data``) emits
+    ``private, no-store`` to match the OpenAPI contract for that
+    operation — not a hardcoded ``no-store`` that drifts from the docs
+    and lets a shared cache store the personalised error envelope (issue
+    #416). When the envelope carries ``retry_after_seconds`` the RFC 7231
+    §7.1.3 ``Retry-After`` response header is mirrored from the body.
+
+    Both headers are emitted on :class:`JSONResponse` directly (rather
+    than relying on the middleware's ``setdefault``) so the retry signal
+    and per-route privacy directive are pinned even on the synthetic
+    paths (e.g. App Attest gate failures) that bypass route resolution.
     """
-    headers: dict[str, str] = {"Cache-Control": "no-store"}
+    route = request.scope.get("route")
+    path_template = getattr(route, "path", None) if route is not None else None
+    headers: dict[str, str] = {
+        "Cache-Control": _resolve_cache_control(
+            request.method, path_template, exc.status_code
+        ),
+    }
     if exc.envelope.retry_after_seconds is not None:
         headers["Retry-After"] = str(exc.envelope.retry_after_seconds)
     return JSONResponse(
@@ -541,23 +557,34 @@ async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(
-    _: Request, exc: RequestValidationError
+    request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """Render request validation failures as the public error envelope.
 
-    Forces ``Cache-Control: no-store`` so a 422 request-validation
-    failure cannot be cached by Cloudflare or ``URLCache.shared`` and
-    re-served to a corrected client (issue #416).
+    Resolves ``Cache-Control`` from :data:`_CACHE_POLICY` keyed by the
+    matched route and ``422``, so a request-validation failure on a
+    personalised route emits ``private, no-store`` (matching the OpenAPI
+    contract) while everything else emits ``no-store``. A 422 must never
+    be re-served by Cloudflare or ``URLCache.shared`` to a corrected
+    client regardless of route (issue #416).
     """
     envelope = ErrorEnvelope(
         code=ErrorCode.SCHEMA_UNSUPPORTED,
         message="Request validation failed.",
     )
     log.info("request validation failed: %s", exc.errors())
+    route = request.scope.get("route")
+    path_template = getattr(route, "path", None) if route is not None else None
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=envelope.model_dump(mode="json"),
-        headers={"Cache-Control": "no-store"},
+        headers={
+            "Cache-Control": _resolve_cache_control(
+                request.method,
+                path_template,
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ),
+        },
     )
 
 
