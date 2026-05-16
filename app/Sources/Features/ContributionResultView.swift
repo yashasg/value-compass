@@ -29,6 +29,9 @@ struct ContributionResultContent: View {
         if let error = store.output.error {
           calculationErrorView(error)
         } else {
+          if let savedSummary = store.saveConfirmation {
+            savedBadge(savedSummary)
+          }
           resultSummary
           categoryBreakdown
           actions
@@ -56,18 +59,6 @@ struct ContributionResultContent: View {
     } message: { message in
       Text(message)
     }
-    .alert(
-      "Result Saved",
-      isPresented: Binding(
-        get: { store.saveConfirmation != nil },
-        set: { if !$0 { store.send(.saveConfirmationDismissed) } }
-      ),
-      presenting: store.saveConfirmation
-    ) { _ in
-      Button("OK", role: .cancel) { store.send(.saveConfirmationDismissed) }
-    } message: { message in
-      Text(message)
-    }
     .accessibilityIdentifier("contribution.result")
     // WCAG 2.2 SC 4.1.3 — Status Messages. The Retry button keeps the
     // user on this screen; when calculation still fails, the inline
@@ -78,6 +69,18 @@ struct ContributionResultContent: View {
     .appAnnounceOnChange(of: errorMessage) { message in
       message
     }
+    // #328: the routine "Result Saved" modal alert was retired (HIG →
+    // Alerts forbids alerts for routine status confirmations). The
+    // inline `savedBadge` covers the sighted-user signal; this modifier
+    // restores VoiceOver / Voice Control / Switch Control parity by
+    // announcing the confirmation summary when `store.saveConfirmation`
+    // transitions from `nil` to a value (or from one summary to a
+    // newer one after a second save round-trip). Same family as the
+    // post-#352 `appAnnounceOnChange(of: store.calculationOutput)`
+    // helper in `PortfolioDetailView`.
+    .appAnnounceOnChange(of: store.saveConfirmation) { summary in
+      summary
+    }
   }
 
   /// Snapshot of `store.output.error?.localizedDescription` so the
@@ -87,6 +90,29 @@ struct ContributionResultContent: View {
   /// sighted and AT users alike.
   private var errorMessage: String? {
     store.output.error?.localizedDescription
+  }
+
+  /// Inline confirmation pill rendered above the result summary after a
+  /// successful `.saveTapped` round-trip. Replaces the routine "Result
+  /// Saved" modal alert that previously forced an OK tap (#328) — HIG →
+  /// Alerts forbids alerts for routine status confirmations. The badge
+  /// stays visible until the next `.persistSucceeded` overwrites
+  /// `store.saveConfirmation` with a newer summary, giving the user a
+  /// persistent post-save UI cue without modal interruption.
+  private func savedBadge(_ summary: String) -> some View {
+    Label(summary, systemImage: "checkmark.circle.fill")
+      .valueCompassTextStyle(.bodyLarge)
+      .foregroundStyle(Color.appPositive)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        Color.appSurfaceElevated,
+        in: RoundedRectangle(cornerRadius: 12)
+      )
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(summary)
+      .accessibilityIdentifier("contribution.result.savedBadge")
   }
 
   private var resultSummary: some View {

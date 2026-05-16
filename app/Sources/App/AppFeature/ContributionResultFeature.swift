@@ -6,8 +6,9 @@ import SwiftData
 /// "required capital" surface today rendered inline in `PortfolioDetailView`.
 /// Replaces the Phase 0 placeholder.
 ///
-/// State holds a value-typed `ContributionOutput` plus the alert payloads
-/// required by the existing UX. Persistence runs through
+/// State holds a value-typed `ContributionOutput` plus the save-error alert
+/// payload and the persisted "Saved $X for Y." confirmation summary
+/// surfaced inline by the view layer. Persistence runs through
 /// `@Dependency(\.modelContainer)` so the SwiftData write happens on a
 /// `BackgroundModelActor` rather than the main thread; the calculator is
 /// stubbed via `@Dependency(\.contributionCalculator)` so retry uses the
@@ -16,6 +17,18 @@ import SwiftData
 /// `MainFeature.path` consumes the `Delegate` cases below to push history
 /// onto the surrounding `NavigationStack` / `NavigationSplitView`; the
 /// reducer no longer carries a Phase-1 navigation latch.
+///
+/// Post-#328: the routine "Result Saved" modal alert that previously
+/// required the user to tap OK was retired in favor of an inline
+/// "Saved" badge driven off `state.saveConfirmation`. HIG → Alerts
+/// forbids alerts for routine status confirmations, so the
+/// `.saveConfirmationDismissed` action was removed alongside the alert;
+/// the confirmation now persists across renders until the next
+/// `.saveTapped` round-trip overwrites it via `.persistSucceeded`.
+/// VoiceOver / Voice Control / Switch Control parity is preserved by an
+/// `appAnnounceOnChange(of: store.saveConfirmation)` modifier in the
+/// view layer (same family as the post-`#352` calculate-output
+/// announcement).
 @Reducer
 struct ContributionResultFeature {
   @ObservableState
@@ -43,7 +56,6 @@ struct ContributionResultFeature {
     case saveTapped
     case openHistoryTapped
     case saveErrorDismissed
-    case saveConfirmationDismissed
     case calculationCompleted(ContributionOutput)
     case persistFailed(String)
     case persistSucceeded(savedTotal: Decimal, portfolioName: String)
@@ -117,10 +129,6 @@ struct ContributionResultFeature {
 
       case .saveErrorDismissed:
         state.saveError = nil
-        return .none
-
-      case .saveConfirmationDismissed:
-        state.saveConfirmation = nil
         return .none
 
       case .calculationCompleted(let output):

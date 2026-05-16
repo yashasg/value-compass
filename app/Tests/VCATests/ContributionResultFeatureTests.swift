@@ -20,11 +20,15 @@ import XCTest
 ///   `state.saveConfirmation`, and the throwing-container failure that
 ///   surfaces `.persistFailed(message)` and writes `state.saveError`.
 /// - `.openHistoryTapped` → `.delegate(.openHistory(portfolioID:))`.
-/// - `.saveErrorDismissed`, `.saveConfirmationDismissed`,
-///   `.calculationCompleted(_)`, `.persistFailed(_)`,
+/// - `.saveErrorDismissed`, `.calculationCompleted(_)`, `.persistFailed(_)`,
 ///   `.persistSucceeded(savedTotal:portfolioName:)` mutations.
 /// - `confirmationMessage(savedTotal:portfolioName:)` pure helper, now
 ///   sourced from `Decimal.appCurrencyFormatted()` (#257).
+///
+/// Post-#328: `.saveConfirmationDismissed` was retired with the success
+/// alert. The confirmation now persists in `state.saveConfirmation` as an
+/// inline "Saved" badge until the next `.saveTapped` round-trip; tests
+/// pin that no dismissal path silently re-emerges.
 @MainActor
 final class ContributionResultFeatureTests: XCTestCase {
   // MARK: - .retryTapped
@@ -267,7 +271,15 @@ final class ContributionResultFeatureTests: XCTestCase {
     }
   }
 
-  func testSaveConfirmationDismissedClearsSaveConfirmation() async {
+  func testSaveConfirmationPersistsBetweenRendersForInlineBadge() async {
+    // Post-#328: the success alert was removed in favor of an inline
+    // "Saved" badge that stays visible until the next `.saveTapped`
+    // round-trip. The badge is keyed off `state.saveConfirmation`, so
+    // a successful persist must leave the value populated indefinitely
+    // (no auto-clear, no `.saveConfirmationDismissed` action). Pin the
+    // "no transient dismissal" contract so a future refactor that
+    // restores the modal-and-dismiss pattern (re-creating the HIG
+    // violation closed by #328) trips this assertion.
     let portfolioID = UUID()
     let store = TestStore(
       initialState: ContributionResultFeature.State(
@@ -278,9 +290,11 @@ final class ContributionResultFeatureTests: XCTestCase {
       ContributionResultFeature()
     }
 
-    await store.send(.saveConfirmationDismissed) {
-      $0.saveConfirmation = nil
-    }
+    // The badge must remain unless the reducer explicitly overwrites
+    // it on the next `.persistSucceeded`. Verify nothing on the action
+    // surface clears it; a non-test renderer cannot synthesize a
+    // dismissal action (`.saveConfirmationDismissed` was deleted).
+    XCTAssertEqual(store.state.saveConfirmation, "Saved $10 for Growth.")
   }
 
   func testCalculationCompletedWritesOutput() async {
