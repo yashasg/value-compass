@@ -124,10 +124,21 @@ struct SettingsView: View {
       apiKeyRequestStatusRow
 
       if let loadError = store.apiKeyLoadError {
-        Text("Stored key could not be read: \(loadError)")
-          .valueCompassTextStyle(.bodySmall)
-          .foregroundStyle(Color.appNegative)
-          .accessibilityIdentifier("settings.apiKey.loadError")
+        // WCAG 2.2 SC 1.4.1 — Use of Color. Pair the negative tint with
+        // an SF Symbol so color-filtered / color-blind users still have
+        // a non-chromatic signal that this row is an error, matching
+        // the convention `HoldingsEditorView`/`PortfolioDetailView`/
+        // `ContributionResultView` already use for warning + error
+        // rows (issue #415). Glyph sourced from
+        // ``SettingsAccessibility.apiKeyLoadErrorGlyph`` so a unit test
+        // can pin the symbol against view-tree introspection.
+        Label(
+          "Stored key could not be read: \(loadError)",
+          systemImage: SettingsAccessibility.apiKeyLoadErrorGlyph
+        )
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .accessibilityIdentifier("settings.apiKey.loadError")
       }
 
       Link(destination: LegalLinks.massiveTermsOfService) {
@@ -203,10 +214,14 @@ struct SettingsView: View {
       }
     case .storedButLastCheckFailed(let reason):
       VStack(alignment: .leading, spacing: 4) {
-        Text("Saved key may be invalid: \(reason)")
-          .valueCompassTextStyle(.bodySmall)
-          .foregroundStyle(Color.appNegative)
-          .accessibilityIdentifier("settings.apiKey.status.failed")
+        // WCAG 2.2 SC 1.4.1 — see `apiKeySection` loadError comment.
+        Label(
+          "Saved key may be invalid: \(reason)",
+          systemImage: SettingsAccessibility.apiKeyStoredButLastCheckFailedGlyph
+        )
+        .valueCompassTextStyle(.bodySmall)
+        .foregroundStyle(Color.appNegative)
+        .accessibilityIdentifier("settings.apiKey.status.failed")
         if let mask = store.apiKeyMaskedDisplay {
           Text(mask)
             .accessibilityLabel(store.apiKeyMaskedAccessibilityLabel ?? "Saved API key")
@@ -295,25 +310,56 @@ struct SettingsView: View {
       .accessibilityElement(children: .combine)
       .accessibilityIdentifier(ProgressViewAccessibility.apiKeyValidatingRowAccessibilityIdentifier)
     case .rejected(let reason):
-      Text("Rejected: \(reason)")
-        .valueCompassTextStyle(.bodySmall)
-        .foregroundStyle(Color.appNegative)
-        .accessibilityIdentifier("settings.apiKey.request.rejected")
+      // WCAG 2.2 SC 1.4.1 — see `apiKeySection` loadError comment.
+      // Glyph sourced from
+      // ``SettingsAccessibility.apiKeyRequestStatusGlyph(for:)`` —
+      // single source of truth pinned by a value-level unit test.
+      Label(
+        "Rejected: \(reason)",
+        systemImage:
+          SettingsAccessibility.apiKeyRequestStatusGlyph(for: .rejected(reason: reason))
+          ?? ""
+      )
+      .valueCompassTextStyle(.bodySmall)
+      .foregroundStyle(Color.appNegative)
+      .accessibilityIdentifier("settings.apiKey.request.rejected")
     case .networkError(let reason):
-      Text("Network error: \(reason)")
-        .valueCompassTextStyle(.bodySmall)
-        .foregroundStyle(Color.appNegative)
-        .accessibilityIdentifier("settings.apiKey.request.networkError")
+      // WCAG 2.2 SC 1.4.1 — network-specific glyph signals the failure
+      // mode (offline / unreachable) for users who cannot perceive the
+      // negative tint.
+      Label(
+        "Network error: \(reason)",
+        systemImage:
+          SettingsAccessibility.apiKeyRequestStatusGlyph(for: .networkError(reason: reason))
+          ?? ""
+      )
+      .valueCompassTextStyle(.bodySmall)
+      .foregroundStyle(Color.appNegative)
+      .accessibilityIdentifier("settings.apiKey.request.networkError")
     case .storeError(let reason):
-      Text("Could not save key: \(reason)")
-        .valueCompassTextStyle(.bodySmall)
-        .foregroundStyle(Color.appNegative)
-        .accessibilityIdentifier("settings.apiKey.request.storeError")
+      // WCAG 2.2 SC 1.4.1 — see `apiKeySection` loadError comment.
+      Label(
+        "Could not save key: \(reason)",
+        systemImage:
+          SettingsAccessibility.apiKeyRequestStatusGlyph(for: .storeError(reason: reason))
+          ?? ""
+      )
+      .valueCompassTextStyle(.bodySmall)
+      .foregroundStyle(Color.appNegative)
+      .accessibilityIdentifier("settings.apiKey.request.storeError")
     case .savedSuccessfully:
-      Text("Your API key is valid.")
-        .valueCompassTextStyle(.bodySmall)
-        .foregroundStyle(Color.appPositive)
-        .accessibilityIdentifier("settings.apiKey.request.saved")
+      // WCAG 2.2 SC 1.4.1 — positive tint paired with a check-mark
+      // glyph so users in Grayscale Color Filter mode can still
+      // distinguish success from the surrounding body copy.
+      Label(
+        "Your API key is valid.",
+        systemImage:
+          SettingsAccessibility.apiKeyRequestStatusGlyph(for: .savedSuccessfully)
+          ?? ""
+      )
+      .valueCompassTextStyle(.bodySmall)
+      .foregroundStyle(Color.appPositive)
+      .accessibilityIdentifier("settings.apiKey.request.saved")
     }
   }
 

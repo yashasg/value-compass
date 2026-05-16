@@ -41,9 +41,19 @@ struct PortfolioEditorView: View {
         }
 
         if let validationError = store.validationError {
-          Text(validationError.localizedDescription)
-            .foregroundStyle(Color.appError)
-            .accessibilityIdentifier("portfolio.editor.validationError")
+          // WCAG 2.2 SC 1.4.1 — pair the error tint with an SF Symbol
+          // so color-filtered / color-blind users still get a
+          // non-chromatic signal this row is a validation failure
+          // (issue #415). Glyph sourced from
+          // ``SettingsAccessibility.portfolioEditorValidationErrorGlyph``
+          // so a unit test can pin the symbol against view-tree
+          // introspection.
+          Label(
+            validationError.localizedDescription,
+            systemImage: SettingsAccessibility.portfolioEditorValidationErrorGlyph
+          )
+          .foregroundStyle(Color.appError)
+          .accessibilityIdentifier("portfolio.editor.validationError")
         }
       }
       .navigationTitle(store.navigationTitle)

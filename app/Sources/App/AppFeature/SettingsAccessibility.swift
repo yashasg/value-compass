@@ -164,4 +164,65 @@ enum SettingsAccessibility {
     }
     return ""
   }
+
+  /// Returns the SF Symbol name paired with each Settings → Massive API
+  /// Key status row, or `nil` when the row carries no non-chromatic
+  /// signal (idle / validating / no-key / stored-valid).
+  ///
+  /// WCAG 2.2 SC 1.4.1 *Use of Color* (Level A) — color tint alone is
+  /// not a perceivable signal for color-filtered / color-blind users.
+  /// ``SettingsView`` pairs each error / success status `Text` with the
+  /// glyph returned here via `Label(_, systemImage:)` so the icon
+  /// becomes the non-chromatic differentiator (issue #415). Pulling the
+  /// mapping out of the view keeps it value-level so a regression test
+  /// can pin it without a UI host — without this helper a future edit
+  /// that drops the `Label` (and reverts to a bare `Text`) would
+  /// silently re-introduce the SC 1.4.1 failure.
+  ///
+  /// Glyph vocabulary mirrors the precedent set by
+  /// ``ContributionResultView`` / ``HoldingsEditorView`` /
+  /// ``PortfolioDetailView`` (all `exclamationmark.triangle*` /
+  /// `exclamationmark.circle` for warning + error rows, with the
+  /// network-specific `wifi.exclamationmark` reserved for connectivity
+  /// failure mode and the canonical `checkmark.circle.fill` for the
+  /// terminal success state).
+  ///
+  /// - Parameter status: the current
+  ///   ``SettingsFeature/State/apiKeyRequestStatus`` value.
+  /// - Returns: the SF Symbol name to pair with the row's text, or
+  ///   `nil` for states that render no inline status row.
+  static func apiKeyRequestStatusGlyph(
+    for status: SettingsAPIKeyRequestStatus
+  ) -> String? {
+    switch status {
+    case .idle, .validating:
+      return nil
+    case .rejected:
+      return "xmark.octagon"
+    case .networkError:
+      return "wifi.exclamationmark"
+    case .storeError:
+      return "exclamationmark.triangle.fill"
+    case .savedSuccessfully:
+      return "checkmark.circle.fill"
+    }
+  }
+
+  /// SF Symbol paired with the Settings → Massive API Key "Saved key
+  /// may be invalid: …" status row, surfaced when the stored key fails
+  /// re-validation. Always emits the negative-state glyph (WCAG 2.2 SC
+  /// 1.4.1, issue #415).
+  static let apiKeyStoredButLastCheckFailedGlyph = "exclamationmark.triangle"
+
+  /// SF Symbol paired with the Settings → Massive API Key "Stored key
+  /// could not be read: …" status row, surfaced when Keychain `load`
+  /// fails. Always emits the negative-state glyph (WCAG 2.2 SC 1.4.1,
+  /// issue #415).
+  static let apiKeyLoadErrorGlyph = "exclamationmark.triangle.fill"
+
+  /// SF Symbol paired with the Portfolio Editor inline validation
+  /// error `Text`. Single non-state-dependent glyph because the only
+  /// failure mode the surface renders is a validation-rejection
+  /// (WCAG 2.2 SC 1.4.1, issue #415).
+  static let portfolioEditorValidationErrorGlyph = "exclamationmark.circle"
 }

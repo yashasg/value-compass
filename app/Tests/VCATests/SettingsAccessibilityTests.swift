@@ -438,4 +438,134 @@ final class SettingsAccessibilityTests: XCTestCase {
       )
     }
   }
+
+  // MARK: - SC 1.4.1 Use-of-Color glyph mapping (issue #415)
+
+  func testAPIKeyRequestStatusGlyphIsNilForIdle() {
+    // `idle` renders no inline status row, so the helper must return
+    // nil — emitting a glyph for a row that does not appear would
+    // mis-document the surface. Pins the precedent set by
+    // `transitionAnnouncement(forAPIKeyRequest:)` which also returns
+    // nil for `.idle`.
+    XCTAssertNil(SettingsAccessibility.apiKeyRequestStatusGlyph(for: .idle))
+  }
+
+  func testAPIKeyRequestStatusGlyphIsNilForValidating() {
+    // `validating` renders a `ProgressView` + neutral body-copy
+    // sentence ("Validating with Massive…"); there is no error or
+    // success tint to pair a glyph with. Pins that the helper does
+    // *not* emit a glyph for an in-flight state — a future regression
+    // that added an icon here would compete with the spinner.
+    XCTAssertNil(
+      SettingsAccessibility.apiKeyRequestStatusGlyph(for: .validating)
+    )
+  }
+
+  func testAPIKeyRequestStatusGlyphForRejected() {
+    // Rejection is a Massive-validated negative outcome; `xmark.octagon`
+    // matches the SF Symbol vocabulary "stop / not accepted" semantics
+    // and is distinct from the generic warning triangle so VoiceOver
+    // users who later pivot to a sighted secondary device get the
+    // semantic differentiation for free.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyRequestStatusGlyph(
+        for: .rejected(reason: "API key cannot be empty.")
+      ),
+      "xmark.octagon"
+    )
+  }
+
+  func testAPIKeyRequestStatusGlyphForNetworkError() {
+    // Connectivity failure mode gets the network-specific glyph so a
+    // user in Grayscale Color Filter mode can tell at a glance whether
+    // the failure means "retry online" vs. "fix the key value" — both
+    // surfaces use the same negative tint, the glyph is what
+    // distinguishes them.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyRequestStatusGlyph(
+        for: .networkError(reason: "Offline.")
+      ),
+      "wifi.exclamationmark"
+    )
+  }
+
+  func testAPIKeyRequestStatusGlyphForStoreError() {
+    // Keychain-write failure is the most severe local-storage class
+    // failure on the surface; uses the filled exclamation-triangle to
+    // signal "blocker" rather than "warning", matching the codebase
+    // convention for blocking-failure surfaces (HoldingsEditor
+    // `Warning: no tickers` uses the non-filled variant for warnings).
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyRequestStatusGlyph(
+        for: .storeError(reason: "errSecItemNotFound")
+      ),
+      "exclamationmark.triangle.fill"
+    )
+  }
+
+  func testAPIKeyRequestStatusGlyphForSavedSuccessfully() {
+    // Terminal success state — the only positive-tint surface in the
+    // section. `checkmark.circle.fill` is Apple's canonical
+    // "confirmed / valid" glyph (HIG → SF Symbols → Status); pinning
+    // it pre-empts a future regression that picks a non-status icon.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyRequestStatusGlyph(for: .savedSuccessfully),
+      "checkmark.circle.fill"
+    )
+  }
+
+  func testAPIKeyStoredButLastCheckFailedGlyphIsNonEmpty() {
+    // The Massive `apiKeyStatus == .storedButLastCheckFailed(...)` row
+    // pairs the negative tint with a warning triangle. Glyph constant
+    // is asserted here so a future "" or removal regression is caught
+    // even when the view-tree symbol cannot be introspected directly.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyStoredButLastCheckFailedGlyph,
+      "exclamationmark.triangle"
+    )
+  }
+
+  func testAPIKeyLoadErrorGlyphIsNonEmpty() {
+    // Keychain `load` failure is rendered with the filled warning
+    // glyph (same vocabulary as `.storeError`) — both are local-disk
+    // failure modes for the same Keychain item.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeyLoadErrorGlyph,
+      "exclamationmark.triangle.fill"
+    )
+  }
+
+  func testPortfolioEditorValidationErrorGlyph() {
+    // Portfolio Editor inline validation row pairs the error tint
+    // with `exclamationmark.circle` — same glyph the codebase uses
+    // for the `HoldingsEditor` "Warning: no tickers" hint, keeping
+    // editor-validation vocabulary uniform across the two surfaces.
+    XCTAssertEqual(
+      SettingsAccessibility.portfolioEditorValidationErrorGlyph,
+      "exclamationmark.circle"
+    )
+  }
+
+  func testAllSC141GlyphsAreNonEmpty() {
+    // Backstop guard against a future refactor that swaps a glyph
+    // constant for `""` — Apple renders an empty `systemImage` as a
+    // blank placeholder, silently re-introducing the SC 1.4.1
+    // "color-only signal" failure this issue fixed.
+    XCTAssertFalse(SettingsAccessibility.apiKeyStoredButLastCheckFailedGlyph.isEmpty)
+    XCTAssertFalse(SettingsAccessibility.apiKeyLoadErrorGlyph.isEmpty)
+    XCTAssertFalse(SettingsAccessibility.portfolioEditorValidationErrorGlyph.isEmpty)
+    for status: SettingsAPIKeyRequestStatus in [
+      .rejected(reason: "x"),
+      .networkError(reason: "x"),
+      .storeError(reason: "x"),
+      .savedSuccessfully,
+    ] {
+      let glyph = SettingsAccessibility.apiKeyRequestStatusGlyph(for: status)
+      XCTAssertNotNil(glyph, "Status \(status) must map to an SF Symbol.")
+      XCTAssertFalse(
+        glyph?.isEmpty ?? true,
+        "Status \(status) glyph must be a non-empty SF Symbol name."
+      )
+    }
+  }
 }
