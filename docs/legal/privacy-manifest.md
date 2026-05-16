@@ -18,7 +18,7 @@ which is `Linked = true`, `Tracking = false`, and serves the
 
 | `NSPrivacyCollectedDataType` | What flows through the network | App Store Connect label section |
 |---|---|---|
-| `NSPrivacyCollectedDataTypeDeviceID` | The `X-Device-UUID` header attached to every backend request (see *Where the identifier comes from* below). | *Identifiers → Device ID* |
+| `NSPrivacyCollectedDataTypeDeviceID` | The per-install `device_uuid` value transmitted to the backend as a body field (POST `/portfolio/holdings`) or as a `device_uuid` query parameter on every other protected operation (`GET /portfolio/data`, `GET /portfolio/export`, `PATCH /portfolio`, `DELETE /portfolio`, `PATCH /portfolio/holdings/{ticker}`, `DELETE /portfolio/holdings/{ticker}`). See *Where the identifier comes from* below. | *Identifiers → Device ID* |
 | `NSPrivacyCollectedDataTypeOtherFinancialInfo` | `BackendPortfolioPayload.monthlyBudget` and every `BackendHoldingPayload.weight` transmitted by `BackendSyncProjection.makePayload(for:deviceUUID:)`. | *Financial Info → Other Financial Info* |
 | `NSPrivacyCollectedDataTypeOtherUserContent` | `BackendPortfolioPayload.name` (the user-typed portfolio name) and the per-holding `BackendHoldingPayload.ticker` string. | *User Content → Other User Content* |
 
@@ -42,18 +42,27 @@ common §5.1.2 rejection cause.
   value on every subsequent call. The identifier survives reinstall
   (within Apple's keychain accessibility constraints) and is never
   rotated client-side.
-- `app/Sources/Backend/Networking/APIClient.swift` calls
-  `makeOutgoingRequest(...)` which sets the
-  `X-Device-UUID` request header on **every** outbound backend call
-  via `URLSession`.
+- `app/Sources/Backend/Networking/APIClient.swift` is the single transport
+  through which every outbound backend call flows. It does **not** attach
+  the device identity as a request header — the OpenAPI contract
+  (`openapi.json`) pins `device_uuid` to a per-operation body field
+  (POST `/portfolio/holdings`'s `AddHoldingRequest.device_uuid`) or query
+  parameter (every other protected operation). Per-operation call sites
+  (e.g. `app/Sources/App/Dependencies/AccountErasureClient.swift`'s
+  `AccountErasureRequestFactory` and the generated SwiftOpenAPIGenerator
+  client inputs) own the plumbing onto the declared surface.
 - `app/Sources/App/Dependencies/APIClientDependency.swift` wires
   `APIClient.shared.send(_:)` into `@Dependency(\.apiClient)`. Any
   reducer that resolves this dependency transmits the identifier
-  automatically.
+  automatically once the per-operation call site has plumbed
+  `device_uuid` onto the request URL or body.
 
-The backend (`backend/api/main.py`) accepts `device_uuid: UUID`
-and joins it onto `Portfolio` rows, which is what makes the manifest
-entry **linked** rather than unlinked.
+The backend (`backend/api/main.py`) reads `device_uuid: UUID` from the
+declared body/query surface and joins it onto `Portfolio` rows, which is
+what makes the manifest entry **linked** rather than unlinked. (A
+historical `X-Device-UUID` request header used to ride alongside as
+dead bytes — undeclared in the spec, never read by the backend — and was
+removed in issue #348 so the wire format matches the contract.)
 
 ## Where the financial info and user content come from
 
@@ -66,14 +75,16 @@ entry **linked** rather than unlinked.
   values from the live SwiftData `Portfolio` row before the projection
   hands the payload to `APIClient`.
 - The payload then travels over TLS to `https://api.valuecompass.app`
-  alongside the `X-Device-UUID` header, which is why both new entries
-  carry `NSPrivacyCollectedDataTypeLinked = true` — the backend joins
-  every payload row to the per-installation identifier.
+  alongside the `device_uuid` body field (POST `/portfolio/holdings`) or
+  `device_uuid` query parameter, which is why both new entries carry
+  `NSPrivacyCollectedDataTypeLinked = true` — the backend joins every
+  payload row to the per-installation identifier read from that
+  declared surface.
 
 ## Why these flag values are correct
 
 - **Linked = `true`** (all three entries): the backend persists rows
-  keyed by the `X-Device-UUID`, so on the server side the device
+  keyed by the `device_uuid` value, so on the server side the device
   identifier, the portfolio name, the monthly budget, and the holding
   weights are all associated with one installation's user-generated
   content. Apple's definition of "linked" applies regardless of whether
@@ -125,8 +136,8 @@ nutrition label must be updated together, and a Privacy Policy update
   readiness checklist (#391).
 - **Coordinated vulnerability disclosure intake** — the GDPR Art. 32(1)(d)
   organizational-measure record (intake channel, scope, response SLAs,
-  and safe harbor for researchers who find a flaw in the
-  `X-Device-UUID` or financial-info flows described above) lives in
+  and safe harbor for researchers who find a flaw in the per-install
+  `device_uuid` or financial-info flows described above) lives in
   [`/SECURITY.md`](../../SECURITY.md) (issue #385). This manifest
   declares **what is collected**; `SECURITY.md` declares **how to
   report a flaw in the collection or transmission machinery**.

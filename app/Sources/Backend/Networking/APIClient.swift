@@ -4,8 +4,6 @@ import Foundation
 ///
 /// Responsibilities:
 /// - Uses HTTP/2 by default (URLSession negotiates this automatically over TLS).
-/// - Attaches the device UUID on every request so the backend can identify
-///   the install without requiring an account.
 /// - Attaches the `X-App-Attest` header on every request that targets a
 ///   protected backend route (everything except `/health`) so the
 ///   `require_app_attest` dependency in `backend/api/main.py` does not
@@ -19,6 +17,16 @@ import Foundation
 ///   own build version because the backend does not negotiate on it.
 ///   Phase 2 (#158) replaced the former `MinAppVersionMonitor.shared`
 ///   singleton with this client-static bridge.
+///
+/// **Device identity does NOT travel as a request header.** The OpenAPI
+/// contract pins `device_uuid` as either a body field (POST
+/// `/portfolio/holdings`) or a query parameter (every other protected op);
+/// the backend's FastAPI handlers in `backend/api/main.py` read it from
+/// those declared surfaces only. Per-operation call sites (e.g.
+/// `AccountErasureRequestFactory`) own that plumbing. A historical
+/// `X-Device-UUID` header used to ride alongside as dead bytes — it was
+/// undeclared in the spec and silently dropped by the backend, so issue
+/// #348 removed it to make the wire format match the contract.
 ///
 /// The generated SwiftOpenAPIGenerator client is configured to use this
 /// session as its underlying transport — see `Sources/Backend/Networking/openapi-generator-config.yaml`
@@ -98,13 +106,17 @@ final class APIClient {
   /// is server-driven via the response-only `X-Min-App-Version` header
   /// (`MinAppVersionClient.observe(response:)`); there is no request-side
   /// app-version channel in the OpenAPI contract. See issue #429.
+  ///
+  /// Note: the client does not attach `X-Device-UUID`. The OpenAPI contract
+  /// (`openapi.json`) pins device identity to the `device_uuid` body field
+  /// or query parameter on a per-operation basis; the backend never reads a
+  /// header. A historical `X-Device-UUID` attachment used to ride along as
+  /// dead bytes — issue #348 removed it.
   static func makeOutgoingRequest(
     from request: URLRequest,
-    deviceID: String,
     appAttestToken: String?
   ) -> URLRequest {
     var req = request
-    req.setValue(deviceID, forHTTPHeaderField: "X-Device-UUID")
     if let appAttestToken {
       req.setValue(appAttestToken, forHTTPHeaderField: "X-App-Attest")
     }
@@ -120,7 +132,6 @@ final class APIClient {
       Self.appAttestRequired(for: request) ? AppAttestProvider.currentToken() : nil
     let req = Self.makeOutgoingRequest(
       from: request,
-      deviceID: DeviceIDProvider.deviceID(),
       appAttestToken: appAttestToken
     )
 

@@ -8,7 +8,7 @@ APNs gateway. To keep the poller importable in CI without that cert
 present, the actual HTTP call is performed only when ``APNS_CERT`` is
 configured — otherwise the helpers log and return.
 
-Log lines never quote the raw ``X-Device-UUID`` (a Linked-to-User
+Log lines never quote the raw ``device_uuid`` value (a Linked-to-User
 identifier per ``app/Sources/App/PrivacyInfo.xcprivacy``): we redact to
 the last-4 hex characters so journald / Cloudflare access-log retention
 defaults are not joined back to a single device. See
