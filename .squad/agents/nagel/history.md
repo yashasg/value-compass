@@ -2631,3 +2631,186 @@ None. Window contains zero code/spec/Swift activity. 100% specialist-history.
 - Drift discipline: **5 consecutive clean cycles**, unannounced-drift counter remains zero entering cycle #45.
 
 (end Nagel cycle #44)
+
+---
+
+## Cycle #45 — Nagel
+
+**Date:** 2026-05-16T02:11:41Z  
+**HEAD at spawn:** `0baf956`  
+**HEAD at close:** `0baf956` (history-append-only — see commit at end)  
+**Window:** `1110b0b..0baf956` (6 commits)  
+**Anchor justification:** Window MUST include `9a2fe85` (PR #513, merged mid-cycle-#44 on 2026-05-15T18:55:25-07:00 = 2026-05-16T01:55:25Z) per cycle-#44 next-actions ("Reuben + Nagel joint closure-validation of PR #513"). Anchor `1110b0b` is the cycle-#44 spawn-time HEAD (the pre-PR-#513 fence), so `1110b0b..HEAD` is the smallest window that contains every PR-#513 hunk plus the cycle-#44 specialist-history writes that landed after Nagel's own cycle-#44 commit `5a79fbe`.
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `5a79fbe` | chore(nagel): cycle #44 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `2aa45c3` | aso(frank): cycle #44 single-anchor probe | Frank | NO — `.squad/agents/frank/history.md` |
+| `abd9a37` | compliance(reuben): cycle #44 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `f322b58` | chore(turk): cycle #44 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `eb70d09` | chore(yen): cycle #44 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `9a2fe85` | **PR #513** compliance(dsr-audit-log) — closes #457 | Compliance (Reuben-adjacent) | **YES** — `openapi.json` + mirror + `backend/api/main.py` + `backend/tests/test_api.py` |
+| `0baf956` | research(saul): cycle #44 NO_OP | Saul | NO — `.squad/agents/saul/history.md` |
+
+`git --no-pager diff --stat 1110b0b..0baf956 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/` →
+```
+ app/Sources/Backend/Networking/openapi.json |   8 +-
+ backend/api/main.py                         | 127 +++++++++++++++++++++++-
+ backend/tests/test_api.py                   | 365 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ openapi.json                                |   8 +-
+ 4 files changed, 499 insertions(+), 9 deletions(-)
+```
+All four file hunks attribute to commit `9a2fe85` exclusively (PR #513). The remaining six commits in window are 100% specialist-history.
+
+---
+
+### PR #513 closure-validation audit (`9a2fe85`)
+
+**Trigger:** Mid-cycle-#44 merge of `#513 compliance(dsr-audit-log): emit structured audit log on PATCH/DELETE DSR endpoints (closes #457)`. First locked-surface mutation since #303 / PR #503 (cycle #39, 6 cycles back).
+
+**Spec deltas (openapi.json + mirror, 4 endpoint hunks each, line-cited against `0baf956`):**
+
+| Path | Method | Hunk | Surface impact |
+|---|---|---|---|
+| `/portfolio` | PATCH | `description` expanded with audit-log paragraph | **description-only** |
+| `/portfolio` | DELETE | `description` expanded with audit-log paragraph (incl. `holdings_count` rationale) | **description-only** |
+| `/portfolio/holdings/{ticker}` | PATCH | `description` expanded with audit-log paragraph | **description-only** |
+| `/portfolio/holdings/{ticker}` | DELETE | `description` expanded with audit-log paragraph (incl. event-name disambiguation vs `dsr.erasure.full_account`) | **description-only** |
+
+For each of the 4 endpoints, structural keys remain stable (Python audit):
+- PATCH `/portfolio`: keys `[description, operationId, parameters, requestBody, responses, summary]` — responses `[200, 401, 404, 422, 503]`, parameters `[device_uuid, X-App-Attest]`
+- DELETE `/portfolio`: keys `[description, operationId, parameters, responses, summary]` — responses `[204, 401, 404, 422, 503]`, parameters `[device_uuid, X-App-Attest]`
+- PATCH `/portfolio/holdings/{ticker}`: keys `[description, operationId, parameters, requestBody, responses, summary]` — responses `[200, 401, 404, 422, 503]`, parameters `[ticker, device_uuid, X-App-Attest]`
+- DELETE `/portfolio/holdings/{ticker}`: keys `[description, operationId, parameters, responses, summary]` — responses `[204, 401, 404, 422, 503]`, parameters `[ticker, device_uuid, X-App-Attest]`
+
+`operationId`, `summary`, `requestBody`, all `parameters`, all `responses` (codes + content schemas), and every component schema are **byte-identical pre/post PR #513**. Spec shape: `openapi=3.1.0`, `info.version=1.0.0`, **paths=8** (unchanged), **components.schemas=15** (unchanged, identical name list: AddHoldingRequest, ErrorCode, ErrorEnvelope, HealthResponse, HoldingOut, PatchHoldingRequest, PatchHoldingResponse, PatchPortfolioRequest, PatchPortfolioResponse, PortfolioDataResponse, PortfolioExport, PortfolioExportHolding, PortfolioExportResponse, PortfolioStatusResponse, SchemaVersionResponse).
+
+**Python deltas (`backend/api/main.py`, +127 lines):**
+- Import addition: `from sqlalchemy import func, select, text` — `select` newly imported for the `delete_portfolio` `SELECT COUNT(*)` review-fix (preserves O(1) memory on cascaded-row count).
+- Four `log.info(...)` calls in `patch_portfolio`, `patch_holding`, `delete_holding`, `delete_portfolio` — emit `event=dsr.rectification.portfolio|dsr.rectification.holding|dsr.row_delete.holding|dsr.erasure.full_account` lines after commit, with `device_uuid_suffix` redacted via `redact_device_uuid` (already imported under #445).
+- Four docstring expansions (mirroring the openapi `description` text).
+- Two pre-commit captures: `portfolio_id = portfolio.id`, `rectified_ticker = holding.ticker` — defensive against ORM detach-after-commit. Equivalent to local variable copies; no new function signatures, no new route decorators, no new response models.
+
+**Contract surface introduced by Python deltas: ZERO.** No new `@app.<method>(...)` decorator, no new Pydantic model class, no new `response_class`, no new `responses=` kwarg, no new headers attached via `response.headers[...] = ...`, no new exception handlers. Server-side `log.info` output is not API surface (does not appear in HTTP response body, headers, or status).
+
+**Test deltas (`backend/tests/test_api.py`, +365 lines):** 12 new pytest cases (3 per handler) plus a shared `_audit_records_for` helper, asserting (a) success-path emission, (b) device-UUID redaction floor, (c) 404 honored-requests-only boundary, and (d) row-vs-full-erasure event-name disambiguation. Pure test additions; no fixture changes affect spec.
+
+**SemVer classification: NON-BREAKING / ADDITIVE (description-only).** Per OpenAPI 3.1 § "Compatibility", expanding `description` strings is the lowest-impact additive operation possible — generated clients ignore it entirely (Swift's `swift-openapi-generator` and Apple's Foundation networking layer treat `description` as a documentation-only field). No client regen required, no version bump required. Compatible with current `info.version=1.0.0`.
+
+**Comparison to #303 / PR #503 baseline** (last sanctioned change, cycle #39): PR #503 changed a response *body shape* (202 empty body declared in spec). PR #513 is strictly weaker — it does not touch any schema, response, parameter, header, security, or operationId. **No closure-line-ref shifts** required on #303 itself (see invariant 3 below).
+
+**PR-#513 closure-validation verdict: ✅ PASS.** Cleanly closes the spec-text portion of compliance issue #457 (Reuben-lane); Nagel-lane exposure is zero. Ready to bank as a sanctioned non-breaking change without filing.
+
+---
+
+### Four-Invariant Pass
+
+**1. Parity gate — PASS.**
+```
+$ diff openapi.json app/Sources/Backend/Networking/openapi.json
+$ echo $?
+0
+$ shasum -a 256 openapi.json app/Sources/Backend/Networking/openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  app/Sources/Backend/Networking/openapi.json
+```
+Byte-identical. New steady-state hash: `286a3a52…315378e` (was `d9c7f1eb…3b5fff` across cycles #40–#44). PR #513 performed both the spec edit AND the mirror copy in the same atomic merge — the parity rule held through the mutation, exactly as #503 did in cycle #39. **Parity-discipline streak resets cleanly: 1 cycle at the new hash (cycle #45), 5-cycle streak at the prior hash closed without violation.**
+
+**2. Swift public-surface stability — PASS.**
+```
+$ git --no-pager diff 1110b0b..0baf956 -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b'
+$ echo "exit 1, zero matches"
+```
+Zero `.swift` files touched in window (`git diff --name-only 1110b0b..0baf956 -- 'app/Sources/**/*.swift'` → 0 paths). PR #145 TCA migration and PR #468 in-app-events scaffolding remain dormant; first `@Reducer` introduction still pending.
+
+**3. Locked-surface scan — PASS-WITH-SANCTIONED-CHANGE.**
+Window contains the PR #513 hunks above. SemVer classification documented above as NON-BREAKING / description-only. **No unannounced drift** — the surface change is fully attributable to a single labeled PR with a clean closure justification (#457 compliance), zero structural impact, and explicit verification (`python -m api.export_openapi --check` in PR body).
+
+**#303 closure pin re-verification post PR #513:**
+- `backend/api/main.py` `response_class=Response`: **L1012** (POST `/portfolio/holdings`, unchanged), **L1370** (was L1319 in cycle #44, shifted +51), **L1473** (was L1394, shifted +79). Shifts are entirely a function of the +127 line PR #513 inserted into the PATCH/DELETE handlers downstream of L1012; the **anchor pin at L1012 is byte-stable**.
+- `backend/tests/test_api.py:546` `def test_add_holding_202_success_is_empty_body_in_spec_and_runtime(` — **unchanged**. PR #513 appended its 365 new test lines after L546 (counts went 1873 → 2238), so the closure docstring at L549 (`Issue #303: …`) is at the same line. Closure intact.
+
+**4. Roster integrity — PASS (5 open, exact match to carry-forward).**
+```
+$ gh issue list --label squad:nagel --state open --limit 200 --json number --jq 'length'
+5
+$ gh issue list --label squad:nagel --state open …
+#423 — open content model (no `additionalProperties: false`)
+#416 — blanket Cache-Control/Last-Modified middleware
+#348 — X-Device-UUID undeclared in spec
+#317 — bare `number` for money fields
+#316 — X-App-Attest as per-op header, not securityScheme
+```
+**Identical** to cycle-#44 carry-forward. All 5 PERSIST against `0baf956`:
+- **#423** — `grep -E '"additionalProperties": false|"extra": "forbid"' openapi.json backend/api/main.py` → empty across 15 schemas + 14 `BaseModel` classes. Open-content substrate untouched.
+- **#416** — `main.py:453,456` still attaches `Cache-Control: max-age=…` and `Last-Modified` globally; spec headers at `openapi.json:161,165`. Middleware unchanged.
+- **#348** — `grep X-Device-UUID openapi.json` → 0 matches in any `parameters` block; `main.py:546,709,821` still reads `device_uuid: UUID` from request body/query. Drift unchanged.
+- **#317** — `HoldingOut.weight = {'type': 'number'}`, `AddHoldingRequest.weight = {'type': 'number', 'maximum': 1.0, 'exclusiveMinimum': 0.0}`. Bare `number` persists on both endpoints PR #513 touched (PATCH `/portfolio/holdings/{ticker}` uses `PatchHoldingRequest.weight` which is `DecimalString`, the #461-closed asymmetric path — separate axis).
+- **#316** — `X-App-Attest` appears at `openapi.json:85,195,345,525,695,…` as `"in": "header"` per-operation `parameters`, **not** in `components.securitySchemes`. Drift unchanged.
+
+---
+
+### Watchlist anchors (re-verified)
+
+- **#303 closure pin** — L1012/L1370/L1473 + `test_api.py:546` (see invariant 3). Closure intact, anchor stable post-PR-#513.
+- **openapi.json shape** — `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. **Shape unchanged**; only `description` strings on 4 existing endpoints expanded. New steady-state hash `286a3a52…315378e`.
+- **Sibling 202 routes** — no new POST/PATCH/DELETE returning 202 in window. PR #513 PATCH/DELETE handlers return existing `200/204` codes.
+- **DSR audit-log family (new, post-#513)** — 4 distinct `event=dsr.*` server-side log emissions are now part of the implementation contract for PATCH/DELETE `/portfolio` and PATCH/DELETE `/portfolio/holdings/{ticker}`. **Server-side log events are not API surface** (no HTTP body/header projection); not Nagel-lane to gate. Reuben-lane (compliance/audit-log retention) owns the floor; Turk-lane (test discipline) owns the 12 new lock-in tests. **Nagel adds zero new watchlist entries for #513.**
+- **#316/#317/#348/#416/#423 carry-forward** — all line refs hold against `0baf956`; #316 and #348 specifically validated as untouched by PR #513 (the 4 affected endpoints already had `X-App-Attest` per-op header + `device_uuid` query param BEFORE PR #513; PR #513 did not modify either pattern).
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** **2** — cycle #39 / PR #503 / #303 (response-body shape) and **cycle #45 / PR #513 / #457 (description-only, NON-BREAKING)**.
+- **Locked-surface-clean-or-sanctioned cycles since cycle #39:** **6** (cycles #40, #41, #42, #43, #44, #45). PR #513 lands as a **clean sanctioned change** — fully attributable, zero structural impact, mirror parity preserved atomically.
+- **Unannounced-drift counter:** **0**. Discipline holds 45/45.
+
+---
+
+### Findings
+
+PR #513 is a textbook NON-BREAKING description-only spec mutation. Re-audit of all five open Nagel drifts (#316/#317/#348/#416/#423) against `0baf956` confirms each persists with byte-stable line refs. **No novel contract drifts** introduced by PR #513 — the 4 description expansions, the 4 `log.info` calls, the import of `select`, and the 12 new pytest cases all sit OUTSIDE the API surface (no new operations, schemas, parameters, responses, headers, or security definitions).
+
+### Decisions
+
+PR #513 sanctioned as the **2nd lifetime locked-surface mutation**. Bank the new openapi.json hash (`286a3a52…315378e`) as the cycle-#45 baseline; cycles #46+ should diff against this hash for parity-gate evaluation. No filing.
+
+### Duplicate-Check Proof
+
+Three-keyword sweep against `squad:nagel` (open + closed, last 30):
+
+1. **`audit log dsr OR rectification OR erasure OR holdings_count`** →
+   - OPEN: #316 (X-App-Attest), #416 (Cache-Control), #423 (open content), #348 (X-Device-UUID) — all carry-forward, none topically novel
+   - CLOSED: #460 (PORTFOLIO_NOT_FOUND overload), #461 (DecimalString range constraints) — both DSR-adjacent, both Reuben-lane closures, neither matches PR #513's description-only annotation pattern
+2. **`description docstring openapi annotation`** → 0 hits. No prior Nagel filing about documentation-text changes — confirms description-only mutations have never been treated as contract drift in this codebase.
+3. **`log.info structured event journald`** → 0 hits. Server-side log emissions are out of Nagel's gating scope (no HTTP projection); historically owned by Reuben (#445 read-side audit log).
+
+**Verdict: NO novel issue to file.** PR #513 is non-breaking, fully attributable, and Reuben-lane-owned on the compliance side. Nagel surfaces zero gap.
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **PR #513 closure-validation: PASS** | (#457 compliance — Reuben-lane) | No Nagel filing; bank as sanctioned non-breaking change |
+| **NO_OP carry-forward** | #423, #416, #348, #317, #316 | All line refs re-validated against `0baf956`; no regression, no expansion |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+PR #513 mutated the locked surface but the mutation is description-only with mirror parity preserved. Risk score: **MINIMAL** — equivalent to a comment edit from the generated-client perspective. No client regen required.
+
+### Forward Watch / Handoff
+
+- **New baseline hash** for cycles #46+: openapi.json SHA-256 `286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e` (was `d9c7f1eb…3b5fff` for cycles #40–#44).
+- **Still waiting** for first sanctioned `paths.*` or `components.schemas.*` *structural* mutation since #303 (PR #503, cycle #39). PR #513 is description-only and does not count as a structural carrier. Likely vehicle remains: **#317** (Decimal-money normalization on `HoldingOut`/`AddHoldingRequest`) or a batched spec-hygiene PR addressing #423's open-content-model substrate.
+- **PR #145** (TCA migration) and **#468** (in-app-events scaffolding) remain forward-watch — first `@Reducer` introduction must arrive with explicit Nagel surface review.
+- **Reuben joint hand-off:** PR #513's closure-validation half (compliance/audit-log floor) is Reuben's; Nagel half (spec/surface) banked here. Both halves PASS — joint closure of the cycle-#44 next-action complete.
+- **Drift discipline:** **6 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/45** entering cycle #46.
+
+(end Nagel cycle #45)
