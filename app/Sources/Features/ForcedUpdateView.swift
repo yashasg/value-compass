@@ -27,6 +27,10 @@ struct ForcedUpdateView: View {
       Text("Update Required")
         .valueCompassTextStyle(.displayLarge)
         .foregroundStyle(Color.appContentPrimary)
+        // #299: pin the blocking-screen headline as a VoiceOver
+        // heading so the Headings rotor surfaces the action's root
+        // status before the body copy and "Open App Store" button.
+        .accessibilityAddTraits(.isHeader)
 
       if let minimumVersion = store.minimumVersion {
         Text("\(AppBrand.displayName) \(minimumVersion) or later is required to continue.")

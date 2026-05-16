@@ -141,6 +141,10 @@ struct ContributionResultContent: View {
       Text("Breakdown")
         .valueCompassTextStyle(.headlineMedium)
         .foregroundStyle(Color.appContentPrimary)
+        // #299: pin the per-screen section title as a VoiceOver
+        // heading so the Headings rotor can jump to Breakdown without
+        // a linear swipe through every category + ticker row.
+        .accessibilityAddTraits(.isHeader)
 
       ForEach(Array(store.output.categoryBreakdown.enumerated()), id: \.offset) { _, category in
         VStack(alignment: .leading, spacing: 8) {
