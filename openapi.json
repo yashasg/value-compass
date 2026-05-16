@@ -1495,6 +1495,7 @@
             "title": "Weight"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "device_uuid",
@@ -1502,7 +1503,7 @@
           "weight"
         ],
         "title": "AddHoldingRequest",
-        "description": "Request body for adding a holding to a device portfolio."
+        "description": "Request body for adding a holding to a device portfolio.\n\n``extra=\"forbid\"`` closes the wire shape so an iOS client typo on a\nfuture optional field (e.g. ``displayName`` vs ``display_name``) is\nsurfaced as a ``schemaUnsupported`` 422 envelope instead of being\nsilently discarded by Pydantic's default ``extra=\"ignore\"`` and\npersisted as the wrong row. The closed-content posture is\nrequest-only \u2014 response models stay open so additive server-side\nschema evolution does not break older app versions (issue #423,\n``docs/services-tech-spec.md`` \u00a77)."
       },
       "ErrorCode": {
         "type": "string",
@@ -1692,12 +1693,13 @@
             "maximum": 1
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "weight"
         ],
         "title": "PatchHoldingRequest",
-        "description": "Request body for ``PATCH /portfolio/holdings/{ticker}``.\n\nOnly ``weight`` is mutable through PATCH. A ticker typo (`AAPL`\nintended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/\n{ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename\nthe row's primary key. ``DecimalString`` preserves exact precision\nend-to-end (see #392)."
+        "description": "Request body for ``PATCH /portfolio/holdings/{ticker}``.\n\nOnly ``weight`` is mutable through PATCH. A ticker typo (`AAPL`\nintended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/\n{ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename\nthe row's primary key. ``DecimalString`` preserves exact precision\nend-to-end (see #392).\n\n``extra=\"forbid\"`` closes the wire shape so a client that sends an\nunknown field (for example ``ticker`` in the body, mistakenly\ntrying to rename the row via PATCH) is rejected with the\ndocumented ``schemaUnsupported`` 422 envelope instead of having\nthe stray field silently ignored while ``weight`` is rewritten.\nRequest-only posture; response models stay open for additive\nevolution (issue #423, ``docs/services-tech-spec.md`` \u00a77)."
       },
       "PatchHoldingResponse": {
         "properties": {
@@ -1758,9 +1760,10 @@
             "title": "Ma Window"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "PatchPortfolioRequest",
-        "description": "Request body for ``PATCH /portfolio``.\n\nImplements the scalar half of the GDPR Art. 16 / CCPA \u00a71798.106\nright-to-rectification path (issue #374). Every field is optional\nso the client can correct a single value without re-stating the\nothers, but the body **must** carry at least one non-null field \u2014\nan empty PATCH is rejected as ``schemaUnsupported`` so the wire\ncontract never accepts a no-op write that silently stamps activity.\n\n``ma_window`` accepts only the values enumerated in\n:data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the\ndocumented ``unsupportedMovingAverageWindow`` envelope so the iOS\nclient can surface a specific error rather than the generic\n``schemaUnsupported`` validation failure."
+        "description": "Request body for ``PATCH /portfolio``.\n\nImplements the scalar half of the GDPR Art. 16 / CCPA \u00a71798.106\nright-to-rectification path (issue #374). Every field is optional\nso the client can correct a single value without re-stating the\nothers, but the body **must** carry at least one non-null field \u2014\nan empty PATCH is rejected as ``schemaUnsupported`` so the wire\ncontract never accepts a no-op write that silently stamps activity.\n\n``ma_window`` accepts only the values enumerated in\n:data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the\ndocumented ``unsupportedMovingAverageWindow`` envelope so the iOS\nclient can surface a specific error rather than the generic\n``schemaUnsupported`` validation failure.\n\n``extra=\"forbid\"`` closes the wire shape so an unknown PATCH field\n(e.g. a future ``currency`` the spec does not yet declare) is\nsurfaced as a ``schemaUnsupported`` 422 envelope instead of being\nsilently dropped \u2014 the bigger risk on a rectification path that\nwould otherwise stamp ``last_seen_at`` while no-op'ing the\ncorrection the user intended. Request-only posture; response\nmodels stay open for additive evolution (issue #423,\n``docs/services-tech-spec.md`` \u00a77)."
       },
       "PatchPortfolioResponse": {
         "properties": {

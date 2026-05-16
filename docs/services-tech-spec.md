@@ -250,6 +250,25 @@ Backend phases use OpenAPI as the backend/iOS contract:
 7. Minimum app support is communicated with `X-Min-App-Version` and handled by the
    client with a forced-update path.
 8. API schema versioning remains machine-readable through `/schema/version`.
+9. **Content-model posture is asymmetric (issue #423): request bodies are
+   closed (`additionalProperties: false` / Pydantic `extra="forbid"`),
+   response bodies stay open.** A request that carries an unknown field
+   must 422 with the `schemaUnsupported` envelope so a client-side typo
+   (e.g. `displayName` vs `display_name`) or a stray field on a
+   rectification PATCH cannot be silently dropped by Pydantic's default
+   `extra="ignore"` while activity is stamped. Response models stay open
+   so additive server-side schema evolution (e.g. a new optional
+   indicator on `HoldingOut`) does not break older iOS builds. Because
+   the closed posture routes arbitrary client-supplied field values
+   through the global `RequestValidationError` handler, the handler
+   redacts `input` and `ctx` from `exc.errors()` before logging so the
+   rejected value itself is never persisted to application logs
+   (preserves `docs/legal/data-retention.md` minimization). The request-
+   only / response sets are derived from the OpenAPI `paths` graph by
+   the spec contract pin in
+   `backend/tests/test_api.py::test_request_bodies_are_closed_content_and_responses_stay_open`,
+   so future request-body or response models inherit the rule
+   automatically.
 
 For v1 offline calculation, no OpenAPI client is required. For v1 hybrid sync or
 future market-data adapters, OpenAPI-generated clients are the only supported
