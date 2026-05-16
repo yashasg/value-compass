@@ -1877,3 +1877,169 @@ Privacy-policy §6 line 257-258 ("disclaimer screen") vs. SettingsView footer li
 - **Window delta can produce the same git log across multiple cycles.** Cycles #39 and #40 share the identical window (06c368b..98424f0), indicating the HEAD has not advanced between Saul's cycle #39 close and cycle #40 spawn. This is a normal multi-specialist-parallel cadence artifact. The correct response is to use the same in-window evidence but conduct the NEW cycle-specific actions (peer probe, counter increment, cross-lane synthesis) rather than declaring NO_OP on the basis of window identity.
 
 **(end Saul cycle #40)**
+
+---
+
+## Cycle #42 — 2026-05-16T01:20Z (window: 98424f0..1662b32)
+
+### Roster Snapshot
+
+**Open issues:** 16 (STABLE from cycles #38–#41).
+Roster: `#440, #393, #354, #347, #322, #313, #301, #296, #286, #277, #269, #263, #253, #241, #240, #238`
+Live verification: `gh issue list --label squad:saul --state open --limit 200 --json number --jq '. | length'` → **16**.
+
+### Cycle #41 Skip Note
+
+Per spawn-prompt instruction: cycle #41 was Yen/Turk-only effective (the only #41 history commits in window are `f273de9` Yen + `1662b32` Turk). Saul did not run cycle #41. Counter and roster carry directly from cycle #40 close into cycle #42.
+
+### Frank Inbox Source
+
+**Used:** `.squad/agents/frank/inbox-saul-cycle-40.md` (5,103 bytes — Saul's own cycle-#40 handoff, already in Frank's inbox). **No new Frank→Saul inbox files exist** for cycles 40/41/42 (`find .squad/agents/saul -name "inbox-frank-cycle-4*"` → empty; cycle-#39 file was absorbed at cycle #39 close and removed). Cycle #40 inbox dispositions all stand: zero storefront delta, peer probe partial (Yahoo Finance LIVE 4.75★/617,974), #286 counter 27→28 banked, wording-drift §6 unfixed.
+
+### In-Window Scan
+
+**Cycle anchor:** HEAD `1662b32`. Prior Saul anchor: `98424f0` (cycle #40 close).
+**Window:** `98424f0..1662b32` — 4 commits, all `.squad/` history-only:
+
+| Commit | Author/Lane | Files | Storefront/Positioning Impact |
+|---|---|---|---|
+| `9e344ad` | Saul cycle #40 history | `.squad/agents/saul/history.md` + `.squad/agents/frank/inbox-saul-cycle-40.md` | Saul-own; already analyzed |
+| `9ba571e` | Nagel cycle #40 history | `.squad/agents/nagel/history.md` (+2138 lines) | None |
+| `f273de9` | Yen cycle #41 history | `.squad/agents/yen/history.md` (+33 lines) | None |
+| `1662b32` | Turk cycle #41 history (HEAD) | `.squad/agents/turk/history.md` (+52 lines) | None |
+
+**Market/positioning surface delta:**
+- `docs/aso/`: NONE
+- `docs/strategy/`: NONE
+- `docs/market/`: NONE
+- `docs/landing/`: NONE
+- `app/Sources/Features/SettingsView.swift`: NONE
+- `app/Sources/App/PrivacyInfo.xcprivacy`: NONE
+
+**Verification:**
+- `git --no-pager diff 98424f0..HEAD --name-only -- 'docs/aso/*' 'docs/strategy/*' 'docs/market/*' 'docs/landing/*' 'app/Sources/Features/SettingsView.swift' 'app/Sources/App/PrivacyInfo.xcprivacy'` → empty.
+- `git --no-pager diff 98424f0..HEAD --stat -- docs/ app/Sources/` → empty.
+
+**Verdict:** **ZERO product-code delta, ZERO `docs/` delta, ZERO storefront surface.** Window is pure history-archive activity.
+
+### Cross-Lane Intel from Embedded History Commits
+
+Three embedded reports in the window deserve carry-noting (none storefront-actionable, all carried for cross-lane awareness):
+
+1. **Nagel cycle #40 (`9ba571e`):** #303 PASS (POST /portfolio/holdings 202 application/json content drop). #423 comment landed with +3 schemas. **Positioning read:** schema-precision is observable-signal hygiene aligned with #347 taxonomy axis (precise contracts = evaluator-visible technical commitment). No storefront copy implication; no Saul filing warranted.
+2. **Yen cycle #41 (`f273de9`):** A11y roster reduced 11 → 8 (closed #326/#386/#401). All 4 a11y invariants PASS. **Positioning read:** narrows the "shipped accessibility" surface inventory but does not change the available evidence list for trust-commitment claims (#322). Frank already has WCAG-leaning claim language anchored; no new candidate commitment yields.
+3. **Turk cycle #41 (`1662b32`):** #328 closed via PR #509 (HIG); 4/4 watchlist PASS, NO_OP. **Positioning read:** HIG lane has reached burn-down stability — fewer chances for surprise storefront-surface mutations (launch screen, sheets, nav already locked). Reduces watchlist load for Saul on cycle-#43 in-window scan.
+
+### Peer-Set Probe (Cycle #42 — NOT TRIGGERED)
+
+Every-3rd-cycle cadence: last full probe cycle #37; partial probe cycle #40 (1/6 reachable). **Cycle #42 is one short of trigger; cycle #43 is next.**
+
+No fresh probe executed. Standing baseline:
+- Yahoo Finance: 4.75★ / 617,974 (LIVE, +74 since cycle #37, rating STABLE)
+- Stock Events / Snowball / Delta / M1 / Empower: cycle #37 baselines (API unreachable cycle #40 — conditionally held)
+
+**Carry to cycle #43:** attempt alternate-method bundle-ID lookup (numeric app ID + URL-scheme fallback) to maximize coverage beyond the single Yahoo Finance hit from cycle #40.
+
+### #286 Counter State
+
+| Cycle | Counter | Action | Status |
+|---|---|---|---|
+| #39 | 26 → 27 | Banked | ✅ |
+| #40 | 27 → 28 | Banked | ✅ |
+| #41 | — | Saul did not run | — |
+| **#42** | **28 → 29** | **Banked** | ✅ **this cycle** |
+
+**Danny activity probe:** `gh issue view 286 --json updatedAt,state` → `updatedAt=2026-05-15T22:38:19Z`, `state=OPEN`.
+
+`updatedAt` corresponds to cycle #32 Saul re-assertion comment (counter 20 fire). Saul cycle-#40 commit `9e344ad` timestamp = `2026-05-16T00:40:23Z` (UTC) — i.e., the #286 last-update timestamp PRECEDES cycle #40 close by ~2 hours and PRECEDES cycle #42 spawn by ~2.7 hours. **No Danny activity since cycle #32.** Issue remains OPEN, no state change, no Danny comment.
+
+Silent bank. **Next fire ~cycle #52** (counter → 40 threshold). **No comment posted on #286 this cycle.**
+
+### Wording-Drift Carry-Forward: REAFFIRMED (UNFIXED, lane-stable)
+
+- **Privacy-policy §6 line 257-258:** "disclaimer screen"
+- **SettingsView footer lines 345/370 (storefront truth-source):** "welcome screen"
+- **Status:** UNFIXED at cycle #42 HEAD.
+- **Reuben activity in window:** Reuben did NOT touch the repo in cycle #42 window (window is history-only; no Reuben history commit landed).
+- **Storefront-copy impact:** ZERO. Frank's storefront anchors to SettingsView truth-source.
+- **Owner:** Reuben. Carry-forward to cycle #43.
+
+### Cross-Lane Synthesis Matrix
+
+| Open Saul Issue | Window Evidence (cycle #42) | Status |
+|---|---|---|
+| **#286** (Bogleheads ICP vs algo seam — Danny primacy) | Zero Danny activity; counter 28→29 banked | BANKED, no action |
+| **#440** (storefront seam zero in-binary observable) | No Settings algorithm picker in window | STILL BLOCKED on Basher |
+| **#322** (trust-commitment enumerated audits) | No new compliance commits in window | Cycle-#40 #322 comment (DSR audit-log as 7th candidate commitment) is the latest fold; no new evidence to file |
+| **#347** (observable-signal taxonomy / no-analytics) | No new DSR or analytics-replacement surface in window | Standing micro-evidence holds; cycle #43 watch on write-side DSR |
+| **#313** (monthly recalc retention loop) / #468 pairing | No in-app events implementation surface | Pairing valid; no fresh evidence |
+| **#354** (privacy-label "Data Not Collected") | No PrivacyInfo.xcprivacy delta | Reinforced (no regression) |
+| **#296** (activation-tier vs manual-entry tracker peer set) | No peer probe this cycle (deferred to #43) | Baseline conditionally held |
+| **#393** (spreadsheet competitor switching cost) | No spreadsheet-export feature in window | UNCHANGED |
+| Remaining 8 issues (#240, #238, #241, #253, #263, #269, #277, #301) | No window evidence touching these | UNCHANGED |
+
+### Filings / Comments
+
+**NEW ISSUE:** NO. Zero novel candidates after duplicate sweep.
+**NEW COMMENT:** NO. No in-window evidence warrants a comment on any roster issue. (#322 was commented cycle #40; no new evidence to fold this cycle.)
+**Decision: Pure carry-cycle NO_OP.**
+
+### Duplicate-Check Proof (15-axis sweep)
+
+| Keyword | Hits in `squad:saul` (open) | Mapping |
+|---|---|---|
+| `storefront` | 16 | All map to existing roster (#440 anchor) |
+| `copy` | 16 | All map to existing roster |
+| `screenshot` | 7 | Subset of roster; Frank-lane (squad:frank) ASO screenshot issues confirmed not in Saul scope |
+| `keyword` | 13 | All map to existing roster |
+| `subtitle` | 12 | All map to existing roster |
+| `aso` | 12 | All map to existing roster (no orphans) |
+| `positioning` | 15 | All map to existing roster |
+| `landing` | 3 | All map to existing roster |
+| `metadata` | 7 | All map to existing roster |
+| `marketing` | 7 | All map to existing roster |
+| `icp` (contextual) | 4 | All map to existing roster (#286, #240) |
+| `peer` (contextual) | 11 | All map to existing roster (#296 anchor) |
+| `tier` (contextual) | 9 | All map to existing roster (#296 anchor) |
+| `commitment` (contextual) | 10 | All map to existing roster (#322 anchor) |
+| `taxonomy` (contextual) | 3 | All map to existing roster (#347 anchor) |
+
+**Cross-roster orphan check:** `gh issue list --search "<kw> -label:squad:saul state:open"` for ICP / Bogleheads / competitor returned only `squad:frank` ASO issues (#220, #245, #246, #246, #255, #270, #274, #292, #312, #324, #327, #342, #353, #362, #370, #390, #409, #431, #442, #468). These are Frank-lane ASO copy/screenshot/category issues — correct separation. **Zero orphan positioning issues outside Saul's lane.**
+
+**Verdict:** Zero novel candidates. Roster is complete for current positioning surface.
+
+### Frank Handoff
+
+**Output file:** `.squad/agents/frank/inbox-saul-cycle-42.md` (7,199 bytes — written this cycle, verified on disk via `wc -c`).
+
+Contents: cycle context, window storefront-surface delta (zero), cross-lane embedded intel (Nagel #423/Yen roster-3/Turk #328), peer probe status (NOT triggered, cycle #43 next), #286 counter 28→29 banked + Danny no-activity probe result, wording-drift §6 carry-forward, #322/#347/#313 cross-lane status, roster (16 STABLE), top-3 asks for cycle #43.
+
+### Evidence
+
+- **Window commits:** `git --no-pager log 98424f0..HEAD --oneline` → 4 commits (Saul/Nagel/Yen/Turk history-only).
+- **Surface-delta verification:** `git --no-pager diff 98424f0..HEAD --name-only -- 'docs/aso/*' 'docs/strategy/*' 'docs/market/*' 'docs/landing/*' 'app/Sources/Features/SettingsView.swift' 'app/Sources/App/PrivacyInfo.xcprivacy'` → empty.
+- **Per-commit stat:** All 4 commits touch ONLY `.squad/agents/<name>/history.md` (+ cycle-40 Saul commit also touched `.squad/agents/frank/inbox-saul-cycle-40.md` — Saul's own handoff).
+- **#286 probe:** `gh issue view 286 --json updatedAt,state` → `updatedAt=2026-05-15T22:38:19Z, state=OPEN` (cycle #32 re-assertion, no Danny activity).
+- **Roster live count:** `gh issue list --label squad:saul --state open --limit 200 --json number --jq '. | length'` → 16.
+- **Dedup sweep:** 15 keywords (10 ASO baseline + 5 contextual icp/peer/tier/commitment/taxonomy). Zero orphans.
+
+### Blockers
+
+1. **#286 Danny primacy** — Counter at 29; no actionable Saul step until Danny picks stance.
+2. **#440 storefront seam** — Blocked on Basher shipping Settings algorithm picker (in-binary observable surface). No Saul market-research action available.
+3. **Wording-drift §6** — Reuben-owned; cycle-#43 carry. Zero storefront impact.
+4. **iTunes API partial availability** — Carries from cycle #40 (5/6 peer apps unreachable). Cycle #43 probe will attempt alternate-method lookup.
+
+### Top 3 Next Actions (Cycle #43)
+
+1. **Peer-set full probe trigger** — Cycle #43 is the every-3rd-cycle trigger. Attempt numeric app ID + URL-scheme fallback in addition to standard iTunes Lookup to recover Stock Events / Snowball / Delta / M1 / Empower data points lost in cycle #40 partial probe.
+2. **#347 observable-signal taxonomy watch** — If any compliance/observability commit lands in cycle #43 window (write-side DSR audit per #457, analytics-substitute structured logging, etc.), fold into #347 with comment.
+3. **#322 commitments-block status watch** — If Danny moves #286 (probably most likely path to unblock), the cascading question is whether Danny accepts the #322 enumerated-commitments frame for v1.0 description copy. If so, the DSR-audit candidate commitment (#7, drafted cycle #40) is ready for Frank's storefront block.
+
+### Learnings
+
+- **A 4-commit, all-history window is a valid cycle-#42 input.** The window is entirely `.squad/agents/<name>/history.md` appends from sibling specialists' prior cycles. This is a "background-archive" window: the codebase did not advance, but the team's documented thinking did. The correct Saul response is to (a) confirm zero storefront delta, (b) screen embedded history reports for cross-lane carries (Nagel #423 schemas, Yen a11y roster reduction, Turk #328 closure), (c) bank the #286 counter as usual, and (d) handoff a tight NO_OP-with-context note to Frank. Pattern locked.
+- **The #286 counter mechanically progresses even across Saul-skip cycles.** Cycle #41 was Yen/Turk-only effective, but the counter only ticks when Saul runs — so cycle #42 banks one step (28 → 29), not two. This avoids double-counting silent banks across parallel-loop cadence.
+- **Frank inbox absent ≠ Frank silent.** When `.squad/agents/saul/inbox-frank-cycle-<N>.md` does not exist, the most recent Saul-to-Frank handoff is the authoritative reference (i.e., Frank's last received Saul handoff is the standing-context document). Confirmed cycle-#40 dispositions all carry; no new Frank-side asks have been queued.
+
+**(end Saul cycle #42)**
