@@ -23,27 +23,9 @@ from collections.abc import Iterable
 from uuid import UUID
 
 from common import config
+from common.logging_utils import redact_device_uuid as _redact
 
 log = logging.getLogger("vca.apns")
-
-
-def _redact(device_uuid: UUID) -> str:
-    """Return a safe-to-log short suffix for a device UUID.
-
-    Two operational needs to satisfy:
-
-    * Logs must still be useful for correlating "did this device get a
-      push?" against an in-flight bug report.
-    * Logs must not store the raw identifier (Art. 25 / data-protection
-      by design); the persisted DB row is the system of record, not
-      journald.
-
-    The last four hex characters of a UUID give ~16 bits of identity —
-    enough for a developer to spot a matching device in a single bug
-    report, far too few to re-identify across the user base. Format
-    keeps the field aligned in grep output.
-    """
-    return f"…{str(device_uuid)[-4:]}"
 
 
 async def push_to_device(device_uuid: UUID) -> None:

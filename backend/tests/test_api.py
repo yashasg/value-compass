@@ -1084,6 +1084,139 @@ def test_portfolio_export_omits_other_devices(
     assert "SECRET" not in tickers
 
 
+def test_portfolio_export_emits_audit_log_on_success(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A successful export must leave a structured ``vca.api`` audit trail.
+
+    GDPR Art. 5(2) (accountability) + CCPA Regulations 11 CCR §7102(a)
+    (24-month records-of-requests) require the controller to be able to
+    demonstrate, on inspection, that a data-portability request was
+    honored. The export handler emits a single structured INFO line on
+    the success path so journald carries the proof (issue #445).
+
+    Field shape is locked in here so the same surface can be reused by
+    the sibling write-side endpoints under #457 without a second
+    contract negotiation.
+    """
+    device_uuid = uuid.uuid4()
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="Audited",
+        monthly_budget=Decimal("100"),
+        ma_window=50,
+        created_at=datetime.now(UTC),
+    )
+    portfolio.holdings.extend(
+        [
+            Holding(id=uuid.uuid4(), ticker="VTI", weight=Decimal("0.5")),
+            Holding(id=uuid.uuid4(), ticker="BND", weight=Decimal("0.5")),
+        ]
+    )
+    db_session.add(portfolio)
+    db_session.commit()
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.get(
+            "/portfolio/export",
+            params={"device_uuid": str(device_uuid)},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    audit_records = [
+        record
+        for record in caplog.records
+        if record.name == "vca.api"
+        and "event=dsr.export.portfolio" in record.getMessage()
+    ]
+    assert len(audit_records) == 1, (
+        "Exactly one dsr.export.portfolio audit line must be emitted on "
+        "the 200 success path (GDPR Art. 5(2) accountability)."
+    )
+    message = audit_records[0].getMessage()
+    assert f"device_uuid_suffix=…{str(device_uuid)[-4:]}" in message
+    assert f"portfolio_id={portfolio.id}" in message
+    assert "holdings_count=2" in message
+
+
+def test_portfolio_export_audit_log_redacts_device_uuid(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The audit line must never quote the raw ``X-Device-UUID``.
+
+    The 30-day journald retention floor in
+    ``docs/legal/data-retention.md`` (Application logs row) is sized
+    against a redacted-suffix surface only; logging the raw UUID would
+    re-open the surface closed by the apns.py ``_redact`` precedent and
+    the issue #339 redaction floor. Regression guard for issue #445.
+    """
+    device_uuid = uuid.uuid4()
+    portfolio = Portfolio(
+        id=uuid.uuid4(),
+        device_uuid=device_uuid,
+        name="Redacted",
+        monthly_budget=Decimal("100"),
+        ma_window=50,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(portfolio)
+    db_session.commit()
+
+    raw_uuid = str(device_uuid)
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.get(
+            "/portfolio/export",
+            params={"device_uuid": raw_uuid},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 200
+
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert raw_uuid not in record.getMessage(), (
+            "Raw device_uuid must not appear in any vca.api log line "
+            "(see docs/legal/data-retention.md Application logs row)."
+        )
+
+
+def test_portfolio_export_does_not_emit_audit_log_on_404(
+    client: TestClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A 404 export must not stamp the accountability log.
+
+    The audit surface is the ``records-of-requests-honored`` trail; a
+    request that 404s was *not* honored (no rows changed hands), so an
+    audit line would mislead the CCPA §7102(a) inspector. Regression
+    guard for issue #445.
+    """
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.get(
+            "/portfolio/export",
+            params={"device_uuid": str(uuid.uuid4())},
+            headers=ATTEST,
+        )
+    assert resp.status_code == 404
+
+    audit_records = [
+        record
+        for record in caplog.records
+        if record.name == "vca.api"
+        and "event=dsr.export.portfolio" in record.getMessage()
+    ]
+    assert audit_records == [], (
+        "No dsr.export.portfolio audit line should be emitted on a 404 "
+        "— the request was not honored."
+    )
+
+
 # ---------------------------------------------------------------------------
 # GDPR Art. 16 / CCPA §1798.106 right-to-rectification — issue #374
 # ---------------------------------------------------------------------------
