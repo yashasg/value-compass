@@ -34,7 +34,6 @@ struct ContributionResultContent: View {
           }
           resultSummary
           categoryBreakdown
-          actions
         }
         // #233: render `Disclaimer.text` alongside every computed
         // dollar amount. Kept inside the same scroll container as the
@@ -47,6 +46,16 @@ struct ContributionResultContent: View {
       .frame(maxWidth: .infinity, alignment: .center)
     }
     .navigationTitle(store.output.error == nil ? "Contribution Result" : "Calculation Failed")
+    // #358: HIG → Bars → Toolbars / Navigation Bars require the
+    // screen's primary action to stay reachable regardless of scroll
+    // position. The category-breakdown VStack inside the ScrollView is
+    // unbounded for large portfolios, so the previous in-body
+    // Save+History HStack scrolled off-screen on the first verification
+    // pass. Save is .primaryAction (trailing nav-bar slot); History is
+    // .secondaryAction (overflow menu on compact, visible on regular).
+    // Both items are gated on the error-free output so the toolbar
+    // collapses to the empty bar on the calculation-failure surface.
+    .toolbar { resultToolbarContent }
     .alert(
       "Could Not Save Result",
       isPresented: Binding(
@@ -198,23 +207,37 @@ struct ContributionResultContent: View {
     }
   }
 
-  private var actions: some View {
-    HStack(spacing: 12) {
+  @ToolbarContentBuilder
+  private var resultToolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .primaryAction) {
       Button {
         store.send(.saveTapped)
       } label: {
         Label("Save", systemImage: "tray.and.arrow.down")
       }
-      .buttonStyle(.borderedProminent)
+      // The toolbar collapses Label to icon-only on iPhone / compact
+      // widths, leaving the "Save" text exposed only to VoiceOver.
+      // `.accessibilityShowsLargeContentViewer()` re-surfaces the
+      // Label's title through iOS's long-press large-content tooltip
+      // so users on AX text sizes who do not use VoiceOver can still
+      // read what the glyph represents (matches the post-#401
+      // PortfolioListView toolbar convention).
+      .accessibilityShowsLargeContentViewer()
       .accessibilityIdentifier("contribution.result.save")
+      .disabled(store.output.error != nil)
+    }
 
+    ToolbarItem(placement: .secondaryAction) {
       Button {
         store.send(.openHistoryTapped)
       } label: {
         Label("History", systemImage: "clock.arrow.circlepath")
       }
-      .buttonStyle(.bordered)
+      // See `.primaryAction` block above — same icon-only collapse
+      // rule, same Large Content Viewer rationale (#401).
+      .accessibilityShowsLargeContentViewer()
       .accessibilityIdentifier("contribution.result.history")
+      .disabled(store.output.error != nil)
     }
   }
 
