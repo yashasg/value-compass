@@ -138,3 +138,125 @@ Things in the spec / current state that I need legal clarity on before TestFligh
 8. **Trademark search status for "Value Compass."** Not yet performed. Not a TestFlight blocker, but a public-launch / marketing-spend blocker. Should be done before Frank produces App Store metadata copy that leans on the brand.
 
 ⚠️ **Standing caveat (repeated from the top of this file):** I am NOT licensed counsel. Every item above is best-effort risk surfacing and starting language. The user MUST have an actual lawyer review the Privacy Policy, any ToS/EULA, and the financial-advice disclaimer before public launch.
+
+---
+
+## Cycle #42 — 2026-05-16T01:20:31Z (Specialist Parallel Loop)
+
+**HEAD:** `1662b32` (chore(turk): cycle #41 history — window CLEAN, watchlist 4/4 PASS, #328 closed via PR #509, NO_OP).
+**Anchor:** `98424f0` (compliance(dsr-audit-log): emit structured audit log on GET /portfolio/export (closes #445) (#506) — my prior in-lane closure at cycle #39).
+**Window:** `98424f0..1662b32`. **First Reuben cycle-history entry committed to this file** (cycles #40 and #41 — Reuben did not produce a history commit because no novel compliance evidence surfaced and orchestrator log carried the gate evidence; this entry rebases the per-cycle history line at #42).
+**Justification for anchor:** `98424f0` was Reuben's last in-window source/docs commit and the natural diff reference point for the two persistent re-validation hooks (#224, #294). Selecting it gives the widest defensible window for in-lane evidence (any compliance-relevant source delta from cycles #40 + #41 + #42 would land in this diff).
+
+### Window-content classification
+
+`git --no-pager diff --name-only 98424f0..HEAD` → 5 files, all under `.squad/agents/{frank,nagel,saul,turk,yen}/history.md` (Frank's `inbox-saul-cycle-40.md` is the only non-history file, and it's a peer-handoff scratch file under `.squad/`, not a product surface). **Zero source-code, zero docs, zero contract, zero policy-text delta.** This is a 100% specialist-history-only window.
+
+### Re-validation gates (both run)
+
+- **#224 (`docs/legal/privacy-policy.md`) — PASS-no-trigger.**
+  - Command: `git --no-pager diff --stat 98424f0..HEAD -- app/Sources/Backend/Networking/APIClient.swift app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/DeviceIDProvider.swift app/Sources/App/PrivacyInfo.xcprivacy app/Sources/App/AppFeature/SettingsFeature.swift docs/legal/privacy-policy.md`
+  - Result: empty. None of the 5 source triggers fired; `privacy-policy.md` untouched. No re-verification required.
+- **#294 (`docs/legal/third-party-services.md`) — PASS-no-trigger.**
+  - Command: `git --no-pager diff --stat 98424f0..HEAD -- app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/MassiveAPIKeyStore.swift app/Sources/Backend/Models/Disclaimer.swift app/Sources/Features/SettingsView.swift docs/legal/third-party-services.md`
+  - Result: empty. None of the 4 source triggers fired; `third-party-services.md` untouched. No re-verification required.
+  - Note: contrast with cycle #39, when #294 FIRED via `75643ba` (Yen `SettingsView.swift:298` `.savedSuccessfully` arm) and re-verified STILL ACCURATE. This cycle's window does not include any `SettingsView.swift` touch.
+
+### In-window compliance keyword grep
+
+Filter: `git --no-pager diff 98424f0..HEAD -- '*.swift' '*.md' '*.json' '*.plist' '*.py' ':(exclude).squad/agents/*/history.md' ':(exclude).squad/agents/frank/inbox-saul-cycle-40.md'` against keyword set `advice|disclaimer|massive|polygon|attribution|copyright|license|gdpr|ccpa|finra|x-device|api_key|consent|cookie|tracking|analytics|pii`.
+
+**Result: 0 hits across every keyword class.** The 203 raw hits in the unfiltered diff are all narrative references inside specialist history files (Saul/Nagel/Yen/Turk discussing prior compliance closures from cycles #39–#41 in their own history append). No source-surface keyword introduction, no policy-text drift, no third-party SDK introduction.
+
+### DSR roster status (per-issue OPEN/CLOSED + last activity)
+
+| # | State | Last activity | Lane | Notes |
+|---|---|---|---|---|
+| #329 (erasure) | CLOSED | 2026-05-15T20:28:43Z | done | Pre-cycle-#39 closure (in-app server-side erasure path landed via prior cycle) |
+| #449 (rectification UI) | OPEN | 2026-05-15T20:43:49Z | team:frontend P2 mvp | No movement since cycle #38. Settings trigger + fallback plumbing for right-to-correct flow pending |
+| #444 (export UI) | OPEN | 2026-05-15T20:55:12Z | team:frontend P2 | No movement since cycle #38. Settings trigger + share-sheet plumbing for GET /portfolio/export pending |
+| #457 (DSR write-side audit log, successor to closed #445) | OPEN | 2026-05-15T21:09:11Z | team:backend P2 security | No movement since cycle #38. PATCH/DELETE DSR audit log gap (Art. 5(2) accountability) — write-side counterpart now ripe to pull, GET-side precedent shipped in 98424f0 |
+| #443 (App Privacy Connect parity) | OPEN | 2026-05-15T18:16:25Z | team:frontend P2 mvp security | No movement since cycle #38. Storefront answer-set parity vs PrivacyInfo.xcprivacy documentation gap |
+
+**DSR-lane movement this cycle: zero.** All four OPEN DSR items are 4-to-7 hours stale relative to cycle-#42 start. **#457 is now the natural next pull** — GET-side audit-log precedent (#445) landed in window; write-side is the symmetric next step, schema/redaction helpers already centralized at `backend/common/logging_utils.py:24-38` and re-exportable.
+
+### Carry-forward status (cycle-#39 list)
+
+1. **§7102(a) 24-month persisted-store question** — **PROMOTED FROM PROSE TO TRACKED ISSUE.**
+   - Filed as **#511 OPEN** by `yashasg` at `2026-05-16T00:41:37Z` (between cycle #39 close and cycle #42 start).
+   - Labels: `documentation`, `priority:p2`, `security`, `team:backend`, `squad:reuben`.
+   - Title: `compliance(dsr-audit-log): CCPA 7102(a) 24-month records-of-requests obligation unresolved against 30-day journald floor`.
+   - Body explicitly cites `docs/legal/data-retention.md:107-110` conditional prose (the artifact Reuben pre-staged at cycle #39) and `backend/api/main.py:985-998` (the 30-day journald emit shipped in `98424f0`).
+   - Acceptance criteria require licensed-counsel determination on whether 7102(a) applies, conditional-vs-resolved status update in `data-retention.md`, and either persisted-store design + data-retention row OR rationale documentation.
+   - Status: **Decision gate before #224 publishes — pre-launch blocker.** Carry-forward retires as prose tracking; lifecycle now happens on #511. **Standing caveat applies: I am not licensed counsel; this determination must come from outside.**
+2. **#485 (privacy-policy §6 wording-drift, in-process erasure return)** — **CLOSED 2026-05-15T22:45:40Z** via commit `8bd0cc1` (PR #495). Pre-cycle-#42 closure; carry-forward retires.
+3. **"Value Compass" trademark search** — **OBSOLETE / SUPERSEDED.** Project rename to "Investrum" landed pre-cycle-#39; trademark clearance for the *current* name was tracked as **#314 (CLOSED)** with body `compliance(trademark): document Investrum name + logo + VCA-trigram clearance before App Store submission`. The legacy "Value Compass" word-mark search referenced in my day-1 history (§3 item 5) was rendered moot by the rename. Residual third-party-trademark exposure in storefront copy is covered by **#411 OPEN** (`compliance(marketing-assets): legal review checklist for App Store Connect screenshots / preview video / CPP / promotional copy`). Carry-forward retires; #314 already closed, #411 governs forward exposure.
+
+### Cycle-window roster reconciliation (outside in-cycle work but recorded for ledger continuity)
+
+Cycle-#39 close-state roster (14 open): `#237, #287, #344, #364, #385, #398, #408, #411, #427, #438, #443, #444, #449, #457`.
+
+Current roster (14 open): `#237, #287, #344, #364, #398, #408, #411, #427, #438, #443, #444, #449, #457, #511`.
+
+**Delta: −#385, +#511** (net 14, matches prompt).
+- **#385** (`compliance(security-policy): publish coordinated vulnerability disclosure policy (SECURITY.md) for public repo`) **CLOSED 2026-05-16T00:38:34Z** — out-of-cycle closure between cycle #39 (00:22Z) and cycle #42 start (01:20Z). I did not author the closure within this cycle; logging here for roster ledger continuity. Verified `gh issue view 385` returns closed-state; the SECURITY.md publication is a docs/process artifact, not a source-surface delta inside my `98424f0..HEAD` diff window.
+- **#511** (filed 2026-05-16T00:41:37Z) — promotion of §7102(a) carry-forward (above).
+
+### In-window findings
+
+**Zero novel compliance gaps.**
+
+The window contains no product-surface, contract-surface, or policy-text delta. Both persistent re-validation gates returned PASS-no-trigger. Compliance keyword grep against non-history-file diff returned zero hits. No new third-party data flow, no new SDK introduction, no new disclaimer-text drift, no new EULA/ToS surface, no new App Store policy-relevant declaration. Therefore no new compliance evidence to surface.
+
+### Dedup search (4 keyword axes)
+
+Run before any candidate filing. None of the four axes surfaced a novel gap; all hits collide with already-tracked issues or out-of-lane closures.
+
+- **Axis 1 — `CCPA 7102 audit retention` (gh issue list --state all --search ... in:title,body --label squad:reuben):** 2 hits — **#511 OPEN** (the §7102(a) carry-forward issue, already filed by user) + **#457 OPEN** (DSR write-side audit log, distinct scope — whether audit lines are *emitted* on PATCH/DELETE, not how long retained). Distinct surfaces; no new filing warranted.
+- **Axis 2 — `journald 24 month records`:** 2 hits — same #511 + #457 collision. No new filing warranted.
+- **Axis 3 — `trademark Value Compass`:** 4 hits — **#411 OPEN** (storefront marketing legal review, the live forward-exposure surface), **#314 CLOSED** (Investrum/VCA-trigram clearance — superseded "Value Compass" by rename), **#408 OPEN** (breach-notification, tangential semantic match on `Cal. Civ. Code §1798.82`), **#338 CLOSED** (repo-notices MIT preservation, no trademark scope). No novel trademark gap surfaced.
+- **Axis 4 — `privacy-policy section 6 erasure`:** 4 hits — **#457 OPEN** (DSR write-side), **#364 OPEN** (privacy-manifest SPM Required-Reason API audit, distinct surface), **#374 CLOSED** (data-rectification path landed), **#471 CLOSED** (HIG quit/relaunch reroute landed). No novel privacy-policy text drift surfaced (and #485 already closed the §6 step-5 wording-drift carry-forward).
+
+### Decisions
+
+- **NO_OP on filings.** Window contains no source/docs/policy delta; both persistent re-validation gates PASS-no-trigger; compliance keyword grep returns zero compliance-relevant hits outside specialist history; four-axis dedup confirms no novel candidate.
+- **Do NOT add a comment to #511.** The user filed it with complete evidence (data-retention.md:107-110 conditional prose + backend/api/main.py:985-998 30-day floor + statutory cites). A fresh specialist comment would add noise per cycle-#39 cross-lane stance.
+- **Do NOT add a comment to #385's closure.** The SECURITY.md publication landed via a non-Reuben PR thread; the closure is self-documenting.
+- **Retire two carry-forwards** (#485 closed; "Value Compass" trademark superseded by rename to Investrum + #314 closed).
+- **Promote #457 to next-pull in DSR lane.** GET-side audit-log precedent shipped in `98424f0`; write-side schema/redaction helpers are already centralized at `backend/common/logging_utils.py:24-38` per cycle #39 evidence; the symmetric PATCH/DELETE emit is now the lowest-effort, highest-value next pull in the DSR roster. (Decision-only; not filing or pulling this cycle — flagging for the next sanctioned in-lane closure window.)
+
+### Issue routing proof
+
+None — no issue filed, no comment posted. NO_OP cycle.
+
+### Roster snapshot (post-cycle, live via gh)
+
+| # | Title (truncated) | Priority | Lane | Status note |
+|---|---|---|---|---|
+| #237 | compliance(licenses): in-app third-party acknowledgements for SPM deps | P2 mvp | team:frontend, team:strategy | open |
+| #287 | compliance(age-rating): document App Store Connect age-rating answers for financial-utility | P2 mvp | team:frontend, team:strategy | open |
+| #344 | compliance(data-minimization): non-collection categories + ATT stance for App Privacy nutrition label | P2 mvp | team:frontend | open |
+| #364 | compliance(privacy-manifest): SPM dependency Required-Reason API audit + re-verification step | P2 mvp | team:frontend | open |
+| #398 | compliance(eula): App Store Connect License Agreement posture (Standard vs Custom EULA) | P2 mvp | team:frontend | open |
+| #408 | compliance(breach-notification): GDPR Art. 33/34 + Cal. Civ. Code §1798.82 procedure | P2 mvp | team:frontend | open |
+| #411 | compliance(marketing-assets): legal review checklist for App Store Connect screenshots/preview/CPP/promo | P2 mvp | team:frontend, team:strategy | open |
+| #427 | compliance(app-review-notes): §2.5.2 + SDK-absence negative declarations in Notes-to-Reviewer | P2 mvp | team:frontend, team:strategy | open |
+| #438 | compliance(disclaimer): UI test coverage for calc-output disclaimer surfaces | P2 mvp | team:frontend | open |
+| #443 | compliance(app-privacy): ASC storefront answer-set parity vs PrivacyInfo.xcprivacy (dormant-sync binary) | P2 mvp | team:frontend | open (DSR-adjacent) |
+| #444 | compliance(data-export-ui): Settings trigger + share-sheet for GET /portfolio/export | P2 | team:frontend | open (DSR) |
+| #449 | compliance(data-rectification-ui): Settings trigger + fallback for right-to-correct flow | P2 mvp | team:frontend | open (DSR) |
+| #457 | compliance(dsr-audit-log): PATCH/DELETE DSR endpoints audit-log gap (write-side counterpart to closed #445) | P2 | team:backend | open (DSR; next-pull) |
+| #511 | compliance(dsr-audit-log): CCPA 7102(a) 24-month records-of-requests vs 30-day journald floor | P2 | team:backend | open (DSR; counsel decision gate) |
+
+**Total: 14 open.** Matches prompt. Δ vs cycle #39: net 0 (−#385 closed, +#511 filed; both out-of-cycle but reconciled here).
+
+### Forward watch / handoff (≤2 lines)
+
+- **Next pull candidate:** #457 (DSR write-side audit log) — GET-side precedent + centralized redaction helpers shipped at cycle #39; symmetric PATCH/DELETE emit is the lowest-friction next closure. If #471/#485-style in-process erasure flow or any DSR endpoint touches `backend/api/main.py` next cycle, fire #294 manually as a precaution (third-party register prose may need re-verification even though triggers didn't fire this cycle).
+- **Counsel-decision watch:** #511 (§7102(a) 24-month obligation) is now a tracked pre-launch blocker for #224 publication; no specialist action available until licensed-counsel determination lands.
+
+### Standing caveat
+
+I am NOT licensed counsel. Every output in this cycle — the gate-PASS evidence, the DSR roster reconciliation, the carry-forward retirements, the routing for #457, and the framing of #511 as a "counsel decision gate" — is paralegal/compliance-engineering work product. Nothing in this entry substitutes for a licensed attorney's determination, and the user MUST obtain an actual attorney's review of (at minimum) the §7102(a) applicability question on #511, the EULA posture on #398, the breach-notification procedure on #408, and the Privacy Policy + ToS final text before any public App Store submission or marketing spend.
+
+(end Reuben cycle #42)
