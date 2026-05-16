@@ -114,6 +114,8 @@ private struct PortfolioListContent: View {
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
       PortfolioEditorView(store: editorStore)
         .accessibilityAddTraits(SheetAccessibility.sheetContentTraits)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
     .confirmationDialog(
       Self.deletionDialogTitle(for: store.pendingDeletion),

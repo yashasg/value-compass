@@ -82,6 +82,11 @@ private struct PortfolioDetailContent: View {
       Text("Summary")
         .valueCompassTextStyle(.headlineMedium)
         .foregroundStyle(Color.appContentPrimary)
+        // #299: pin the section title as a VoiceOver heading so the
+        // Headings rotor can jump to Summary / Holdings / Calculate
+        // directly. Custom `Text` titles outside `Form.Section` do not
+        // ship with `.isHeader` by default.
+        .accessibilityAddTraits(.isHeader)
 
       LabeledContent(
         "Monthly Budget",
@@ -105,6 +110,8 @@ private struct PortfolioDetailContent: View {
         Text("Holdings")
           .valueCompassTextStyle(.headlineMedium)
           .foregroundStyle(Color.appContentPrimary)
+          // #299: pin as a VoiceOver heading (see `summarySection`).
+          .accessibilityAddTraits(.isHeader)
 
         Spacer()
 
@@ -253,6 +260,11 @@ private struct PortfolioDetailContent: View {
         Label("Calculate", systemImage: "function")
           .valueCompassTextStyle(.headlineMedium)
           .foregroundStyle(Color.appContentPrimary)
+          // #299: pin the decorative section-title Label as a
+          // VoiceOver heading. The trailing Calculate button keeps its
+          // default `.isButton` trait so the rotor still distinguishes
+          // section header from action target.
+          .accessibilityAddTraits(.isHeader)
 
         Spacer()
 

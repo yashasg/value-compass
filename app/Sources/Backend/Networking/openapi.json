@@ -22,22 +22,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -52,22 +47,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -102,22 +99,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "public, max-age=3600"
                 }
               }
             }
@@ -132,22 +124,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -162,22 +149,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -188,7 +170,7 @@
     "/portfolio/status": {
       "get": {
         "summary": "Portfolio Status",
-        "description": "Return the freshest ``last_modified`` / ``next_modified``.\n\nThe cache response is lightweight and Cloudflare-cacheable. A\nSQLAlchemy failure is surfaced as the documented ``syncUnavailable``\n503 envelope (matching ``/portfolio/data`` and ``/health``) so the\niOS client sees a decodable retry signal instead of FastAPI's default\n500 body when the DB is unreachable (issue #439).",
+        "description": "Return the freshest ``last_modified`` / ``next_modified``.\n\nThe cache response is lightweight and Cloudflare-cacheable. A\nSQLAlchemy failure is surfaced as the documented ``syncUnavailable``\n503 envelope (matching ``/portfolio/data`` and ``/health``) so the\niOS client sees a decodable retry signal instead of FastAPI's default\n500 body when the DB is unreachable (issue #439).\n\nSets ``Last-Modified`` from ``StockCache.last_modified`` \u2014 the actual\nresource time, mirroring the body field of the same name \u2014 so the\nresponse carries a meaningful RFC 7232 \u00a72.2 validator. When the\ncache table is empty the header is omitted (faking a validator\nwould defeat any future ``If-Modified-Since`` round-trip). See\nissue #416.",
         "operationId": "portfolio_status_portfolio_status_get",
         "parameters": [
           {
@@ -212,20 +194,21 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
+              "X-Min-App-Version": {
+                "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "public, max-age=60, stale-while-revalidate=60"
                 }
               },
               "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Min-App-Version": {
-                "description": "Minimum supported iOS app version.",
+                "description": "RFC 7231 GMT timestamp sourced from ``StockCache.last_modified`` \u2014 the resource time, not the request-handling time.",
                 "schema": {
                   "type": "string"
                 }
@@ -242,22 +225,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -272,22 +250,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -302,22 +275,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -362,22 +337,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -392,22 +362,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -422,22 +387,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -452,22 +412,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -482,22 +437,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -542,22 +499,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -572,22 +524,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -602,22 +549,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -632,22 +574,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -662,22 +599,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -715,22 +654,17 @@
           "202": {
             "description": "Successful Response",
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -745,22 +679,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -775,22 +704,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -805,22 +729,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -835,22 +754,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -865,22 +779,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -935,22 +851,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -965,22 +876,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -995,22 +901,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1025,22 +926,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1055,22 +951,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -1106,22 +1004,17 @@
           "204": {
             "description": "Successful Response",
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1136,22 +1029,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1166,22 +1054,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1196,22 +1079,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1226,22 +1104,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -1305,22 +1185,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1335,22 +1210,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1365,22 +1235,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1395,22 +1260,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
                 }
               }
             }
@@ -1425,22 +1285,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -1485,22 +1347,17 @@
           "204": {
             "description": "Successful Response",
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1515,22 +1372,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1545,22 +1397,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1575,22 +1422,17 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
                 }
               }
             }
@@ -1605,22 +1447,24 @@
               }
             },
             "headers": {
-              "Cache-Control": {
-                "description": "Cloudflare-cacheable max-age in seconds.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Last-Modified": {
-                "description": "UTC RFC 7231 timestamp for the response.",
-                "schema": {
-                  "type": "string"
-                }
-              },
               "X-Min-App-Version": {
                 "description": "Minimum supported iOS app version.",
                 "schema": {
                   "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Per-operation cache directive. ``no-store`` on every error envelope so transient 5xx are never re-served by URLCache or Cloudflare.",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds the client should wait before retrying. Mirrors ``ErrorEnvelope.retry_after_seconds`` in the body so Cloudflare and ``URLSession`` honour the same retry signal (RFC 7231 \u00a77.1.3).",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -1651,6 +1495,7 @@
             "title": "Weight"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "device_uuid",
@@ -1658,7 +1503,7 @@
           "weight"
         ],
         "title": "AddHoldingRequest",
-        "description": "Request body for adding a holding to a device portfolio."
+        "description": "Request body for adding a holding to a device portfolio.\n\n``extra=\"forbid\"`` closes the wire shape so an iOS client typo on a\nfuture optional field (e.g. ``displayName`` vs ``display_name``) is\nsurfaced as a ``schemaUnsupported`` 422 envelope instead of being\nsilently discarded by Pydantic's default ``extra=\"ignore\"`` and\npersisted as the wrong row. The closed-content posture is\nrequest-only \u2014 response models stay open so additive server-side\nschema evolution does not break older app versions (issue #423,\n``docs/services-tech-spec.md`` \u00a77)."
       },
       "ErrorCode": {
         "type": "string",
@@ -1848,12 +1693,13 @@
             "maximum": 1
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "weight"
         ],
         "title": "PatchHoldingRequest",
-        "description": "Request body for ``PATCH /portfolio/holdings/{ticker}``.\n\nOnly ``weight`` is mutable through PATCH. A ticker typo (`AAPL`\nintended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/\n{ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename\nthe row's primary key. ``DecimalString`` preserves exact precision\nend-to-end (see #392)."
+        "description": "Request body for ``PATCH /portfolio/holdings/{ticker}``.\n\nOnly ``weight`` is mutable through PATCH. A ticker typo (`AAPL`\nintended as `MSFT`) is corrected by ``DELETE /portfolio/holdings/\n{ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename\nthe row's primary key. ``DecimalString`` preserves exact precision\nend-to-end (see #392).\n\n``extra=\"forbid\"`` closes the wire shape so a client that sends an\nunknown field (for example ``ticker`` in the body, mistakenly\ntrying to rename the row via PATCH) is rejected with the\ndocumented ``schemaUnsupported`` 422 envelope instead of having\nthe stray field silently ignored while ``weight`` is rewritten.\nRequest-only posture; response models stay open for additive\nevolution (issue #423, ``docs/services-tech-spec.md`` \u00a77)."
       },
       "PatchHoldingResponse": {
         "properties": {
@@ -1914,9 +1760,10 @@
             "title": "Ma Window"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "PatchPortfolioRequest",
-        "description": "Request body for ``PATCH /portfolio``.\n\nImplements the scalar half of the GDPR Art. 16 / CCPA \u00a71798.106\nright-to-rectification path (issue #374). Every field is optional\nso the client can correct a single value without re-stating the\nothers, but the body **must** carry at least one non-null field \u2014\nan empty PATCH is rejected as ``schemaUnsupported`` so the wire\ncontract never accepts a no-op write that silently stamps activity.\n\n``ma_window`` accepts only the values enumerated in\n:data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the\ndocumented ``unsupportedMovingAverageWindow`` envelope so the iOS\nclient can surface a specific error rather than the generic\n``schemaUnsupported`` validation failure."
+        "description": "Request body for ``PATCH /portfolio``.\n\nImplements the scalar half of the GDPR Art. 16 / CCPA \u00a71798.106\nright-to-rectification path (issue #374). Every field is optional\nso the client can correct a single value without re-stating the\nothers, but the body **must** carry at least one non-null field \u2014\nan empty PATCH is rejected as ``schemaUnsupported`` so the wire\ncontract never accepts a no-op write that silently stamps activity.\n\n``ma_window`` accepts only the values enumerated in\n:data:`SUPPORTED_MA_WINDOWS`; anything else is rejected with the\ndocumented ``unsupportedMovingAverageWindow`` envelope so the iOS\nclient can surface a specific error rather than the generic\n``schemaUnsupported`` validation failure.\n\n``extra=\"forbid\"`` closes the wire shape so an unknown PATCH field\n(e.g. a future ``currency`` the spec does not yet declare) is\nsurfaced as a ``schemaUnsupported`` 422 envelope instead of being\nsilently dropped \u2014 the bigger risk on a rectification path that\nwould otherwise stamp ``last_seen_at`` while no-op'ing the\ncorrection the user intended. Request-only posture; response\nmodels stay open for additive evolution (issue #423,\n``docs/services-tech-spec.md`` \u00a77)."
       },
       "PatchPortfolioResponse": {
         "properties": {

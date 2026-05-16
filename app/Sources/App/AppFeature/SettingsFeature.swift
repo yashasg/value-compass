@@ -62,6 +62,16 @@ struct SettingsFeature {
     /// separate from `apiKeyRequestStatus` so a load failure doesn't get
     /// clobbered by a later save attempt.
     var apiKeyLoadError: String?
+    /// Whether the destructive confirmation dialog for removing the saved
+    /// Massive API key is currently showing. Toggled by
+    /// `removeAPIKeyTapped` and reset by either
+    /// `removeAPIKeyConfirmationDismissed` (cancel / tap-out) or
+    /// `removeAPIKeyConfirmed` (proceed). Mirrors the account-erasure
+    /// confirmation pattern below so the Keychain delete is gated by the
+    /// same `.confirmationDialog` vocabulary the user already sees on
+    /// "Erase All My Data" (HIG → Patterns → Confirming an action;
+    /// issue #319).
+    var isAPIKeyRemovalConfirmationPresented: Bool = false
 
     // MARK: Account erasure (issue #329)
 
@@ -87,6 +97,8 @@ struct SettingsFeature {
     // MARK: API key actions (issue #127)
     case saveAPIKeyTapped
     case removeAPIKeyTapped
+    case removeAPIKeyConfirmationDismissed
+    case removeAPIKeyConfirmed
     case revalidateStoredKeyTapped
     case apiKeyValidationCompleted(MassiveAPIKeyValidationOutcome, persistedKey: String)
     case apiKeyRevalidationCompleted(MassiveAPIKeyValidationOutcome)
@@ -228,6 +240,26 @@ struct SettingsFeature {
         return .none
 
       case .removeAPIKeyTapped:
+        // HIG → Patterns → Confirming an action: destructive role styles
+        // the button but does not gate it. The saved Massive API key is
+        // recoverable only by the user re-fetching it from Massive's
+        // developer dashboard, so a single mis-tap of Remove must not
+        // wipe the Keychain entry. `removeAPIKeyTapped` therefore only
+        // opens the confirmation dialog; the actual delete happens in
+        // `removeAPIKeyConfirmed`. Guarded by the same in-flight
+        // predicate the View uses on the Remove button so a stray
+        // double-fire during validation cannot stack confirmations
+        // (issue #319).
+        guard !state.apiKeyRequestStatus.isInFlight else { return .none }
+        state.isAPIKeyRemovalConfirmationPresented = true
+        return .none
+
+      case .removeAPIKeyConfirmationDismissed:
+        state.isAPIKeyRemovalConfirmationPresented = false
+        return .none
+
+      case .removeAPIKeyConfirmed:
+        state.isAPIKeyRemovalConfirmationPresented = false
         do {
           try massiveAPIKey.delete()
           state.apiKeyStatus = .noStoredKey
