@@ -64,6 +64,7 @@ from sqlalchemy.orm import Session
 
 from common import config
 from common import db as common_db
+from common.logging_utils import redact_device_uuid
 from db.models import Holding, Portfolio, StockCache
 
 log = logging.getLogger("vca.api")
@@ -931,6 +932,16 @@ def portfolio_export(
     keeps the row out of the retention-purge sweep documented in
     ``docs/legal/data-retention.md`` — consistent with every other
     authenticated read of the portfolio surface.
+
+    On success the handler also emits a structured ``vca.api`` INFO log
+    entry (``event=dsr.export.portfolio …``) so a supervisory inspection
+    has a server-side record that the GDPR Art. 20 / CCPA §1798.130(a)(3)
+    request was honored (GDPR Art. 5(2) accountability + CCPA
+    Regulations 11 CCR §7102(a) records-of-requests; issue #445). The
+    line is redacted to the last-4 hex characters of the device UUID per
+    the ``docs/legal/data-retention.md`` "Application logs" row, so the
+    accountability surface inherits the 30-day journald retention floor
+    rather than reopening the raw-identifier surface closed by #339.
     """
     try:
         portfolio = db.execute(
@@ -970,6 +981,20 @@ def portfolio_export(
                 for holding in portfolio.holdings
             ],
         ),
+    )
+    # GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a)
+    # records-of-requests obligation (issue #445): emit a structured
+    # audit-log line on every successful export so a supervisory
+    # inspection can demonstrate the controller honored the data-
+    # portability request. ``redact_device_uuid`` shares the apns.py
+    # redaction floor (last-4 hex only) — the raw UUID must never reach
+    # journald per ``docs/legal/data-retention.md`` "Application logs".
+    log.info(
+        "event=dsr.export.portfolio device_uuid_suffix=%s "
+        "portfolio_id=%s holdings_count=%d",
+        redact_device_uuid(device_uuid),
+        portfolio.id,
+        len(portfolio.holdings),
     )
     _stamp_activity(db, portfolio)
     return response
