@@ -258,12 +258,17 @@ Backend phases use OpenAPI as the backend/iOS contract:
    rectification PATCH cannot be silently dropped by Pydantic's default
    `extra="ignore"` while activity is stamped. Response models stay open
    so additive server-side schema evolution (e.g. a new optional
-   indicator on `HoldingOut`) does not break older iOS builds. The
-   closed list is `AddHoldingRequest`, `PatchPortfolioRequest`,
-   `PatchHoldingRequest`; future request-body schemas must adopt the
-   same posture, and the spec contract pin in
-   `backend/tests/test_api.py::test_request_bodies_are_closed_content_and_responses_stay_open`
-   fails the build if a model flips.
+   indicator on `HoldingOut`) does not break older iOS builds. Because
+   the closed posture routes arbitrary client-supplied field values
+   through the global `RequestValidationError` handler, the handler
+   redacts `input` and `ctx` from `exc.errors()` before logging so the
+   rejected value itself is never persisted to application logs
+   (preserves `docs/legal/data-retention.md` minimization). The request-
+   only / response sets are derived from the OpenAPI `paths` graph by
+   the spec contract pin in
+   `backend/tests/test_api.py::test_request_bodies_are_closed_content_and_responses_stay_open`,
+   so future request-body or response models inherit the rule
+   automatically.
 
 For v1 offline calculation, no OpenAPI client is required. For v1 hybrid sync or
 future market-data adapters, OpenAPI-generated clients are the only supported

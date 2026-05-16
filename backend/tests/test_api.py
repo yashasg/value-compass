@@ -2241,25 +2241,103 @@ def test_delete_portfolio_does_not_emit_audit_log_on_404(
 # Issue #423 — request bodies are closed-content; response models stay open.
 # ---------------------------------------------------------------------------
 
-REQUEST_BODY_SCHEMAS: tuple[str, ...] = (
-    "AddHoldingRequest",
-    "PatchPortfolioRequest",
-    "PatchHoldingRequest",
-)
 
-OPEN_RESPONSE_SCHEMAS: tuple[str, ...] = (
-    "ErrorEnvelope",
-    "HealthResponse",
-    "SchemaVersionResponse",
-    "PortfolioStatusResponse",
-    "HoldingOut",
-    "PortfolioDataResponse",
-    "PatchPortfolioResponse",
-    "PatchHoldingResponse",
-    "PortfolioExportHolding",
-    "PortfolioExport",
-    "PortfolioExportResponse",
-)
+def _walk_schema_refs(
+    schema: object,
+    components: dict[str, dict],
+    visited: set[str],
+) -> None:
+    """Collect component schema names reachable from ``schema``.
+
+    Walks ``$ref`` pointers along with the nested-schema keywords OpenAPI
+    inherits from JSON Schema (``properties``, ``items``,
+    ``additionalProperties``, ``allOf`` / ``oneOf`` / ``anyOf``) so a
+    request body that wraps a payload in another component is fully
+    traversed. ``visited`` accumulates the closure across calls — passing
+    the same set lets the caller derive the request-only / response-only
+    partitions for the closed/open invariant pin below.
+    """
+    if isinstance(schema, list):
+        for item in schema:
+            _walk_schema_refs(item, components, visited)
+        return
+    if not isinstance(schema, dict):
+        return
+
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+        name = ref.rsplit("/", 1)[-1]
+        if name not in visited:
+            visited.add(name)
+            _walk_schema_refs(components.get(name, {}), components, visited)
+
+    for key in ("items", "additionalProperties", "not"):
+        if key in schema:
+            _walk_schema_refs(schema[key], components, visited)
+    for key in ("allOf", "oneOf", "anyOf", "prefixItems"):
+        for item in schema.get(key, []) or []:
+            _walk_schema_refs(item, components, visited)
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for prop in properties.values():
+            _walk_schema_refs(prop, components, visited)
+
+
+def _categorize_component_refs(
+    openapi: dict,
+) -> tuple[set[str], set[str]]:
+    """Partition object component schemas by request-only vs. response reach.
+
+    Returns ``(request_only_objects, response_objects)`` where each name
+    is a component schema reachable (transitively) from a request body
+    or a response content schema respectively. A schema that appears in
+    both reaches (e.g. ``ErrorEnvelope`` rendered as the documented 422
+    envelope on every protected route) is excluded from
+    ``request_only_objects`` so the closed-content rule does not fire
+    against schemas that must remain open for forward-compatible
+    response evolution.
+
+    Only schemas that look like dict-shaped objects (``type: object`` or
+    declaring ``properties``) are included — ``additionalProperties``
+    has no effect on enum / scalar components like ``ErrorCode`` so
+    keeping them out of either set avoids spurious failures.
+    """
+    components = openapi.get("components", {}).get("schemas", {})
+    request_refs: set[str] = set()
+    response_refs: set[str] = set()
+
+    for path_item in openapi.get("paths", {}).values():
+        if not isinstance(path_item, dict):
+            continue
+        for op in path_item.values():
+            if not isinstance(op, dict):
+                continue
+            request_body = op.get("requestBody") or {}
+            for content in (request_body.get("content") or {}).values():
+                _walk_schema_refs(
+                    (content or {}).get("schema"), components, request_refs
+                )
+            for response in (op.get("responses") or {}).values():
+                if not isinstance(response, dict):
+                    continue
+                for content in (response.get("content") or {}).values():
+                    _walk_schema_refs(
+                        (content or {}).get("schema"),
+                        components,
+                        response_refs,
+                    )
+
+    def is_object_schema(name: str) -> bool:
+        component = components.get(name, {})
+        return component.get("type") == "object" or "properties" in component
+
+    request_only_objects = {
+        name for name in (request_refs - response_refs) if is_object_schema(name)
+    }
+    response_objects = {
+        name for name in response_refs if is_object_schema(name)
+    }
+    return request_only_objects, response_objects
 
 
 def test_request_bodies_are_closed_content_and_responses_stay_open(
@@ -2272,27 +2350,45 @@ def test_request_bodies_are_closed_content_and_responses_stay_open(
     a request must surface as ``schemaUnsupported`` rather than being
     silently dropped, while a server adding a new optional field to a
     response must not break older app builds that decode the known
-    properties. A future Pydantic model that flips the posture (e.g.
-    drops ``extra="forbid"`` from a request, or adds it to a response)
-    will fail this contract pin.
+    properties.
+
+    The request-only / response sets are derived from the OpenAPI
+    ``paths`` graph (not from a hard-coded schema list), so adding a new
+    request body or response model automatically inherits the rule:
+    fail-closed on the request side, fail-open on the response side.
     """
     schema = client.get("/openapi.json").json()
     components = schema["components"]["schemas"]
+    request_only, response_objects = _categorize_component_refs(schema)
 
-    for name in REQUEST_BODY_SCHEMAS:
+    # Sanity-check the partition: the three documented request bodies
+    # must be present so a future regression that dropped every request
+    # body (and therefore emptied ``request_only``) cannot silently pass.
+    expected_request_bodies = {
+        "AddHoldingRequest",
+        "PatchPortfolioRequest",
+        "PatchHoldingRequest",
+    }
+    assert expected_request_bodies <= request_only, (
+        "Documented request-body schemas missing from the request-only set: "
+        f"{sorted(expected_request_bodies - request_only)} — every request "
+        "body must carry additionalProperties: false (issue #423)."
+    )
+
+    for name in sorted(request_only):
         component = components[name]
         assert component.get("additionalProperties") is False, (
-            f"{name} must declare additionalProperties: false so unknown "
-            "fields fail validation rather than being silently ignored "
-            "(issue #423)."
+            f"{name} is reachable only from a request body and must declare "
+            "additionalProperties: false so unknown fields fail validation "
+            "rather than being silently ignored (issue #423)."
         )
 
-    for name in OPEN_RESPONSE_SCHEMAS:
+    for name in sorted(response_objects):
         component = components[name]
-        assert "additionalProperties" not in component, (
-            f"{name} must leave additionalProperties unset so the server "
-            "can add optional response fields without breaking older app "
-            "builds (issue #423)."
+        assert component.get("additionalProperties") is not False, (
+            f"{name} is reachable from a response and must not declare "
+            "additionalProperties: false so the server can add optional "
+            "response fields without breaking older app builds (issue #423)."
         )
 
 
@@ -2395,5 +2491,50 @@ def test_patch_holding_rejects_unknown_field_with_schema_unsupported(
     assert db_session.scalars(
         select(Holding).where(Holding.ticker == "MSFT")
     ).all() == []
+
+
+def test_rejected_extra_field_value_is_not_written_to_logs(
+    client: TestClient,
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Issue #423 review: rejected request values must never reach app logs.
+
+    With ``extra="forbid"``, the global validation handler runs against
+    free-form user input on every closed request body. Pydantic embeds
+    the rejected value in the ``input`` (and sometimes ``ctx``) keys of
+    every error dict — logging that verbatim would persist untrusted
+    client-supplied data (potentially a free-form ``notes`` string or a
+    rectification correction) to application logs, inverting the data-
+    minimization posture documented in ``docs/legal/data-retention.md``.
+
+    The handler redacts those keys before logging, so the distinctive
+    sentinel below — chosen so it cannot collide with structural error
+    metadata — must not appear in any ``vca.api`` log record.
+    """
+    device_uuid, _ = _seed_portfolio(db_session)
+    sentinel = "leak-sentinel-7f3a2e1c-do-not-log"
+
+    with caplog.at_level("INFO", logger="vca.api"):
+        resp = client.post(
+            "/portfolio/holdings",
+            json={
+                "device_uuid": str(device_uuid),
+                "ticker": "AAPL",
+                "weight": 0.5,
+                "notes": sentinel,
+            },
+            headers=ATTEST,
+        )
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "schemaUnsupported"
+    for record in caplog.records:
+        if record.name != "vca.api":
+            continue
+        assert sentinel not in record.getMessage(), (
+            "Rejected request field values must be redacted before "
+            "validation errors are logged (issue #423 review)."
+        )
 
 

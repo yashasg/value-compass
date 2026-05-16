@@ -370,6 +370,31 @@ async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     )
 
 
+def _redact_validation_errors(
+    errors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Drop raw rejected values from Pydantic validation errors before logging.
+
+    Pydantic embeds the rejected user input in ``input`` (and sometimes in
+    ``ctx``) for every error dict. Once request bodies are closed-content
+    (``extra="forbid"`` — issue #423), arbitrary client-supplied fields
+    can land in those errors (e.g. a free-form ``notes`` value, or a
+    rectification correction). Logging them verbatim would persist
+    untrusted, potentially personal user input to application logs and
+    invert the data-minimization posture documented in
+    ``docs/legal/data-retention.md``.
+
+    We strip ``input`` and ``ctx`` here so the diagnostic line still
+    carries the structural fields a developer needs (``type``, ``loc``,
+    ``msg``) without leaking the rejected value itself.
+    """
+    redacted: list[dict[str, Any]] = []
+    for err in errors:
+        clean = {k: v for k, v in err.items() if k not in {"input", "ctx"}}
+        redacted.append(clean)
+    return redacted
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(
     _: Request, exc: RequestValidationError
@@ -379,7 +404,10 @@ async def validation_error_handler(
         code=ErrorCode.SCHEMA_UNSUPPORTED,
         message="Request validation failed.",
     )
-    log.info("request validation failed: %s", exc.errors())
+    log.info(
+        "request validation failed: %s",
+        _redact_validation_errors(exc.errors()),
+    )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=envelope.model_dump(mode="json"),
