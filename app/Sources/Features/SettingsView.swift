@@ -247,6 +247,19 @@ struct SettingsView: View {
       }
       .accessibilityIdentifier("settings.apiKey.save")
       .disabled(!canSubmitAPIKey)
+      // #386: WCAG 2.1 SC 3.3.2 / 4.1.2 — VoiceOver / Voice Control /
+      // Switch Control users who focus the disabled Save button hear
+      // "Save, dimmed button" with no programmatic link to the empty
+      // SecureField or the in-flight validation row. The hint composer
+      // is driven off the same two reducer-state inputs that gate the
+      // .disabled(...) modifier so the spoken unblock-reason cannot
+      // drift from the visual disabled state.
+      .accessibilityHint(
+        SettingsAccessibility.apiKeySaveDisabledHint(
+          draft: store.apiKeyDraft,
+          requestStatus: store.apiKeyRequestStatus
+        )
+      )
     }
   }
 

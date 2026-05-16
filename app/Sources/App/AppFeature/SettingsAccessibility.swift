@@ -119,4 +119,49 @@ enum SettingsAccessibility {
       return "Your API key is valid."
     }
   }
+
+  /// Returns the `.accessibilityHint` string for the Settings → Massive
+  /// API Key → **Save** button, given the same `draft` + `requestStatus`
+  /// pair that gates ``SettingsView/canSubmitAPIKey``. Returns the empty
+  /// string when the button is enabled (SwiftUI auto-suppresses empty
+  /// hints) and a state-aware unblock reason when it is disabled (#386).
+  ///
+  /// Closes the WCAG 2.1 SC 3.3.2 (Labels or Instructions) / SC 4.1.2
+  /// (Name, Role, Value) gap exposed in #386: today VoiceOver / Voice
+  /// Control / Switch Control users who focus the disabled Save button
+  /// hear `"Save, dimmed button"` with no programmatic association to
+  /// the adjacent placeholder ("Enter API key") or the in-flight
+  /// validation row, so they cannot tell what to do to enable it. The
+  /// hint is computed from the same two reducer-state inputs that drive
+  /// ``SettingsView/canSubmitAPIKey`` — empty trimmed draft vs. an
+  /// in-flight Massive round-trip — so spoken text matches the visual
+  /// disabled-reason context.
+  ///
+  /// - Parameters:
+  ///   - draft: the current ``SettingsFeature/State/apiKeyDraft`` value.
+  ///     Whitespace-only drafts are treated as empty to match the
+  ///     reducer-side gate.
+  ///   - requestStatus: the current
+  ///     ``SettingsFeature/State/apiKeyRequestStatus`` value. Only
+  ///     ``SettingsAPIKeyRequestStatus/validating`` (i.e.
+  ///     ``SettingsAPIKeyRequestStatus/isInFlight`` `== true`) disables
+  ///     the button on a non-empty draft; every other terminal status
+  ///     (`rejected`, `networkError`, `storeError`, `savedSuccessfully`)
+  ///     leaves the button enabled for a retry / replacement and the
+  ///     hint stays empty.
+  /// - Returns: an empty string when the button is enabled, or a single
+  ///   user-facing sentence naming what the user must do to enable it.
+  static func apiKeySaveDisabledHint(
+    draft: String,
+    requestStatus: SettingsAPIKeyRequestStatus
+  ) -> String {
+    let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmedDraft.isEmpty {
+      return "Enter an API key to enable."
+    }
+    if requestStatus.isInFlight {
+      return "Currently validating with Massive. Please wait."
+    }
+    return ""
+  }
 }

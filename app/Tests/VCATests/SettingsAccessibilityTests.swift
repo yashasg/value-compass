@@ -332,4 +332,110 @@ final class SettingsAccessibilityTests: XCTestCase {
       )
     }
   }
+
+  // MARK: - API-key Save disabled-button hint (#386)
+
+  func testAPIKeySaveDisabledHintIsEmptyOnNonEmptyDraftAndIdleStatus() {
+    // The button is enabled when the trimmed draft is non-empty and no
+    // request is in flight. SwiftUI auto-suppresses an empty
+    // `.accessibilityHint(_:)` so the enabled state must return "" —
+    // a non-empty enabled-state hint would chatter "Double tap to
+    // activate" follow-ups with no unblock context.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeySaveDisabledHint(
+        draft: "sk-live-abc123",
+        requestStatus: .idle
+      ),
+      ""
+    )
+  }
+
+  func testAPIKeySaveDisabledHintNamesTheEmptyDraftAsTheUnblockReason() {
+    // The most common disabled cause: user has not typed anything. The
+    // adjacent `SecureField` placeholder ("Enter API key") is a
+    // separate AT element, so a Voice Control / Switch Control / direct-
+    // focus VoiceOver user needs the unblock-reason here on the button.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeySaveDisabledHint(
+        draft: "",
+        requestStatus: .idle
+      ),
+      "Enter an API key to enable."
+    )
+  }
+
+  func testAPIKeySaveDisabledHintTreatsWhitespaceOnlyDraftAsEmpty() {
+    // Mirror the reducer-side `canSubmitAPIKey` trim — a whitespace-
+    // only draft also fails the gate, so spoken text must match the
+    // same threshold the visible disabled state uses. Without this
+    // parity, a user who only typed a tab/space would hear "double
+    // tap to activate" but the button would still be dimmed.
+    let whitespaceVariants = [" ", "  ", "\t", "\n", " \t \n "]
+    for draft in whitespaceVariants {
+      XCTAssertEqual(
+        SettingsAccessibility.apiKeySaveDisabledHint(
+          draft: draft,
+          requestStatus: .idle
+        ),
+        "Enter an API key to enable.",
+        "Whitespace-only draft '\(draft.debugDescription)' should be treated as empty."
+      )
+    }
+  }
+
+  func testAPIKeySaveDisabledHintNamesInFlightValidationAsTheUnblockReason() {
+    // The second disabled cause: a Massive round-trip is already
+    // running. The button stays dimmed for the round-trip window so
+    // the user does not double-submit; the hint tells AT users
+    // *why* it is dimmed (i.e., "wait, do not retry") rather than the
+    // default "Save, dimmed button" which sounds like a permanent
+    // failure.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeySaveDisabledHint(
+        draft: "sk-live-abc123",
+        requestStatus: .validating
+      ),
+      "Currently validating with Massive. Please wait."
+    )
+  }
+
+  func testAPIKeySaveDisabledHintPrefersEmptyDraftReasonOverInFlightWhenBoth() {
+    // Defensive: if both gates fail at once (empty draft *and*
+    // somehow in-flight — currently unreachable but possible after a
+    // future reducer refactor), the empty-draft reason is the
+    // actionable one. Pin the precedence so a future refactor cannot
+    // silently flip to "please wait" while the user has nothing to
+    // wait for.
+    XCTAssertEqual(
+      SettingsAccessibility.apiKeySaveDisabledHint(
+        draft: "",
+        requestStatus: .validating
+      ),
+      "Enter an API key to enable."
+    )
+  }
+
+  func testAPIKeySaveDisabledHintIsEmptyForEveryTerminalRequestStatus() {
+    // Every non-`validating` status leaves the button enabled (so the
+    // user can retry / replace the key), so the hint must collapse to
+    // "" — a non-empty hint on an enabled button is unwanted chatter.
+    // Pins parity with `SettingsAPIKeyRequestStatus.isInFlight`.
+    let terminalStatuses: [SettingsAPIKeyRequestStatus] = [
+      .idle,
+      .rejected(reason: "API key cannot be empty."),
+      .networkError(reason: "The Internet connection appears to be offline."),
+      .storeError(reason: "errSecItemNotFound"),
+      .savedSuccessfully,
+    ]
+    for status in terminalStatuses {
+      XCTAssertEqual(
+        SettingsAccessibility.apiKeySaveDisabledHint(
+          draft: "sk-live-abc123",
+          requestStatus: status
+        ),
+        "",
+        "Non-in-flight status \(status) on a non-empty draft should produce no hint."
+      )
+    }
+  }
 }
