@@ -978,6 +978,13 @@ def portfolio_export(
 @app.post(
     "/portfolio/holdings",
     status_code=status.HTTP_202_ACCEPTED,
+    # The 202 success path returns a bare ``Response(status_code=202)`` (see
+    # the fire-and-forget completion below). ``response_class=Response`` tells
+    # FastAPI's OpenAPI generator to omit the default ``application/json``
+    # success body so the contract matches the empty wire shape — same
+    # treatment we already apply to ``DELETE /portfolio/holdings/{ticker}``
+    # and ``DELETE /portfolio``. See issue #303.
+    response_class=Response,
     responses={
         status.HTTP_401_UNAUTHORIZED: ERROR_RESPONSES[
             status.HTTP_401_UNAUTHORIZED
