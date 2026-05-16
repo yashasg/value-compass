@@ -65,6 +65,7 @@
 		A0000000000000000000B0A3 /* FinancialRowAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A3 /* FinancialRowAccessibility.swift */; };
 		A0000000000000000000B0A4 /* RowContextActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A4 /* RowContextActions.swift */; };
 		A0000000000000000000B0A5 /* ProgressViewAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A5 /* ProgressViewAccessibility.swift */; };
+		A0000000000000000000B0A6 /* SheetAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0A6 /* SheetAccessibility.swift */; };
 		A0000000000000000000B095 /* PortfolioListFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F095 /* PortfolioListFeature.swift */; };
 		A0000000000000000000B096 /* SettingsFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F096 /* SettingsFeature.swift */; };
 		A0000000000000000000B097 /* PortfolioDetailFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F097 /* PortfolioDetailFeature.swift */; };
@@ -128,6 +129,7 @@
 		C0000000000000000000B024 /* FinancialRowAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F024 /* FinancialRowAccessibilityTests.swift */; };
 		C0000000000000000000B025 /* RowContextActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F025 /* RowContextActionsTests.swift */; };
 		C0000000000000000000B026 /* ProgressViewAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F026 /* ProgressViewAccessibilityTests.swift */; };
+		C0000000000000000000B027 /* SheetAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F027 /* SheetAccessibilityTests.swift */; };
 		C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */; };
 		C0000000000000000000B022 /* ContributionCalculatorMVPHoldingsSeamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */; };
 		A0000000000000000000B0C1 /* CalculationOutputDisclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */; };
@@ -206,6 +208,7 @@
 		A0000000000000000000F0A3 /* FinancialRowAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialRowAccessibility.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0A4 /* RowContextActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowContextActions.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0A5 /* ProgressViewAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewAccessibility.swift; sourceTree = "<group>"; };
+		A0000000000000000000F0A6 /* SheetAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetAccessibility.swift; sourceTree = "<group>"; };
 		A0000000000000000000F095 /* PortfolioListFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioListFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F096 /* SettingsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFeature.swift; sourceTree = "<group>"; };
 		A0000000000000000000F097 /* PortfolioDetailFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDetailFeature.swift; sourceTree = "<group>"; };
@@ -257,6 +260,7 @@
 		C0000000000000000000F024 /* FinancialRowAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialRowAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F025 /* RowContextActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowContextActionsTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F026 /* ProgressViewAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewAccessibilityTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000F027 /* SheetAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetAccessibilityTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerSurfaceTests.swift; sourceTree = "<group>"; };
 		C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCalculatorMVPHoldingsSeamTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000F0C1 /* CalculationOutputDisclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationOutputDisclaimer.swift; sourceTree = "<group>"; };
@@ -376,6 +380,7 @@
 				A0000000000000000000F0A3 /* FinancialRowAccessibility.swift */,
 				A0000000000000000000F0A4 /* RowContextActions.swift */,
 				A0000000000000000000F0A5 /* ProgressViewAccessibility.swift */,
+				A0000000000000000000F0A6 /* SheetAccessibility.swift */,
 				A0000000000000000000F095 /* PortfolioListFeature.swift */,
 				A0000000000000000000F096 /* SettingsFeature.swift */,
 				A0000000000000000000F09C /* SettingsFeature+APIKey.swift */,
@@ -536,6 +541,7 @@
 				C0000000000000000000F024 /* FinancialRowAccessibilityTests.swift */,
 				C0000000000000000000F025 /* RowContextActionsTests.swift */,
 				C0000000000000000000F026 /* ProgressViewAccessibilityTests.swift */,
+				C0000000000000000000F027 /* SheetAccessibilityTests.swift */,
 				C0000000000000000000F021 /* DisclaimerSurfaceTests.swift */,
 				C0000000000000000000F022 /* ContributionCalculatorMVPHoldingsSeamTests.swift */,
 			);
@@ -727,6 +733,7 @@
 				A0000000000000000000B0A3 /* FinancialRowAccessibility.swift in Sources */,
 				A0000000000000000000B0A4 /* RowContextActions.swift in Sources */,
 				A0000000000000000000B0A5 /* ProgressViewAccessibility.swift in Sources */,
+				A0000000000000000000B0A6 /* SheetAccessibility.swift in Sources */,
 				A0000000000000000000B095 /* PortfolioListFeature.swift in Sources */,
 				A0000000000000000000B096 /* SettingsFeature.swift in Sources */,
 				A0000000000000000000B097 /* PortfolioDetailFeature.swift in Sources */,
@@ -781,6 +788,7 @@
 				C0000000000000000000B024 /* FinancialRowAccessibilityTests.swift in Sources */,
 				C0000000000000000000B025 /* RowContextActionsTests.swift in Sources */,
 				C0000000000000000000B026 /* ProgressViewAccessibilityTests.swift in Sources */,
+				C0000000000000000000B027 /* SheetAccessibilityTests.swift in Sources */,
 				C0000000000000000000B021 /* DisclaimerSurfaceTests.swift in Sources */,
 				C0000000000000000000B022 /* ContributionCalculatorMVPHoldingsSeamTests.swift in Sources */,
 			);
