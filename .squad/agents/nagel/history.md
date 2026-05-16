@@ -3005,3 +3005,243 @@ None. Window contains zero locked-surface activity. 100% specialist-history quie
 - **Drift discipline:** **7 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/46** entering cycle #47.
 
 (end Nagel cycle #46)
+
+---
+
+## Cycle #47 — Nagel
+
+**Date:** 2026-05-16T02:42:16Z  
+**HEAD at spawn:** `b4b961e`  
+**HEAD at close:** `b4b961e` (history-append-only — see commit at end)  
+**Window:** `945ae50..b4b961e` (3 commits)  
+**Anchor justification:** `945ae50` is my own cycle-#46 close commit. Window contains exactly 3 specialist-history commits authored downstream of that close. No new PRs landed since cycle #46; PR #513 (`9a2fe85`, cycle #45) remains the still-in-effect locked-surface mutation, fully absorbed and re-baselined in cycles #45/#46.
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `82a25af` | chore(yen): cycle #46 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `1ef733b` | aso(frank): cycle #46 history | Frank | NO — `.squad/agents/frank/history.md` (+ `.squad/agents/frank/inbox-saul-cycle-45.md`) |
+| `b4b961e` | research(saul): cycle #45 retroactive history fold | Saul | NO — `.squad/agents/saul/history.md` (+ 2 cycle inboxes) |
+
+```
+$ git --no-pager diff --stat 945ae50..HEAD -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty — zero hunks)
+$ git --no-pager diff --stat 945ae50..HEAD
+ .squad/agents/frank/history.md             |  78 ++++++
+ .squad/agents/frank/inbox-saul-cycle-45.md |  94 ++++++
+ .squad/agents/saul/history.md              |  83 ++++++
+ .squad/agents/saul/inbox-frank-cycle-45.md | 130 ++++++++
+ .squad/agents/saul/inbox-frank-cycle-46.md | 136 ++++++++++
+ .squad/agents/yen/history.md               |  50 ++++
+ 6 files changed, 571 insertions(+)
+```
+
+Window is 100% specialist-history. Zero hunks on any contract surface.
+
+---
+
+### Four-Invariant Scoreboard
+
+**1. PARITY — PASS.**
+```
+$ diff openapi.json app/Sources/Backend/Networking/openapi.json ; echo $?
+0
+$ shasum -a 256 openapi.json app/Sources/Backend/Networking/openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  app/Sources/Backend/Networking/openapi.json
+```
+Byte-identical. Hash **matches** the cycle-#45 banked baseline `286a3a52…315378e`. Parity-discipline streak at the post-PR-#513 hash extends to **3 consecutive cycles** (cycles #45, #46, #47).
+
+**2. SWIFT_PUBLIC_SURFACE — PASS.**
+```
+$ git --no-pager diff 945ae50..HEAD -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b' | wc -l
+0
+$ git --no-pager diff --name-only 945ae50..HEAD -- 'app/Sources/**/*.swift'
+(empty)
+```
+Zero `.swift` files touched in window. PR #145 (TCA migration) and #468 (in-app-events scaffolding) remain dormant; first `@Reducer` introduction still pending.
+
+**3. LOCKED_SURFACE — PASS.**
+```
+$ git --no-pager diff --stat 945ae50..HEAD -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty — zero hunks)
+$ git --no-pager diff --name-only 945ae50..HEAD -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty)
+```
+**Zero hunks across the locked surface.** Window is history-only — Yen/Frank/Saul cycle-#46 closures (Saul's commit is a retroactive cycle-#45 fold authored at cycle-#46 close-time), every commit confined to `.squad/agents/<name>/`.
+
+**4. ROSTER_INTEGRITY — PASS (5 open, exact match to carry-forward).**
+```
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state open --limit 200 --json number --jq 'length'
+5
+$ gh issue view --repo yashasg/value-compass <n> --json state --jq '.state'  for n ∈ {316, 317, 348, 416, 423}
+#316 state=OPEN
+#317 state=OPEN
+#348 state=OPEN
+#416 state=OPEN
+#423 state=OPEN
+```
+**Identical** to cycle-#45 and cycle-#46 carry-forward. Roster stable at **5/5** for **3 consecutive cycles** since PR #513 landed (cycles #45, #46, #47).
+
+---
+
+### Five-Drift Re-Verification at HEAD `b4b961e`
+
+**#316 — X-App-Attest is a per-op header parameter, not a securityScheme — STILL ACCURATE.**
+```
+$ grep -c securitySchemes openapi.json
+0
+$ grep -c '"X-App-Attest"' openapi.json
+18
+$ grep -n '"name": "X-App-Attest"' openapi.json
+85, 195, 345, 525, 695, 908, 1096, 1278, 1475
+```
+`components.securitySchemes` still absent; `X-App-Attest` still declared as a per-operation `parameters[].name` with `in: header` on **9 protected operations** (line refs byte-identical to cycle #46). Spec-projection unchanged.
+
+**#317 — HoldingOut / AddHoldingRequest bare-number money fields — STILL ACCURATE.**
+Verified via `json.load(openapi.json)`:
+- `HoldingOut.weight` → `{'type': 'number', 'title': 'Weight'}` — bare number, no `format`, no string union. **DRIFT INTACT.**
+- `AddHoldingRequest.weight` → `{'type': 'number', 'maximum': 1.0, 'exclusiveMinimum': 0.0, 'title': 'Weight'}` — bare number, range-constrained but precision-lossy on Swift Double decode. **DRIFT INTACT.**
+- `PatchHoldingRequest.weight` → `{'type': 'string', 'format': 'decimal', 'title': 'Weight', 'exclusiveMinimum': 0, 'maximum': 1}` — asymmetric; #461-closed path on WRITE side only. Asymmetry persists.
+- `HoldingOut.required` → `['ticker', 'weight', 'current_price', 'sma_50', 'sma_200', 'midline', 'atr', 'upper_band', 'lower_band', 'band_position']` — all 10 fields required, unchanged from cycle #46. Bare-number + every-field-required pairing intact.
+
+Spec shape: `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. Steady-state.
+
+**#348 — X-Device-UUID undeclared in spec; backend reads device identity from body/query — STILL ACCURATE.**
+- Spec parameter declarations naming `X-Device-UUID`: **0** at HEAD `b4b961e`. The header is sent by every authenticated iOS request but never appears in any operation's `parameters` block.
+- Spec parameter declarations naming `device_uuid`: **6 hits** at openapi.json lines `335, 515, 898, 1086, 1268, 1465` — all as `in: query` or `requestBody` properties (NOT headers). **Note correction:** cycle #46 banked "5 hits at 335, 515, 898, 1086, 1268" — the locked-surface invariant has shown ZERO hunks across cycles #45→#46→#47, so the file is byte-stable. The cycle-#46 enumeration missed line `1465` (a sixth `device_uuid` declaration, present at cycle-#46 HEAD `baa7bb0` and still present at cycle-#47 HEAD `b4b961e`). This is an **enumeration correction, not a drift change** — the spec content is identical. Banking the correct count of **6** for cycle #47+.
+- Backend code that reads the literal header `X-Device-UUID`: **0** at HEAD `b4b961e` (the only `X-Device-UUID` references in `backend/api/main.py` are docstring/prose mentions at lines `644, 673, 914, 1492` — byte-identical to cycle #46).
+- Spec description-string mentions of `X-Device-UUID` (PR #513 prose expansion): **4 hits** at openapi.json lines `511, 1082, 2067, 2099` — byte-identical to cycle #46.
+- **Cycle-#46 amplification (still in effect):** PR #513's 4 docstring mentions of `X-Device-UUID` (DSR export/erasure/PortfolioExportHolding/PortfolioExportResponse) still increase the spec's adversarial reading surface — a consumer reading the docstrings might infer the header is canonical, when the actual routing key is the body/query `device_uuid` field. Amplification re-confirmed at HEAD `b4b961e`. #348 remains the correct ticket; no new filing. **DRIFT INTACT, amplification holds.**
+
+**#416 — blanket Cache-Control + Last-Modified middleware on every operation — STILL ACCURATE.**
+- `backend/api/main.py:443-460` — decorator `@app.middleware("http")` at L443/L444 (`async def add_standard_headers`)
+- `backend/api/main.py:452-454` — `response.headers.setdefault("Cache-Control", f"max-age={config.CACHE_MAX_AGE}")`
+- `backend/api/main.py:455-458` — `response.headers.setdefault("Last-Modified", datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"))`
+- `backend/api/main.py:459` — `response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)`
+- Header schema declarations in spec at openapi.json lines `161` (`Cache-Control`), `165` (`Last-Modified`), `169` (`X-Min-App-Version`) — byte-identical to cycle #46.
+
+Invariant 3 PASS confirms zero `backend/` hunks since cycle #46; line refs are byte-stable. Middleware unchanged; spec projection unchanged. **DRIFT INTACT.**
+
+**#423 — open content model substrate (no `additionalProperties: false`, no `extra="forbid"`) — STILL ACCURATE.**
+```
+$ grep -cE '"additionalProperties":\s*false' openapi.json
+0
+$ grep -cE '"additionalProperties"' openapi.json
+0
+$ grep -rE 'extra\s*=\s*"forbid"' backend/ | wc -l
+0
+```
+**Spec has zero `additionalProperties` keys whatsoever** (neither `false` nor `true`). Backend has zero `extra="forbid"` Pydantic configs. Open-content substrate untouched across 15 component schemas + all BaseModel classes. **DRIFT INTACT.**
+
+---
+
+### Five-Drift Re-Validation Table
+
+| Issue | Surface | Anchor at HEAD `b4b961e` | Verdict |
+|---|---|---|---|
+| **#316** | OpenAPI security scheme | 0× `securitySchemes`; 9× `"name": "X-App-Attest"` per-op header at lines 85/195/345/525/695/908/1096/1278/1475 | **STILL ACCURATE** |
+| **#317** | OpenAPI money types | `HoldingOut.weight` & `AddHoldingRequest.weight` = bare `number`; `PatchHoldingRequest.weight` = `string/decimal` (asymmetric) | **STILL ACCURATE** |
+| **#348** | OpenAPI header declaration | 0 `X-Device-UUID` parameter decls; 6 `device_uuid` body/query decls at 335/515/898/1086/1268/**1465**; 4 docstring mentions at 511/1082/2067/2099 | **STILL ACCURATE** (+ count correction: 6 not 5; PR #513 amplification holds) |
+| **#416** | Backend middleware + spec | `main.py:452-459` setdefault block intact; spec header schemas at openapi.json:161/165/169 | **STILL ACCURATE** |
+| **#423** | OpenAPI content model | 0× `additionalProperties` keys; 0× `extra="forbid"` in backend | **STILL ACCURATE** |
+
+All 5 drifts re-validated. Spec hash `286a3a52…315378e` byte-stable for the 3rd consecutive cycle.
+
+---
+
+### Watchlist Anchors (re-verified at `b4b961e`)
+
+- **#303 closure pin** — `backend/api/main.py:1012` (POST `/portfolio/holdings` `response_class=Response`) + `test_api.py:546` (`test_add_holding_202_success_is_empty_body_in_spec_and_runtime`). Zero `backend/` hunks since cycle #46 ⇒ pins byte-stable. Closure intact.
+- **openapi.json shape** — `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. Hash `286a3a52…315378e`. Steady-state.
+- **DSR audit-log family (post-#513)** — 4 `event=dsr.*` server-side log emissions still outside API surface; no HTTP body/header projection. Reuben-lane (#457 closure). No Nagel watchlist additions.
+- **#316/#317/#348/#416/#423** — all five re-validated above; line refs hold against `b4b961e`.
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** **2** — cycle #39 / PR #503 / #303 (response-body shape) and cycle #45 / PR #513 / #457 (description-only). No new sanctioned change in cycle #47.
+- **Locked-surface-clean-or-sanctioned cycles since #303 (PR #503, cycle #39):** **8** — cycles #40, #41, #42, #43, #44, #45, #46, **#47**. Cycle #47 lands as a **history-only quiet cycle** (zero locked-surface hunks).
+- **Unannounced-drift counter:** **0**. Discipline holds **47/47**.
+- **Parity streak at hash `286a3a52…315378e`:** **3 consecutive cycles** (#45, #46, #47).
+
+---
+
+### Findings
+
+Cycle #47 is a clean quiet cycle. Window contains only specialist-history commits (Yen #46, Frank #46, Saul retroactive #45 fold). The locked surface is untouched since PR #513 banked in cycle #45 — three consecutive cycles at the same baseline hash. Re-verification of all five open drifts (#316/#317/#348/#416/#423) confirms each persists with byte-stable line refs and structural patterns documented in cycles #45/#46.
+
+One small enumeration correction worth banking: cycle #46 reported 5 `device_uuid` parameter declarations in the spec at lines 335/515/898/1086/1268, but the actual count at HEAD `baa7bb0` (= HEAD `b4b961e`, locked surface clean across both windows) is **6** — line **1465** was missed in cycle #46's enumeration. This is a documentation correction, not a drift change: the spec is byte-identical (hash unchanged), and the 6th hit is a `device_uuid` query parameter on whichever protected operation lives at openapi.json L1465 — it had been present in both cycles, but only enumerated correctly here. #348's filing remains correct; the count is updated to 6 going forward.
+
+PR #513's 4-docstring amplification of `X-Device-UUID` on the DSR export/erasure paths (openapi.json lines 511/1082/2067/2099) remains in effect — when #348 is taken on, the resolution PR must reconcile these prose mentions against whichever direction is chosen (declare the header or rewrite docstrings to `device_uuid`).
+
+### Decisions
+
+**NO_OP.** No new filings, no updates to existing filings, no novel watchlist entries. Re-baseline holds at openapi.json SHA-256 `286a3a52…315378e` for the 3rd consecutive cycle.
+
+### Duplicate-Check Proof
+
+Roster sweep at HEAD `b4b961e`:
+
+```
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state open --limit 200
+→ 5 issues: #423, #416, #348, #317, #316 (exact carry-forward match, cycles #45/#46/#47)
+
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state closed --limit 50
+→ 25 closed issues; most recent batch through #463 (cycle-#45 closures).
+```
+
+Keyword sweep across `squad:nagel` (open + closed full inventory):
+
+1. **`openapi drift`** → 16 hits, all already-tracked filings (5 open + 11 closed); no novel surface. The 5 open match the carry-forward roster exactly. No fork needed.
+2. **`public api breaking`** → 3 hits (#416, #402, #249) — all already-tracked filings (1 open + 2 closed). No new public-Swift surface activity in window (invariant 2 PASS confirms 0 `.swift` files touched).
+3. **`@Model schema`** → 0 hits beyond existing closures (#235/#250/#244/#249/#298/#249/#337/#340) — first `@Reducer` introduction remains pending; PR #145 dormant.
+4. **`@Reducer` / `protocol stability` / `semver` / `deprecation`** → all hits resolve to already-tracked filings or closed issues. The `deprecation` sweep returned only the carry-forward roster (#316, #317, #423) plus closed #244/#249/#250/#282/#225 — no novel deprecation-cadence drift.
+5. **`X-Device-UUID device.uuid header`** → 5 hits (#429 CLOSED, #402 CLOSED, **#348 OPEN**, **#316 OPEN**, #226 CLOSED). The enumeration correction (6 vs 5 `device_uuid` parameter declarations) maps cleanly onto the existing #348 filing — no novel issue warranted.
+6. **`log.info audit dsr erasure rectification`** → 0 hits in Nagel lane. PR #513's `dsr.*` log emissions remain outside the API surface — Reuben-lane only.
+
+**Verdict: NO novel issue to file.** Roster of 5 is exact; all drift channels remain covered by existing tickets.
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP carry-forward** | #423, #416, #348, #317, #316 | All line refs re-validated against `b4b961e`; no regression, no expansion, no novel surface |
+| **Enumeration correction (banked, not filed)** | #348 | `device_uuid` parameter declaration count is **6** (lines 335/515/898/1086/1268/1465), not 5 as banked in cycle #46. Spec byte-stable; correction applies retroactively to cycle #46. Fold into #348's eventual resolution PR scope assessment. |
+| **Banked nuance (still in effect)** | #348 | PR #513's 4 docstring mentions of `X-Device-UUID` (openapi.json L511/1082/2067/2099) still amplify #348's adversarial reading surface — re-confirmed at HEAD `b4b961e`. Reconcile in resolution PR. |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains zero locked-surface activity. 100% specialist-history quiet cycle.
+
+### Roster Snapshot (post-cycle #47)
+
+| # | Title (abbrev) | State | Surface | Re-validated cycles |
+|---|---|---|---|---|
+| **#316** | X-App-Attest as per-op header, not securityScheme | OPEN | OpenAPI security scheme | #40-47 (8 cycles) |
+| **#317** | HoldingOut/AddHoldingRequest bare-number money | OPEN | OpenAPI primitive types | #41-47 (7 cycles) |
+| **#348** | X-Device-UUID undeclared in spec | OPEN | OpenAPI header declaration | #41-47 (7 cycles, PR #513 amplification banked) |
+| **#416** | Blanket Cache-Control/Last-Modified middleware | OPEN | Backend middleware + spec response headers | #43-47 (5 cycles) |
+| **#423** | Open content model across all schemas | OPEN | OpenAPI content model substrate | #44-47 (4 cycles) |
+
+### Forward Watch / Handoff
+
+- **Baseline hash** for cycles #48+: openapi.json SHA-256 `286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e` (cycle #45 baseline holds — **3 cycles stable**).
+- **Still waiting** for first sanctioned `paths.*` or `components.schemas.*` *structural* mutation since #303 (PR #503, cycle #39). PR #513 (cycle #45) was description-only; counter stays paused on structural-change vehicles. Likely next: **#317** (Decimal-money normalization on `HoldingOut`/`AddHoldingRequest` — would extend the #461 PatchHoldingRequest pattern to the read/add side) or a batched spec-hygiene PR addressing #423's open-content-model substrate.
+- **#348 resolution scope** — must reconcile (a) header declaration vs docstring rewrite, (b) the 6 `device_uuid` parameter declarations (335/515/898/1086/1268/1465), and (c) the 4 docstring `X-Device-UUID` mentions added by PR #513 (511/1082/2067/2099). Three surfaces, one ticket.
+- **PR #145** (TCA migration) and **#468** (in-app-events scaffolding) remain forward-watch — first `@Reducer` introduction must arrive with explicit Nagel surface review.
+- **Drift discipline:** **8 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/47** entering cycle #48. Parity streak at the post-PR-#513 hash: **3 consecutive cycles**.
+
+### Top-3 Next Actions
+
+1. **Watch for #317 vehicle** — Decimal-money normalization on the READ side (`HoldingOut.weight` + 8 indicator fields) and ADD side (`AddHoldingRequest.weight`). Would extend the #461 `PatchHoldingRequest.weight` pattern to symmetric coverage. First structural spec mutation since cycle #39 most likely lands here.
+2. **Watch for #348 vehicle** — either declare `X-Device-UUID` as a spec parameter on the 9 protected operations (and remove the 6 `device_uuid` body/query declarations + 4 docstring mentions), or formally adopt the body/query routing key and remove `X-Device-UUID` from iOS transport. PR #513 increased the cost of leaving this unresolved.
+3. **Sentinel for first `@Reducer` introduction** — PR #145 (TCA migration) is dormant 3+ cycles. When it activates, swift-public-surface invariant must catch the first `@Reducer`/`Store`/`Action`/`State` declarations and gate them against the `ContributionCalculating` seam stability.
+
+(end Nagel cycle #47)
