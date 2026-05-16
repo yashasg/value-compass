@@ -912,3 +912,261 @@ The following 5 items require licensed-attorney review before any public App Sto
 I am Reuben, a paralegal/compliance-engineering specialist agent. **I am NOT a licensed attorney admitted to practice law in any jurisdiction, and nothing in this cycle-#47 entry — the dual PASS-no-trigger hook scoreboard (#224 2nd post-fire / #294 8th consecutive), the byte-stable roster reconciliation, the counsel-gate dormancy report, the four-axis dedup sweep, or the NO_OP decision — constitutes legal advice or substitutes for licensed-counsel review.** Items 1–5 in the pre-launch counsel gates list above MUST be reviewed by a licensed attorney before any public App Store submission or marketing spend. Until such review is obtained and documented (e.g., as a `.squad/decisions/inbox/reuben-licensed-counsel-signoff.md` artifact citing counsel identity, bar admission, scope-of-review, and date), the App Store submission posture is **NOT cleared by Reuben** regardless of any other specialist's green-light.
 
 (end Reuben cycle #47)
+
+
+---
+
+## Cycle #48 — 2026-05-16T02:52:00Z (Specialist Parallel Loop)
+
+**HEAD at spawn:** `67434c23ea67a990e56355e5e2ac793d01e36985` (`67434c2`)
+**Previous cycle close:** `bb56ca5` (`compliance(reuben): cycle #47 — …NO_OP`)
+**Reuben-anchor window:** `bb56ca5..67434c2` → **3 commits, 6 files changed, +542/-32 lines** (one Nagel cycle-#47 history append + **two product UI a11y/HIG closures**: `ab0fb33` PR #517 closes #415 SC 1.4.1 use-of-color; `67434c2` PR #519 closes #358 ContributionResult toolbar hoist).
+**Spawn-prompt window framing:** `b4b961e..67434c2` → identical product-commit subset (the two new product commits — `b4b961e` was the cycle-#47 spawn HEAD, not my cycle-#47 close anchor; gates were evaluated against both framings and produce identical verdicts for product trigger paths).
+
+**Window commits (verbatim `git --no-pager log --oneline bb56ca5..67434c2`):**
+
+```
+67434c2 hig(toolbars): hoist ContributionResult Save + History into .toolbar (closes #358) (#519)
+ab0fb33 a11y(use-of-color): pair Settings + PortfolioEditor status Texts with SF Symbols so SC 1.4.1 holds under Color Filters (closes #415) (#517)
+7d63935 chore(nagel): cycle #47 history — 4 invariants PASS … NO_OP
+```
+
+**Window diffstat (verbatim, Reuben-anchor):**
+
+```
+.squad/agents/nagel/history.md                         | 240 ++++++++++++++++
+app/Sources/App/AppFeature/SettingsAccessibility.swift |  61 ++++
+app/Sources/Features/ContributionResultView.swift      |  33 ++-
+app/Sources/Features/PortfolioEditorView.swift         |  16 +-
+app/Sources/Features/SettingsView.swift                |  94 ++++--
+app/Tests/VCATests/SettingsAccessibilityTests.swift    | 130 +++++++++
+6 files changed, 542 insertions(+), 32 deletions(-)
+```
+
+**First non-history-only window since cycle #45.** Cycles #46 and #47 were both team-history-only (perfect-quiet pair); cycle #48 breaks the streak with two Yen/Turk-lane product commits that overlap one #294 trigger path. Gate evaluation MANDATORY this cycle.
+
+### Hook scoreboard
+
+| Hook | Trigger files | `git diff b4b961e..67434c2 -- <files+doc>` | Verdict | Streak |
+|---|---|---|---|---|
+| **#224** (`docs/legal/privacy-policy.md`) | `APIClient.swift`, `MassiveAPIKeyValidator.swift`, `DeviceIDProvider.swift`, `PrivacyInfo.xcprivacy`, `SettingsFeature.swift` (+ doc) | **EMPTY** (0 bytes) | **PASS-no-trigger** | **3rd post-PR-#513-fire** consecutive clean |
+| **#294** (`docs/legal/third-party-services.md`) | `MassiveAPIKeyValidator.swift`, `MassiveAPIKeyStore.swift`, `Disclaimer.swift`, **`SettingsView.swift`** (+ doc) | `app/Sources/Features/SettingsView.swift \| 94 ++++++/-24` (commit `ab0fb33` only — `MassiveAPIKey*`, `Disclaimer.swift`, and `third-party-services.md` itself are all UNTOUCHED) | **GATE FIRED → re-verified STILL ACCURATE** | breaks 8-cycle PASS-no-trigger streak; 2nd lifetime #294 fire (1st was cycle #39 via `75643ba`); 2nd consecutive cycle with a gate fire across the two hooks (#224 cycle #45 / #294 cycle #48) |
+
+**Important boundary check (spawn-prompt called out):** The `ab0fb33` commit also touches `app/Sources/App/AppFeature/SettingsAccessibility.swift` (the value-level enum, NOT a screen) — this file is **NOT** on either hook's trigger list. The privacy-policy hook trigger is `SettingsFeature.swift` (the reducer), not `SettingsAccessibility.swift` (the AT-announcement composer). The third-party-services hook trigger is `SettingsView.swift` (the screen). Both distinctions hold and neither file aliases the other — confirmed via the `Re-validation hooks` table at `loop-strategy.md:86`.
+
+Diff-evidence (verbatim, both framings produce identical output for product paths):
+
+```
+$ git --no-pager diff --stat b4b961e..67434c2 -- \
+    app/Sources/Backend/Networking/APIClient.swift \
+    app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift \
+    app/Sources/Backend/Networking/DeviceIDProvider.swift \
+    app/Sources/App/PrivacyInfo.xcprivacy \
+    app/Sources/App/AppFeature/SettingsFeature.swift \
+    docs/legal/privacy-policy.md
+(no output — 0 bytes returned)
+
+$ git --no-pager diff --stat b4b961e..67434c2 -- \
+    app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift \
+    app/Sources/Backend/Networking/MassiveAPIKeyStore.swift \
+    app/Sources/Backend/Models/Disclaimer.swift \
+    app/Sources/Features/SettingsView.swift \
+    docs/legal/third-party-services.md
+ app/Sources/Features/SettingsView.swift | 94 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-------------------
+ 1 file changed, 70 insertions(+), 24 deletions(-)
+```
+
+---
+
+### #294 (`docs/legal/third-party-services.md`) — **GATE FIRED → document re-verification = PASS-and-still-accurate**
+
+Single trigger: `app/Sources/Features/SettingsView.swift` modified by commit `ab0fb33` (PR #517 closes #415, Yen-lane WCAG 2.2 SC 1.4.1 "Use of Color"). The other three #294 triggers (`MassiveAPIKeyValidator.swift`, `MassiveAPIKeyStore.swift`, `Disclaimer.swift`) are UNTOUCHED and `third-party-services.md` itself is UNTOUCHED — so the fire is exclusively driven by the `SettingsView.swift` change, with no companion commit touching the doc.
+
+**What `ab0fb33` actually did to `SettingsView.swift`:** wrapped six inline status `Text` rows in `Label(_, systemImage:)` so the WCAG 2.2 SC 1.4.1 "color is not the only signal" obligation holds under Grayscale Color Filter / Color Filters / Increase Contrast. The transformation pattern at each of the six sites is identical and visual-only:
+
+```
+- Text("<status string>")
+-   .valueCompassTextStyle(.bodySmall)
+-   .foregroundStyle(Color.appNegative | .appPositive)
+-   .accessibilityIdentifier("settings.apiKey.…")
++ Label(
++   "<status string>",                                       // string LITERAL identical
++   systemImage: SettingsAccessibility.<glyphAccessor>       // SF Symbol pulled from new value-level enum
++ )
++ .valueCompassTextStyle(.bodySmall)                          // text-style PRESERVED
++ .foregroundStyle(Color.appNegative | .appPositive)          // tint PRESERVED
++ .accessibilityIdentifier("settings.apiKey.…")               // a11y ID PRESERVED
+```
+
+Six sites: `apiKeySection` loadError row (l.~130); `apiKeyValidationStatusView .storedButLastCheckFailed` row (l.~215); `apiKeyRequestStatusRow` `.rejected` / `.networkError` / `.storeError` / `.savedSuccessfully` arms (l.~315–360). Companion glyph dictionary lives at `app/Sources/App/AppFeature/SettingsAccessibility.swift:194-227` (5 new symbol constants + 1 state-mapped helper: `xmark.octagon`, `wifi.exclamationmark`, `exclamationmark.triangle.fill`, `checkmark.circle.fill`, `exclamationmark.triangle`, `exclamationmark.circle`).
+
+**User-facing string literals (post-commit, verified via `grep -nE '"...' SettingsView.swift`):**
+
+| Status | String literal | Status |
+|---|---|---|
+| `.apiKeyLoadError` | `"Stored key could not be read: \(loadError)"` | identical to pre-commit |
+| `.storedButLastCheckFailed` | `"Saved key may be invalid: \(reason)"` | identical |
+| `.rejected` | `"Rejected: \(reason)"` | identical |
+| `.networkError` | `"Network error: \(reason)"` | identical |
+| `.storeError` | `"Could not save key: \(reason)"` | identical |
+| `.savedSuccessfully` | `"Your API key is valid."` | identical |
+
+**Cross-check each load-bearing claim in `docs/legal/third-party-services.md` against the post-`ab0fb33` `SettingsView.swift`:**
+
+| Doc claim | Doc line | Ground truth at HEAD `67434c2` | Verdict |
+|---|---|---|---|
+| "(`app/Sources/Features/SettingsView.swift` — Massive API Key section footer plus `Link` rows) and the public Privacy Policy (`docs/legal/privacy-policy.md` §8) are both derived from" this register | `third-party-services.md:17-19` | `SettingsView.swift:34` invokes `apiKeySection`; `:120` declares `private var apiKeySection`; `:111-119` docstring still reads "A `Section` footer plus two `Link` rows surface Massive's Terms of Service and Privacy Policy"; `:144` `Link(destination: LegalLinks.massiveTermsOfService)` and `:157` `Link(destination: LegalLinks.massivePrivacyPolicy)` both present and unmodified by `ab0fb33` (diff hunks are at l.130/215/315–360 — none collide with the footer or the two `Link` rows) | **PASS — accurate** |
+| "User-consent surface: Settings → Massive API Key section. Section footer names Massive as the recipient before the user taps Save; the two `Link` rows hand the user off to Safari to read the published policy text before consent." | `third-party-services.md:44` | Section footer + two `Link` rows untouched (see above); the SF-Symbol pairing is added to the **inline status `Text` rows** that live OUTSIDE the consent-surface footer/Link block. The footer narration ("Massive is the recipient…") and the consent gesture (tap-then-Link-to-Safari) are byte-identical pre/post `ab0fb33` | **PASS — accurate** |
+| "Service used: Account/key validation endpoint … `MassiveAPIKeyValidator.swift`" | `third-party-services.md:36` | `MassiveAPIKeyValidator.swift` UNTOUCHED in window (`git diff b4b961e..67434c2 -- …` = 0 bytes); `GET /v1/account` shape (the #441 correction at l.97) holds | **PASS — accurate** |
+| "Data sent: The Massive API key the user enters, carried as `Authorization: Bearer <key>`. No portfolio, holdings, contribution history, device identifier, or telemetry is sent in this request path." | `third-party-services.md:39` | `MassiveAPIKeyValidator.swift` UNTOUCHED; the SF-Symbol pairing is a SwiftUI rendering decoration on the **client-side response surface** (status rows), not a wire-format change. No new field is sent, no new endpoint is hit, no new third-party flow is introduced | **PASS — accurate** |
+| "At-rest storage of the key: iOS Keychain … `MassiveAPIKeyStore.swift`" | `third-party-services.md:41` | `MassiveAPIKeyStore.swift` UNTOUCHED in window | **PASS — accurate** |
+| "Terms of Service URL surfaced in-app: `<https://massive.com/legal/terms>` … `Disclaimer.swift` — `LegalLinks.massiveTermsOfService`" | `third-party-services.md:42` | `Disclaimer.swift` UNTOUCHED in window; `SettingsView.swift:144` still resolves `LegalLinks.massiveTermsOfService` for the Terms `Link` | **PASS — accurate** |
+| "Privacy Policy URL surfaced in-app: `<https://massive.com/legal/privacy>` … `Disclaimer.swift` — `LegalLinks.massivePrivacyPolicy`" | `third-party-services.md:43` | `Disclaimer.swift` UNTOUCHED; `SettingsView.swift:157` still resolves `LegalLinks.massivePrivacyPolicy` | **PASS — accurate** |
+| "App Store Connect 'App Privacy' treatment: The Massive API key is provided by the user, processed by Massive, and not collected by us. No additional 'Data Linked to You' / 'Data Used to Track You' entry is required on Investrum's nutrition label for the Massive flow — we are not the controller for the key the user gives to Massive." | `third-party-services.md:45` | Unchanged surface posture — SF Symbols are Apple-platform glyphs rendered in-process by SwiftUI, **not a third-party data flow**. The ASC App Privacy answer-set does not need an additional entry because no new data is collected, shared, or sent off-device by the pairing change | **PASS — accurate** |
+| "Re-verification trigger: (a) the API host (`api.massive.com`) is changed inside `MassiveAPIKeyValidator.swift`; (b) a new endpoint is added…; (c) the request shape (headers, body, or content type) changes; (d) Massive announces a ToS or Privacy Policy URL change; (e) any new Massive surface (e.g., the issue #128 EOD market-data refresh) lands." | `third-party-services.md:46` | None of (a)–(e) triggered by `ab0fb33` (the change is a SwiftUI rendering decoration on the response-side status rows; no wire change, no new endpoint, no URL change, no new Massive surface). The narrower `loop-strategy.md` trigger list (which fired here on `SettingsView.swift`) is a superset of the doc's own re-verification trigger list (a)–(e); the hook fire on `SettingsView.swift` is a true positive for the loop-strategy table but a false positive against the doc's narrower self-declared trigger criteria. **The hook design correctly defers to the doc's narrower criteria via this re-verification — STILL ACCURATE outcome confirms (a)–(e) is the binding criterion at the policy level.** | **PASS — accurate** |
+| "Initial register published … Surfaced in `SettingsView` Massive API Key section (issue #294)." | `third-party-services.md:96` (change log) | Surface still present at HEAD; no new change-log entry required because no field in the register changed (per the doc's own "How to update this register" §1 — "Add, edit, or remove a row in the table above" — and no row was edited) | **PASS — accurate** |
+| "Corrected the 'Endpoints exercised' row from `POST /v1/account` to `GET /v1/account` so the §5.2.3 register matches the shipping runtime (issue #441)." | `third-party-services.md:97` (change log) | `MassiveAPIKeyValidator.swift` UNTOUCHED in window — the `request.httpMethod = "GET"` shape holds | **PASS — accurate** |
+
+**Forward-cross-check (NEW inbound citation introduced by `ab0fb33`):** the new file `app/Sources/App/AppFeature/SettingsAccessibility.swift` adds a docstring at l.67-71 that cites `third-party-services.md` and issue #294 explicitly:
+
+> _"The Massive API-key save flow is the gate to the only third-party integration the app depends on (`docs/legal/third-party-services.md`, #294). A VoiceOver user who taps Save and hears nothing cannot tell whether the key was accepted, rejected, networked-out, or failed to land in the Keychain — so every non-idle transition is audible."_
+
+This is an INBOUND citation TO `third-party-services.md` (the codebase now points at the doc), not a new claim the doc makes about the codebase. No drift introduced; the doc's content remains the source of truth. Logged for record because it tightens the bidirectional traceability between the §5.2.3 register and the consent-surface accessibility composer.
+
+**#294 re-verification verdict: STILL ACCURATE.** The new `Label`/`systemImage` pairing on six status rows is a SwiftUI rendering decoration that:
+- preserves every user-visible string literal byte-identically,
+- preserves the negative/positive color tint and text-style,
+- preserves every `.accessibilityIdentifier`,
+- does not touch the consent surface (Section footer + two `Link` rows),
+- does not introduce a new third-party data flow,
+- does not change the wire format, endpoint, or attribution language,
+- does not add or remove any service from the register.
+
+**No correction to `docs/legal/third-party-services.md` needed.** **No change-log entry needed** (per the doc's own §"How to update this register" — no field in the table changed). **No counsel re-review obligation triggered** (the doc's narrower (a)–(e) criteria at `:46` are unmet).
+
+**Pattern note — second lifetime #294 fire-and-re-verify cycle.** The first was cycle #39 via `75643ba` (Yen `SettingsView.swift:298` `.savedSuccessfully` arm — also a Yen-lane a11y commit that touched a #294 trigger path without changing the third-party-services content). Both fires landed on Yen-lane accessibility work over the inline status `Text` rows in `SettingsView`'s `apiKeyRequestStatusRow`; both re-verified STILL ACCURATE. The structural lesson holds: **the #294 hook trigger list (`loop-strategy.md:87`) is intentionally broader than the doc's own (a)–(e) re-verification criteria so the gate fires on any `SettingsView.swift` touch and the doc-owner (me) gets to confirm no policy drift — which is the correct, conservative posture.**
+
+---
+
+### #224 (`docs/legal/privacy-policy.md`) — PASS-no-trigger
+
+Command + result already verified above. **3rd consecutive PASS-no-trigger cycle since the last #224 fire** (cycle #45 PR #513). Privacy-policy hook trigger `SettingsFeature.swift` (the reducer) did NOT fire — `ab0fb33` modified `SettingsAccessibility.swift` (the AT-announcement composer, NOT a hook trigger) and `SettingsView.swift` (a #294 trigger, NOT a #224 trigger). Distinct surfaces; hook design holds.
+
+The §6 wording-drift carry-forward at `privacy-policy.md:257-258` ("disclaimer screen" vs `SettingsView.swift:360`/`:387` "welcome screen") remains **STILL UNFIXED** for the 5th consecutive cycle (logged at #42/#43/#44/#45/now #48). `ab0fb33` touched `SettingsView.swift` (the source of "welcome screen") but did NOT touch the doc, so this remains a future-cycle docs-edit closable item; not Reuben-actionable in the cycle #48 commit window.
+
+---
+
+### Compliance landscape scan (post-cycle-#48 product touches)
+
+Surface re-review against GDPR / CCPA / DPDP / PrivacyInfo / App Privacy / EULA / ToS / age rating / data-retention, focused on whether either of the two product commits creates a NEW Reuben-lane gap.
+
+| Surface | Status post-cycle-#48 | Open gap? |
+|---|---|---|
+| **WCAG 2.2 SC 1.4.1** (Use of Color) | Settings + PortfolioEditor status rows now paired with SF Symbols (`ab0fb33` closes Yen #415) | **Yen-lane closure, NOT a Reuben surface.** SC 1.4.1 is a non-regulatory accessibility criterion under WCAG; Apple's App Review §1.5 generally references accessibility but does not impose a specific WCAG-conformance gate. No new Reuben-lane filing warranted. |
+| **HIG → Bars → Toolbars** (primary action reachability) | ContributionResult Save + History now in `.toolbar` (`67434c2` closes Turk #358) | **Turk-lane closure, NOT a Reuben surface.** |
+| **GDPR Art. 5(2) accountability / records-of-requests** | Audit-log trail LIVE for all five backend DSR endpoints (cycle-#45 #513 closure); unchanged this cycle | No new gap |
+| **GDPR Art. 13(1)(e) / CCPA §1798.130(a)(5)** (notice at collection — third-party recipient identification) | `third-party-services.md` register accurate post-`ab0fb33` (see above re-verification matrix); `SettingsView.swift` Massive-section footer and two `Link` rows intact | No new gap |
+| **GDPR Art. 16/17 + CCPA §1798.105/106** (rectification/erasure) | Backend complete; UI tracker #449 + #444 already open; cycle-#48 product commits don't affect this surface | **Already tracked** (#449, #444) |
+| **CCPA 11 CCR §7102(a)** (24-month records retention) | 30-day journald floor LIVE; counsel-decision gate dormant 7 cycles | **Already tracked: #511** (counsel-gate; now 7 cycles dormant) |
+| **App Review §5.2.3** (third-party content/services) | Register accurate post-`ab0fb33`; consent surface intact | No new gap |
+| **PrivacyInfo.xcprivacy** Required-Reason API | Untouched in window (`PrivacyInfo.xcprivacy` not in either commit's file set) | **Already tracked: #364** |
+| **App Privacy nutrition labels (ASC ↔ PrivacyInfo parity)** | Untouched; SF Symbols are platform glyphs, not a data flow | **Already tracked: #443** |
+| **EULA posture / breach-notification procedure** | Untouched | **Already tracked: #398 / #408** (counsel-gates dormant) |
+| **Disclaimer UI test coverage** | Untouched | **Already tracked: #438** |
+| **Third-party SPM acknowledgements** | Untouched (the new file `SettingsAccessibility.swift` is internal, not a new SPM dependency) | **Already tracked: #237** |
+| **Age rating / marketing assets / app-review notes** | Untouched | **Already tracked: #287 / #411 / #427** |
+| **§6 wording-drift carry-forward** (`privacy-policy.md:257-258` "disclaimer screen" vs `SettingsView.swift` "welcome screen") | `SettingsView.swift` touched but `privacy-policy.md` untouched; drift remains unfixed | Tracked as carry-forward (5 cycles); patch deferred to next sanctioned `docs/legal/*` edit cycle |
+
+**Novel surfaces surfaced by post-cycle-#48 scan: ZERO.** Both product commits are pure Yen-lane / Turk-lane UI work with no policy, attribution, disclaimer, wire-format, endpoint, or data-flow change. The compliance landscape is materially unchanged from cycle-#47 close.
+
+### Roster snapshot (`gh issue list --label squad:reuben --state open --limit 200`)
+
+**13 open** (live count via `--json number --jq 'length'` = `13` — byte-stable vs cycle #46 / #47 close, **3rd consecutive cycle byte-stable**):
+
+| # | Title (truncated 70ch) | updatedAt | Δ vs cycle #47 |
+|---|---|---|---|
+| #237 | compliance(licenses): in-app third-party acknowledgements | `2026-05-15T17:09:34Z` | unchanged |
+| #287 | compliance(age-rating): ASC age-rating questionnaire | `2026-05-15T12:54:46Z` | unchanged |
+| #344 | compliance(data-minimization): non-collection + ATT | `2026-05-15T14:26:03Z` | unchanged |
+| #364 | compliance(privacy-manifest): SPM Required-Reason API audit | `2026-05-15T14:42:19Z` | unchanged |
+| #398 | compliance(eula): ASC License Agreement posture | `2026-05-15T15:46:14Z` | unchanged (counsel-gate) |
+| #408 | compliance(breach-notification): Art. 33/34 + §1798.82 | `2026-05-15T16:16:19Z` | unchanged (counsel-gate) |
+| #411 | compliance(marketing-assets): ASC screenshots/preview/CPP | `2026-05-15T16:35:51Z` | unchanged |
+| #427 | compliance(app-review-notes): §2.5.2 + SDK-absence | `2026-05-15T17:09:36Z` | unchanged |
+| #438 | compliance(disclaimer): UI test coverage for calc-output | `2026-05-15T18:01:57Z` | unchanged |
+| #443 | compliance(app-privacy): ASC vs PrivacyInfo parity | `2026-05-15T18:16:25Z` | unchanged |
+| #444 | compliance(data-export-ui): Settings + share-sheet | `2026-05-15T20:55:12Z` | unchanged |
+| #449 | compliance(data-rectification-ui): Settings + fallback | `2026-05-15T20:43:49Z` | unchanged |
+| #511 | compliance(dsr-audit-log): CCPA §7102(a) 24-month vs 30-day | `2026-05-16T00:41:46Z` | unchanged (counsel-gate, **7th dormant cycle**) |
+
+**Δ vs cycle #47 close: net 0.** Most-recent `updatedAt` across the roster remains `2026-05-16T00:41:46Z` (#511) — older than my own cycle-#47 close commit timestamp (`bb56ca5`), confirming zero squad:reuben movement during the window. Closed-50 sweep unchanged (last close was #485 on `2026-05-15T22:45:40Z`, pre-cycle-#47).
+
+### Counsel-gate trio status (dormant)
+
+| # | Lane | State | updatedAt | Dormant for |
+|---|---|---|---|---|
+| **#511** | CCPA §7102(a) 24-month records-of-requests | OPEN | `2026-05-16T00:41:46Z` | **7 cycles** (since cycle #41) |
+| **#398** | EULA posture (Standard vs Custom) | OPEN | `2026-05-15T15:46:14Z` | dormant since open |
+| **#408** | Breach notification (Art. 33/34 + §1798.82) | OPEN | `2026-05-15T16:16:19Z` | dormant since open |
+
+All three remain on hold pending licensed-counsel determination. **No specialist action available; no movement this cycle.** Carry-forward as launch-gate bundle, not per-issue tickets.
+
+### Dedup sweep (4 axes — vacuous given zero candidate filing surfaced)
+
+Cycle-#48 product commits are Yen-lane (a11y/SC 1.4.1) and Turk-lane (HIG/toolbar) — neither produces a Reuben-lane candidate finding. Dedup is vacuously satisfied. Retained for record:
+
+- **Axis 1 — `audit log OR DSR OR data-retention`:** 6 cross-state matches across `audit|DSR|data-retention|records-of-requests|7102` patterns; squad:reuben-scoped open hits collide with #511/#444/#449 already-tracked. **No novel gap.**
+- **Axis 2 — `third-party OR privacy OR consent`:** 80 cross-state matches repo-wide (label-keyword overlap with Yen/Turk lanes is high — same numerator as cycle #47, includes the just-closed #415 a11y issue in the broad set); squad:reuben-scoped open hits = 12 of 13 already-tracked. **No novel gap.**
+- **Axis 3 — `breach OR EULA OR age-rating`:** 20 cross-state matches; squad:reuben-scoped open hits = 9 already-tracked (#287, #398, #408, #411, #344, #443, #427, #364, #237). **No novel gap.**
+- **Axis 4 (cycle-specific — `SF Symbol OR "use of color" OR "1.4.1"`):** 10 hits, all Yen/Turk-lane (#239 / #415-just-closed / #414 / #493 / #479 / #487 / #228 / #346 / #386 / #401). **Zero Reuben-lane SC 1.4.1 / use-of-color / SF-Symbol surfaces** — correct, because SF Symbol pairing is an accessibility/visual convention and is NOT a legal/compliance obligation under any framework Reuben tracks (ADA Title III's WCAG-conformance gate applies to public-accommodation websites under US case law, not iOS apps directly; Apple App Review §1.5 references accessibility generically without imposing a specific WCAG-conformance gate). **No novel gap.**
+
+**Result:** **0 novel surfaces** across all four axes. All hits collide with already-tracked open roster items or already-closed prior cycles, or are out-of-lane (Yen/Turk) accessibility/HIG issues. Dedup confirms no filing warranted.
+
+### Decision
+
+**NO_OP.** Justification:
+
+1. Both standing hooks resolved: **#224 = 3rd post-#513-fire consecutive clean (PASS-no-trigger); #294 = FIRED-and-re-verified STILL ACCURATE** (single trigger `SettingsView.swift` via `ab0fb33`; doc-content unchanged; all 11 doc-claim cross-checks PASS).
+2. Two cycle-#48 product commits (`ab0fb33` / `67434c2`) are Yen-lane / Turk-lane respectively; neither creates a new Reuben-lane gap.
+3. Roster byte-stable at **13 open** for the **3rd consecutive cycle**; counsel-gate trio dormant (#511 now 7 cycles dormant).
+4. No PR/issue movement on squad:reuben surface; the only closures in the window are #415 (Yen) and #358 (Turk).
+5. Dedup axes (vacuously) collide with already-tracked surfaces; **zero novel gap**.
+
+**Routing proof:** None — no issue filed, no comment posted, no label applied. **NEW_ISSUE list: [] (empty).**
+
+### Pre-launch licensed-counsel gates (carry-forward, substantively unchanged from cycle #47)
+
+The following 5 items require licensed-attorney review before any public App Store submission. **No specialist action can close them.**
+
+1. **#511** — CCPA 11 CCR §7102(a) 24-month records-of-requests obligation vs the 30-day journald floor at `docs/legal/data-retention.md:58`.
+2. **#398** — ASC License Agreement posture (Standard vs Custom EULA) for a financial-utility app with non-advice disclaimer.
+3. **#408** — GDPR Art. 33/34 + Cal. Civ. Code §1798.82 breach-notification procedure.
+4. **Privacy Policy final text** (`docs/legal/privacy-policy.md`, issue #224 doc).
+5. **Terms of Service final text** (non-advice carve-out, jurisdiction, arbitration, limitation-of-liability, IP grant, termination/survival).
+
+**Orchestrator action ask (re-iterated, 3rd cycle):** items 1–5 are dependencies of any App Store submission and are NOT closable by specialist action. Surface to principal (yashasg) as a single carry-forward bundle for licensed-counsel engagement.
+
+### Blockers
+
+- **None new this cycle.** Standing blockers (counsel-gate trio + Privacy Policy + ToS) remain unchanged.
+- The cycle-#48 gate fire was correctly resolved by re-verification; no doc edit required.
+
+### Top 3 next actions
+
+1. **(External, not specialist-actionable) Engage licensed counsel** on the 5-item pre-launch gate bundle — the only path to unstall App Store submission. 7 cycles of #511 dormancy.
+2. **(Forward watch, cycle #49)** If any commit touches `app/Sources/App/AppFeature/SettingsFeature.swift` (the reducer — e.g., implementation of #444 export-ui or #449 rectification-ui Settings trigger), the **#224** hook fires AND the §6 wording-drift carry-forward at `privacy-policy.md:257-258` becomes a closable fix in the same docs-edit window. Re-armed for cycle #49.
+3. **(Forward watch, cycle #49)** If any further commit touches `app/Sources/Features/SettingsView.swift` or any `app/Sources/Backend/Networking/Massive*.swift` or `app/Sources/Backend/Models/Disclaimer.swift`, the **#294** hook fires again — re-verify the §5.2.3 register against the new touch. Cycle #48 establishes the precedent that the broader loop-strategy trigger list correctly fires on Yen-lane a11y touches against `SettingsView.swift` even when the doc's narrower (a)–(e) criteria are unmet; the re-verification step is what discriminates true-positive (policy drift) from true-no-drift (visual decoration only) cases. **Outcome of any future #294 fire is NOT pre-decided.**
+
+### Learnings
+
+- **First non-history-only window since cycle #45.** Cycles #46 and #47 were both team-history-only; cycle #48 breaks the streak with product commits, and the gate machinery handled it cleanly: one hook PASS-no-trigger, one hook FIRED+re-verified STILL ACCURATE, with surgical diff-evidence at each step.
+- **Pattern: Yen-lane accessibility work over `SettingsView.swift`'s inline status rows produces #294 fires that re-verify STILL ACCURATE.** Both lifetime #294 fires (cycle #39 `75643ba` and cycle #48 `ab0fb33`) followed this exact pattern: a Yen-lane SwiftUI rendering change (announcement modifier add, then SF-Symbol pairing) on the `apiKeyRequestStatusRow` arms, with the user-visible string literals and the consent-surface footer/Link rows preserved byte-identically. This is the **correct, conservative behavior of the hook** — the broad trigger-file list catches every `SettingsView.swift` touch and forces a re-verification check; the narrower doc-internal (a)–(e) criteria at `third-party-services.md:46` are what determine whether actual policy drift occurred. Two-for-two STILL ACCURATE so far, but the next fire's outcome is not pre-decided and must be evaluated on its own merits.
+- **Boundary-aliasing check on `SettingsAccessibility.swift`.** The spawn-prompt called out a potential confusion: is `SettingsAccessibility.swift` (added by `ab0fb33`) the same as `SettingsFeature.swift` (#224 trigger) or `SettingsView.swift` (#294 trigger)? Answer: **neither**. `SettingsAccessibility.swift` is a brand-new value-level enum at `app/Sources/App/AppFeature/SettingsAccessibility.swift` containing AT-announcement and SF-Symbol composers; it is NOT on either hook's trigger list. The hooks correctly did not fire on it. This is the third such boundary-check this lane has logged (cycles #43, #46 logged similar near-aliasing for `SettingsView.swift` vs `SettingsFeature.swift`) and the design holds.
+- **Inbound citation from `SettingsAccessibility.swift` to `third-party-services.md` is a positive signal.** The new `app/Sources/App/AppFeature/SettingsAccessibility.swift:67-71` docstring explicitly cites `docs/legal/third-party-services.md` and #294 as the rationale for the Massive API-key save flow being a load-bearing AT-announcement surface. This tightens bidirectional traceability between the §5.2.3 register and the consent-surface AT helper — a structural improvement worth logging.
+- **Counsel-gate trio (#511 / #398 / #408) dormancy is now 7 cycles structural** — re-iterating that these are NOT "stuck on a desk" specialist items but explicit external launch-gate dependencies.
+
+### Attestation — I am NOT licensed counsel
+
+I am Reuben, a paralegal/compliance-engineering specialist agent. **I am NOT a licensed attorney admitted to practice law in any jurisdiction, and nothing in this cycle-#48 entry — the dual hook scoreboard (#224 PASS-no-trigger 3rd post-fire / #294 FIRED+re-verified STILL ACCURATE 2nd lifetime), the 11-claim post-fire re-verification matrix for `docs/legal/third-party-services.md`, the byte-stable roster reconciliation, the counsel-gate dormancy report, the four-axis dedup sweep, or the NO_OP decision — constitutes legal advice or substitutes for licensed-counsel review.** Items 1–5 in the pre-launch counsel gates list above MUST be reviewed by a licensed attorney before any public App Store submission or marketing spend. Until such review is obtained and documented (e.g., as a `.squad/decisions/inbox/reuben-licensed-counsel-signoff.md` artifact citing counsel identity, bar admission, scope-of-review, and date), the App Store submission posture is **NOT cleared by Reuben** regardless of any other specialist's green-light.
+
+(end Reuben cycle #48)
