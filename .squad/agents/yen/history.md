@@ -163,3 +163,33 @@ Value Compass is a local-first iOS/iPadOS app (iOS 17+, SwiftUI + SwiftData) tha
 3. **Restated infra ask (unchanged from cycle #41):** XCUITest target under `app/Tests/` with an `accessibilitySnapshot()` strategy is still missing. Without it the ticker-composer pin, the API-key announcement pin, the erase-flow announcement pin, and the welcome-string pin are all unit-validated only — a UI re-wire could silently break spoken output without tripping a test. QA-infra ownership, not Yen-lane to file.
 
 (end Yen cycle #42)
+
+## Cycle #43 — 2026-05-16T01:40:17Z
+
+**Window chosen:** `1662b32..54d9df5` (cycle-#42 close anchor → HEAD). `git --no-pager log --oneline 1662b32..54d9df5` returns exactly **6 commits**, all `chore/aso/research/compliance`-prefixed specialist history appends — Nagel, Turk, Yen (cycle-#42), Reuben, Saul, Frank — plus Frank's `inbox-saul-cycle-42.md` handoff. `git --no-pager diff --stat 1662b32..54d9df5` confirms **only 7 files touched, every one under `.squad/agents/`**: 6× `history.md` (+555 lines net append-only) and 1× `inbox-saul-cycle-42.md` (+122 lines, new file). **Zero product / spec / asset / localization mutation in window.** Shape exactly matches the cycle-#42 close prediction (the spawn prompt said "6 commits, all `.squad/agents/*/history.md` + `inbox-saul-cycle-42.md`" — verified.)
+
+**Hot-surface invariants (all PASS, identical to cycle-#42 close baseline):**
+- `SettingsView.swift` `.accessibility[A-Z]` modifier count = **42** (post-#489 baseline); `grep -c "accessibility"` substring count also = **42** — no hidden tokens. **PASS.**
+- Welcome-screen canonical strings: `"automatically, exactly like a fresh install."` at `SettingsView.swift:346`; `Text("Returning to the welcome screen…")` at `:370`. Both literal-match unchanged since cycle-#39 baseline (bit-identical to cycle-#42 readings at `:346`/`:370`). **PASS.** Note: cycle-#43 spawn prompt repeated the historical `:345` line-number citation; the actual line has been `:346` since `b332de74` (2026-05-15) — see cycle-#42 entry where this transcription drift was documented. Invariant-by-string-content (the policy adopted in cycle #42 forward-watch §1) confirms no regression.
+- `grep -rn "\.frame(width:" app/Sources/Features/` → **7 hits**, byte-identical to cycle-#38/#41/#42 baselines: `ForcedUpdateView.swift:23` (decorative 96×96, `.accessibilityHidden(true)` at `:25`), `PortfolioDetailView.swift:174,:180,:193,:203` (all `@ScaledMetric`-bound, the #228 fix), `MainView.swift:218` (1×1 split-focus anchor), `OnboardingView.swift:193` (decorative 28×28, `.accessibilityHidden(true)` at `:194`). **No new fixed-width reflow blockers. PASS.**
+- `grep -rn "minimumScaleFactor(" app/Sources/Features/` → exit 1, **zero matches**. No truncation-hider regressions. **PASS.**
+
+**Watchlist re-validation (4 tickets, unchanged from cycle #42 — all PASS):** #228 CLOSED + fix still in place at `PortfolioDetailView.swift:44–45,:174,:180,:193,:203`; #394 OPEN with in-place composer pin at `PortfolioDetailView.swift:211–214` (regular-width) and `:233–234` (compact) still wired; #487 CLOSED — `SettingsAccessibility.swift:60` `transitionAnnouncement(forAccountErasure:.erased)` still returns `"Your data has been erased. Returning to the welcome screen…"` (no "force-quit"/"App Switcher" in any spoken string); #493 CLOSED — `SettingsAccessibility.swift:130` still returns `"Your API key is valid."`, matching visible string at `SettingsView.swift:298`. All four held byte-identically across an empty window. **PASS.**
+
+**Roster reconciliation (live = 7, delta −1 vs cycle-#42 close of 8):** open set at HEAD = `{#239, #260, #299, #318, #366, #394, #415}`. **#371 closed at 2026-05-16T01:36:58Z** (`a11y(progress-view): bare ProgressView() instances ship with no accessibilityLabel`) — closure happened after cycle-#42's roster snapshot but before this scan. Closure is off-HEAD (no commit in window references #371), so it was either a manual `gh issue close` by the orchestrator/user or a merge on a non-`main` branch; either way it is a clean reduction of the Yen queue. The other 7 are bit-identical to cycle-#42's open set. No opens, no label churn, no priority changes.
+
+**Dedup-check (no candidate this cycle, search run for protocol compliance):**
+- `gh issue list --label "squad:yen" --state open --limit 200 --json number,title,labels,updatedAt` → 7 issues, listed above.
+- `gh issue list --label "squad:yen" --state closed --limit 100 --json number,title,labels,closedAt` → reviewed top 24; most recent closure is #371 (above), prior to that #326 (2026-05-16T00:45:55Z), #386 (2026-05-16T00:40:19Z), #401 (2026-05-16T00:33:05Z), #493 (2026-05-16T00:00:49Z) — all already-tracked watchlist items.
+- No new search queries needed: window is product-empty, no candidate bug surfaced for me to disambiguate against existing tickets. Recorded for protocol.
+
+**Filing decision this cycle: NO_OP.** Rationale: (a) window is product-empty — 6 commits, all `.squad/agents/*/history.md` appends + 1 inbox file, zero touch to `app/Sources/`, `app/Tests/`, `docs/`, assets, or `.strings`; (b) all 4 hot-surface invariants PASS bit-identically vs cycle-#42 baseline (Settings `.accessibility` count = 42, welcome strings at `:346`/`:370`, 7 safe `.frame(width:)` sites, 0 `.minimumScaleFactor`); (c) all 4 watchlist tickets (#228/#487/#493 closures + #394 in-place mitigation) hold at HEAD; (d) roster reduced 8→7 (#371 closed off-HEAD), no new opens, no churn on the remaining 7; (e) no candidate a11y defect surfaced — inventing one to justify activity would violate the spawn-prompt hard constraint.
+
+**Forward watch (carry-forward from cycle #42, status unchanged):**
+1. **Invariant-by-string-content policy is working** — this cycle's spawn prompt repeated the legacy `:345` line citation, but the `grep -n` re-derivation at audit time (per cycle-#42 forward-watch §1) caught it instantly without drama. Keep using string content, not transcribed line numbers, as the contract.
+2. **#394 simulator-confirmation still pending** — composer mitigation at `PortfolioDetailView.swift:211–214,:233–234` is byte-stable across cycles #38→#43. Orchestrator/Basher: please confirm on simulator or split into a residual follow-up; I will not close unilaterally.
+3. **XCUITest accessibility-snapshot infra still missing** (restated from cycles #41/#42). Without it, the ticker-composer, API-key-announcement, erase-flow-announcement, and welcome-string pins remain unit-validated only. QA-infra ownership, not Yen-lane to file.
+
+**Roster snapshot:** 7 open Yen-lane issues at cycle close = `{#239, #260, #299, #318, #366, #394, #415}`.
+
+(end Yen cycle #43)
