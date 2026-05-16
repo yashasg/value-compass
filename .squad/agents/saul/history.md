@@ -2122,3 +2122,118 @@ No new positioning opportunity surfaces from Frank's cycle-#42 peer probe (zone 
 - **NO_OP cycles 3-in-a-row (#41 skip, #42 NO_OP, #43 NO_OP) are a feature of a mature roster, not a bug.** The Saul roster of 16 is positioning-complete at the current pre-screenshot-freeze surface; the bottleneck is Danny-on-#286, not Saul-side under-discovery. Continued NO_OP cadence is correct until either (a) Danny moves, (b) Basher ships an observable in-binary surface (#440 trigger), or (c) compliance/observability lands a fresh signal Saul can fold (e.g., write-side DSR for #347).
 
 **(end Saul cycle #43)**
+
+## Cycle #44 — 2026-05-16T01:47Z
+
+**HEAD at spawn open:** `1110b0b` · **Saul spawn-window:** `c75460d..1110b0b` (5 commits, history-only). **Post-spawn HEAD:** `2aa45c3` (Frank + Nagel cycle-#44 commits landed in parallel mid-cycle; explicitly out-of-window for Saul-#44 attribution but consumed via Frank's published cycle-#44 inbox).
+
+### Window verification
+
+`git log c75460d..1110b0b --oneline` → 5 commits, all cycle-#43 close history appends from sibling specialists (Saul/Reuben/Turk/Yen) + Frank's cycle-#43 ASO probe commit (which also wrote `inbox-saul-cycle-43.md`).
+
+`git diff --stat c75460d..1110b0b -- docs/aso/ docs/marketing/ docs/research/ app/Sources/Features/SettingsView.swift app/Sources/App/Info.plist app/Sources/Features/WelcomeView.swift` → **EMPTY**. `docs/marketing/` and `docs/research/` and `app/Sources/Features/WelcomeView.swift` are N/A (do not exist at HEAD `1110b0b`); the other three paths exist and were untouched in-window. Storefront-surface **ZERO delta** — 8th consecutive cycle.
+
+`SettingsView.swift` l.345/370 welcome-screen footer canonical strings UNCHANGED. `Info.plist` `UILaunchScreen` color-only UNCHANGED. `PrivacyInfo.xcprivacy` declarations UNCHANGED. `docs/aso/` tree untouched.
+
+### Frank handoff integration
+
+**Two inboxes ingested:**
+
+1. **`.squad/agents/frank/inbox-saul-cycle-43.md` (9,396 bytes, Frank cycle #43)** — primary handoff for the spawn-window. Frank executed the every-3rd-cycle full 6-peer probe `iTunes /lookup?id=1488720155,6463484375,1288676542,328412701,1071915644,1001257338&country=us` → `resultCount=6`, peer-zone **STABLE 4.68–4.84★ (seven weeks zero rating drift)**, Stock Events anchor byte-identical 7 cycles. Three peers cut new versions (Yahoo v26.9.2, M1 v2026.5.2, Empower v2026.05.13) with sub-noise rating Δ < 0.0001★. Methodology repair: 3 cycle-#43 spawn-brief IDs (`328412086`/`1145410103`/`504672533`) returned `resultCount=0`; Frank swapped to cycle-#42 canonical IDs already verified live (same pattern as cycle-#42 Snowball repair `1407781015 → 6463484375`).
+
+2. **`.squad/agents/saul/inbox-frank-cycle-44.md` (5,914 bytes, Frank cycle #44, post-spawn parallel)** — forward-look context. Single-anchor Stock Events probe byte-identical for the **8th consecutive cycle** (#33/#37/#39/#42/#43/#44). Peer-zone band carried from cycle-#43 probe **STABLE 4.68–4.84★ across 8 weeks**. Eighth consecutive storefront-surface ZERO cycle confirmed by Frank too. Frank cycle #44: NO_OP filing; roster 27 STABLE; next full 6-peer probe = cycle #46 (every-3rd cadence #43 → #46).
+
+**Spawn-prompt directive honored:** "If a `inbox-frank-cycle-44.md` exists from Frank's parallel spawn, prefer that" → I read both, anchoring window analysis to the cycle-#43 inbox (in-window) and using the cycle-#44 inbox for forward-look context only. Saul-side curl re-execution **NOT NEEDED** — per cycle-#43 standing protocol, Frank owns the live curls; Saul cites Frank's published numbers.
+
+### `#286` primacy-gate counter
+
+`gh issue view 286 --json state,updatedAt` → `state=OPEN`, `updatedAt=2026-05-15T22:38:19Z`. Last touch = Saul cycle-#32 re-assertion. **Zero Danny activity** since cycle #32 (~12 Saul-active cycles). Counter: **30 → 31. BANKED, NOT FIRED.** Next fire target ≈ cycle #52 (counter → 40, per cycle-#39 fire-anchor). Per standing protocol: do NOT comment on #286 this cycle.
+
+| Cycle | Counter | Action |
+|---|---|---|
+| #40 | 27 → 28 | Banked |
+| #41 | — (Saul skip) | — |
+| #42 | 28 → 29 | Banked |
+| #43 | 29 → 30 | Banked |
+| **#44** | **30 → 31** | **Banked** |
+
+### Duplicate-check sweep (15 keywords × open + closed × squad:saul + squad:frank)
+
+`gh issue list --label squad:<lane> --state <open|closed> --search "<kw>" --limit 50 --json number --jq 'length'` per axis:
+
+| Keyword | saul:open | saul:closed | frank:open | frank:closed | Mapping |
+|---|---|---|---|---|---|
+| storefront | 16 | 5 | 26 | 2 | Saul: #440 anchor; Frank: #220 source-of-truth |
+| copy | 16 | 4 | 24 | 3 | Saul: roster-wide; Frank: #261/#327/#342 + 7 frame issues |
+| screenshot | 7 | 3 | 19 | 2 | Saul subset; Frank #246/#284/#292 + 7 frame issues |
+| keyword | 13 | 2 | 19 | 1 | Saul: roster-wide; Frank: #245/#220 |
+| subtitle | 12 | 3 | 16 | 1 | Saul: roster-wide; Frank: #377/#245/#220 |
+| aso | 12 | 5 | 27 | 3 | Saul: roster-wide; Frank: all 27 are `aso(...)` |
+| positioning | 15 | 5 | 18 | 3 | Saul-lane primary (#377 partial Frank cross-cite) |
+| landing | 3 | 2 | 3 | 2 | Saul subset; Frank: iOS-N/A |
+| metadata | 7 | 0 | 9 | 0 | Both: #220 anchor |
+| marketing | 7 | 0 | 12 | 0 | Frank: #351 (Marketing URL) |
+| retention | 5 | 3 | 3 | 0 | Saul: #313/#270; Frank subset |
+| pricing | 10 | 3 | 6 | 0 | Saul: #241 anchor |
+| tier | 9 | 2 | 14 | 0 | Saul: #296 anchor; Frank category/tier subset |
+| methodology | 11 | 2 | 13 | 2 | Saul: roster-wide; Frank: methodology hygiene |
+| peer-set | 10 | 4 | 14 | 1 | Saul: #296 anchor |
+
+**Cross-label orphan check** (`gh issue list --state open --search "<kw> -label:squad:saul -label:squad:frank"`): only Reuben-lane #427/#443 (compliance docs) and Turk-lane #320 (iPad split-views) matched on `positioning` / `competitor` / `persona` / `peer-set` keywords. All belong to their correct lane — **zero positioning orphans outside Saul/Frank**.
+
+**Closed-sweep (Saul, latest 5):** #458 launch-recruitment, #456 launch-copy, #424 channel-feasibility, #399 subtitle-primacy, #378 cold-start-path — all sealed cycles #38–#39; no reopen candidate from this window's signal.
+
+**Verdict:** Zero novel candidates from window + Frank cycle-#43 inbox + Frank cycle-#44 inbox + 15-axis sweep.
+
+### Cross-lane carry from window
+
+Five sibling cycle-#43 close commits in-window (all NO_OP / PASS, none storefront-actionable today):
+
+| Commit | Lane | Disposition | Saul-relevant carry |
+|---|---|---|---|
+| `9b9242c` | Saul cycle #43 | NO_OP, #286 counter 30 banked | Self — already absorbed |
+| `591ec81` | Reuben cycle #43 | Both gates PASS-no-trigger (4th consecutive), #511 dormant | #322 7th-commitment fold-in still pending — needs Reuben to either ship the CCPA §7102(a) surface or close #511 |
+| `f25c0ce` | Turk cycle #43 | Watchlist 4/4 PASS, roster 13 STABLE | HIG burn-down holding; no storefront-surface surprises |
+| `cd4fecc` | Yen cycle #43 | Watchlist 4/4 PASS, roster 8→7 (#371 off-HEAD close) | a11y shipped-evidence surface stable; no storefront copy claim ready to add |
+| `c75460d` | Nagel cycle #43 | All 4 invariants PASS, roster 5 STABLE | No in-app-events scaffolding (still #468 watch) |
+
+**Wording-drift §6 carry-forward:** privacy-policy §6 line 257-258 ("disclaimer screen") vs `SettingsView.swift` l.345/370 ("welcome screen") **UNFIXED at HEAD `2aa45c3`** (Reuben did not touch privacy-policy in-window). 4 cycles running since cycle-#40 surfacing. Zero storefront-copy impact (Frank anchors to SettingsView truth-source). Reuben-owned. Carry-forward to cycle #45.
+
+### Roster
+
+`gh issue list --label squad:saul --state open --limit 200 --json number --jq 'length'` → **16 STABLE**. Unchanged from cycle #43.
+
+Full list: `#440, #393, #354, #347, #322, #313, #301, #296, #286, #277, #269, #263, #253, #241, #240, #238`.
+
+### Decision: **NO_OP**
+
+Eight consecutive cycles of storefront-surface ZERO delta. Eight cycles of Stock Events anchor byte-identical parity. Eight weeks of peer-zone STABLE 4.68–4.84★. Zero novel candidates from 15-axis dedup sweep across both Saul and Frank rosters (open + closed). Zero novel candidates from cross-label orphan scan. The competitive surface is extraordinarily calm; the Saul-roster bottleneck remains Danny-on-#286, not Saul-side under-discovery.
+
+No new filing, no new comment, no decision-inbox drop. Roster 16 STABLE.
+
+### Filings / Comments
+
+**NEW ISSUE:** NO. Zero novel candidates after full sweep.
+**NEW COMMENT:** NO. No in-window evidence warrants comment on any roster issue.
+**DECISION-INBOX DROP:** NO. No positioning shift to record.
+
+### Frank Handoff
+
+**Output file:** `.squad/agents/frank/inbox-saul-cycle-44.md` (7,236 bytes, written pre-narrative per cycle-#38 WRITE-first rule, verified on disk via `wc -c`).
+
+Contents: Frank evidence consumed (both cycle-#43 and cycle-#44 inboxes), where folded (NO_OP rationale per input), `#286` counter 30→31 banked, Saul-side canonical-ID set adopted (`1488720155 / 6463484375 / 1288676542 / 328412701 / 1071915644 / 1001257338`), 6 follow-up asks for Frank's cycle #45 probe (single-anchor watch, Snowball review-surge watch, keyword competition refresh @ cycle #46, #511 ship/close watch, #468 scaffolding watch, wording-drift §6 status), roster + counter summary.
+
+### Top 3 next actions (cycle #45)
+
+1. **Watch Danny activity on #286** — counter at 31, ~8 Saul-active cycles until next fire window. Any Danny touch resets the watch and may release the #440 + #238 + #296 + #322 cascade.
+2. **Watch Reuben on #511** — if Reuben ships the CCPA §7102(a) accountability surface (or formally closes #511) in any window before cycle #48, fold immediately into the #322 commitments-block as the 7th candidate.
+3. **Cycle #46 = next full 6-peer probe** — coordinate with Frank's published cadence (#43 → #46). Per Frank cycle-#44 inbox, Saul cycle #46 should also refresh keyword competition for "value averaging" / "VCA" / "Edleson" terms anchoring #269 + the storefront seam claim.
+
+### Learnings
+
+- **Mid-cycle HEAD advance during the Specialist Parallel Loop is now a recurring pattern.** Frank's cycle #44 commit (`2aa45c3`) and Nagel's cycle #44 commit (`5a79fbe`) landed AFTER my spawn-open snapshot of `1110b0b`. The correct response is to (a) honor the spawn-prompt's documented window (`c75460d..1110b0b`) for diff-stat attribution, (b) read both the in-window inbox (cycle #43) and any post-spawn inbox file from a parallel-spawn sibling (cycle #44) for forward-look context, (c) cite both transparently in history without conflating them. Pattern locked.
+- **Eight consecutive storefront-ZERO cycles + eight weeks STABLE peer-zone is no longer noteworthy as an event — it's now the baseline for cycle narration.** What WOULD be noteworthy: any deviation from the 4.68–4.84★ band, any release-cohort change for Stock Events away from v9.35.4 / 2026-04-30, or any Danny touch on #286. Set the bar there.
+- **Two consecutive methodology repairs (cycle #42 Snowball + cycle #43 three-ID swap) suggest the iTunes app-ID universe is mildly entropic at the multi-week scale.** When Frank revisits a peer-set quarterly, expect 1–2 dead IDs per six-app probe. The right ergonomic is: re-derive canonical IDs from `/search?term=<name> <category>` at every full-probe trigger (cycle #46 onward), not relying on spawn-brief inheritance. Frank already adopted this discipline; Saul propagates the canonical set in the cycle-#44 handoff.
+- **Filing-velocity dropping to zero for the 4th consecutive Saul-active cycle (#40 commented #322 only, #42/#43/#44 pure NO_OP) does NOT indicate Saul-side stagnation.** It indicates roster-completeness against the current pre-screenshot-freeze positioning surface. The unlocking conditions are external (Danny on #286, Basher on #440 binary surface, Reuben on #511) — not internal to Saul's discovery velocity. Continued NO_OP cadence is correct.
+
+**(end Saul cycle #44)**
