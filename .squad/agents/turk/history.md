@@ -280,3 +280,86 @@ Three consecutive cycles (#41 history-only-window, #42 empty-window, #43 history
 Roster 13 stable. Three deferred PR audits queued. Watchlist 4/4 PASS. No file requests, no engineer routing.
 
 (end Turk cycle #43)
+
+---
+
+## Cycle #44 — 2026-05-16T01:47:00Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `1110b0b` (`aso(frank): cycle #43 — full 6-peer probe LIVE …`).
+**Window:** `c75460d..1110b0b` (cycle-#43 spawn-window oldest commit → HEAD) per orchestrator spawn instructions.
+
+### Window scan — HISTORY-ONLY (6 commits, 0 product delta)
+`git --no-pager log c75460d..1110b0b --oneline`:
+- `1110b0b` aso(frank): cycle #43 history
+- `9b9242c` research(saul): cycle #43 history
+- `591ec81` compliance(reuben): cycle #43 history
+- `f25c0ce` chore(turk): cycle #43 history (self)
+- `cd4fecc` chore(yen): cycle #43 history
+- `c75460d` chore(nagel): cycle #43 history *(window-inclusive at lower bound; same diff)*
+
+`git --no-pager diff --stat c75460d..1110b0b` → 6 files, 425 insertions — **all** `.squad/agents/{frank,reuben,saul,turk,yen}/history.md` + one `.squad/agents/frank/inbox-saul-cycle-43.md`. Zero touches to `app/Sources/**`, `Info.plist`, `Assets.xcassets`, design-system primitives, SF Symbols, app icon, or any HIG surface. `git --no-pager diff c75460d..1110b0b -- 'app/Sources/**/*.swift' 'app/Sources/App/Info.plist'` → empty. No code-side regression possible by construction.
+
+### Off-window: deferred post-merge audits now reachable
+All three carry-forwards from cycle #43 are now ancestors of HEAD (`git merge-base --is-ancestor` = YES for all):
+- `f5cba107` (PR #509, ContributionResultView 'Saved' badge → #328) ✅ ancestor
+- `ec23e07` (PR #512, `.contextMenu` mirror → #341) ✅ ancestor
+- `2e69ed0` (PR #507, OnboardingView motion → #360) ✅ ancestor
+
+Audits performed below (one-time clearance pass; results then folded into the standing watchlist).
+
+#### Deferred audit 1 — PR #509 / #328 (ContributionResultView 'Saved' badge): **PASS**
+- `app/Sources/Features/ContributionResultView.swift:102-115` `private func savedBadge(_ summary:)` renders `Label(summary, systemImage: "checkmark.circle.fill")` (icon + text, *not* color-only) tinted with `Color.appPositive` inside an elevated `RoundedRectangle(cornerRadius: 12)`, identified `contribution.result.savedBadge`. **HIG → Feedback** — "communicate state changes without interrupting"; **HIG → Alerts** — "Avoid using an alert to communicate routine information."
+- Site call at `:32-33` `if let savedSummary = store.saveConfirmation { savedBadge(savedSummary) }` — persistent inline cue replaces the dismissed `.alert("Result Saved", …)` modal.
+- VoiceOver announcement parity (`appAnnounceOnChange(of: store.saveConfirmation)` at `:72-74`) is Yen-lane scope (#330 family); cited here for completeness, not re-graded.
+- Verdict: **HIG-compliant from Turk lane.** Carry-forward cleared.
+
+#### Deferred audit 2 — PR #512 / #341 (`.contextMenu` mirror): **PASS**
+- `app/Sources/Features/PortfolioListView.swift:47-86` — every row pairs `.swipeActions(edge: .trailing, allowsFullSwipe: false) { Delete (destructive) / Edit }` with `.contextMenu { Edit / Delete (destructive) }`, both pulling titles + `systemImage` + role from `PortfolioRowContextActions` so swipe and pointer strings cannot drift.
+- `app/Sources/Features/ContributionHistoryView.swift:52-86` — same pattern for the single `Delete` destructive action.
+- **HIG → Context menus**: "When you provide a context menu for a list row, use the same actions you offer with swipe gestures so that people who can't perform a swipe gesture — for example, when using a pointer — can still access the actions." ✅ Mirror requirement met. Pointer (right-click / Control-click) + long-press touch users reach Edit/Delete parity with swipe.
+- Adjacent watch: pointer hover effects on the rows themselves (#234) remain open; the context-menu mirror does not regress or substitute for that work.
+- Verdict: **HIG-compliant from Turk lane.** Carry-forward cleared.
+
+#### Deferred audit 3 — PR #507 / #360 (OnboardingView motion): **PASS**
+- `app/Sources/Features/OnboardingView.swift:38` `@Environment(\.accessibilityReduceMotion) private var reduceMotion`; `:93-101` `stepTransition` returns `.opacity` when Reduce Motion is on, else `.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity))` — the HIG-canonical forward-navigation direction.
+- `:52, :54` both conditional branches apply `.transition(stepTransition)`; enclosing `.animation(.easeInOut(duration: 0.3), value: store.hasAcknowledgedDisclaimer)` drives the swap (≤ 0.35 s, within HIG short-transition guidance).
+- **HIG → Foundations → Motion**: "Use motion to clarify navigation" + "Honor the Reduce Motion accessibility setting." ✅ Both prongs met (forward-direction slide + reduce-motion fallback to cross-fade).
+- No conflict with the disclaimer-as-gate `fullScreenCover` pattern (#124): the transition is *intra*-cover (between two child views), not a cover dismissal.
+- Verdict: **HIG-compliant from Turk lane.** Carry-forward cleared.
+
+### Standing watchlist — 5/5 PASS at HEAD `1110b0b`
+(Added #459 — launch-screen — to the standing set now that its anchor is stable on `main`.)
+
+| # | Concern | HIG section | Evidence (file:line at HEAD 1110b0b) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts (destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog(`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog(`; `app/Sources/Features/ContributionHistoryView.swift:118` `.confirmationDialog(` | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheet compact context) | `app/Sources/Features/PortfolioEditorView.swift:50` `.navigationBarTitleDisplayMode(.inline)`; `app/Sources/Features/HoldingsEditorView.swift:491` `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; consumed at `ContributionResultView.swift:46` + `PortfolioDetailView.swift:71` via `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` (CRV citation shifted 43→46 vs cycle #43 due to PR #509 Saved-badge insertion — same anchor, same modifier) | **PASS** |
+| #471 | Settings → Erase routes in-process (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-101` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` + `MainFeature.path` element variant; `app/Sources/App/AppFeature/MainFeature.swift:27, :168` doc-confirm compact-toolbar path-scoping; `app/Sources/App/AppFeature/SettingsFeature.swift:392` `return .send(.delegate(.dataErased))` after Keychain wipe | **PASS** |
+| #459 | `UILaunchScreen` populated (non-empty dict so cold start renders brand color) | HIG → Launching → Launch Screens ("design a launch screen that looks like the first screen of your app") | `app/Sources/App/Info.plist:38-42` `<key>UILaunchScreen</key><dict><key>UIColorName</key><string>AppBackground</string></dict>`; asset `app/Sources/Assets/Assets.xcassets/AppBackground.colorset` exists | **PASS** |
+
+### Adjacent HIG-surface regression scan — N/A in window
+Window diff is pure cross-specialist `.squad/agents/**/history.md` + one inbox markdown. No `.confirmationDialog`, `.alert`, `.sheet`, `.fullScreenCover`, `.navigationBarTitleDisplayMode`, `.toolbar`, SF Symbol substitution, app-icon variant, launch-screen change, `Info.plist` mutation, sheet-detents change, navigation push/pop, or raster-vs-SF-Symbol swap introduced. No new HIG surface to scan.
+
+### Duplicate-check evidence (standing roster sweep; no candidate to file)
+- `gh issue list --label squad:turk --state open --limit 200 --json number` → 13 open: `[222, 231, 234, 259, 291, 300, 319, 320, 323, 358, 373, 376, 403]`. Identical to cycle #43 close.
+- `gh issue list --label squad:turk --state closed --limit 12 --json number,title,closedAt` → most-recent closures (post cycle #42 booking): #486, #480, #471, #462, #459, #426, #414, #389, #361, #360, #341, #328. No new closures since cycle #43 close — #341/#360/#328 already booked off-HEAD at cycle #42; everything older already booked.
+- Roster delta vs cycle #43 close: **0** (13 → 13).
+- No candidate finding generated this cycle (window product-empty + deferred audits all PASS). Per loop strategy, ≥ 3 keyword sweeps are required *when considering filing*; not triggered here.
+
+### Filing decision: **NO_OP**
+- Rationale: window is pure cross-specialist history append (0 `app/Sources/**` delta); three previously-deferred post-merge audits all PASS with high-quality HIG-compliant fixes; standing watchlist now 5/5 PASS (adding #459 launch-screen anchor); roster steady at 13. No code regression evidence anywhere. No `gh issue create` and no `gh issue comment` warranted.
+
+### Carry-forward to cycle #45
+1. **All three cycle-#43 deferred audits cleared** (PR #509/#328, PR #512/#341, PR #507/#360 — each one PASS at HEAD 1110b0b). Drop them from the queue.
+2. **Standing watchlist expanded to 5 items**: #389, #361, #426, #471, **#459** (added). Continue per-cycle ancestor grep.
+3. **PR #514** (`7f1622c` — ProgressView a11y labels → #371) — explicitly Yen-lane scope; Turk does not audit. Noted for Yen handoff only.
+4. Deferred raster `AppLogoMark` decision: still Tess/Basher-owned; revisit only if a design-system issue tagging `squad:turk` is filed.
+
+### New learning
+The local-worktree-lag pattern (cycle #41–#43 NO_OPs on history-only windows while origin/main quietly accepted HIG-surface PRs) self-resolved at cycle #44: orchestrator advanced HEAD past the three queued merge commits in one step, and the deferred audit queue cleared in a single cycle. Validates the cycle-#42 learning — "track deferred audits by merge-oid, not issue number" — because three different issue numbers (#328/#341/#360) cleared via a single ancestry recheck at cycle top, with zero need to re-derive line citations from scratch.
+
+### Forward watch / handoff
+Roster 13 stable. Standing watchlist 5/5 PASS. Deferred-audit queue empty. No file requests, no engineer routing, no cross-lane co-signs needed.
+
+(end Turk cycle #44)
