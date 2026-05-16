@@ -366,13 +366,16 @@ final class SettingsFeatureTests: XCTestCase {
     }
   }
 
-  /// Removal clears the persisted key, the masked display, and any inline
-  /// status messaging.
-  func testRemoveAPIKeyClearsState() async {
+  /// `removeAPIKeyTapped` no longer touches the Keychain — it opens the
+  /// destructive confirmation dialog so a single mis-tap on Remove cannot
+  /// wipe the user's saved Massive API key (issue #319; HIG → Patterns →
+  /// Confirming an action).
+  func testRemoveAPIKeyTappedPresentsConfirmationWithoutDeleting() async {
     let deletes = LockIsolated<Int>(0)
     let initialState = SettingsFeature.State(
       apiKeyStatus: .storedAndValid,
       apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
       apiKeyRequestStatus: .savedSuccessfully)
     let store = TestStore(initialState: initialState) {
       SettingsFeature()
@@ -381,25 +384,97 @@ final class SettingsFeatureTests: XCTestCase {
     }
 
     await store.send(.removeAPIKeyTapped) {
+      $0.isAPIKeyRemovalConfirmationPresented = true
+    }
+    XCTAssertEqual(
+      deletes.value, 0, "Tapping Remove must not delete the key before confirmation."
+    )
+  }
+
+  /// Cancelling the destructive dialog closes it without firing any
+  /// Keychain side effect — the saved key state is unchanged (#319).
+  func testRemoveAPIKeyConfirmationDismissedKeepsKey() async {
+    let deletes = LockIsolated<Int>(0)
+    let initialState = SettingsFeature.State(
+      apiKeyStatus: .storedAndValid,
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
+      apiKeyRequestStatus: .savedSuccessfully,
+      isAPIKeyRemovalConfirmationPresented: true)
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKey.delete = { deletes.withValue { $0 += 1 } }
+    }
+
+    await store.send(.removeAPIKeyConfirmationDismissed) {
+      $0.isAPIKeyRemovalConfirmationPresented = false
+    }
+    XCTAssertEqual(deletes.value, 0, "Cancel must not delete the key.")
+  }
+
+  /// In-flight save/revalidate blocks the destructive dialog from opening so
+  /// the user can't queue a removal on top of an active network round-trip
+  /// (matches the `.disabled` predicate on both Remove buttons; #319).
+  func testRemoveAPIKeyTappedNoOpWhileRequestInFlight() async {
+    let deletes = LockIsolated<Int>(0)
+    let initialState = SettingsFeature.State(
+      apiKeyStatus: .storedAndValid,
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
+      apiKeyRequestStatus: .validating)
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKey.delete = { deletes.withValue { $0 += 1 } }
+    }
+
+    await store.send(.removeAPIKeyTapped)
+    XCTAssertEqual(deletes.value, 0, "In-flight guard must not delete the key.")
+  }
+
+  /// Confirming the destructive dialog runs the Keychain delete, clears the
+  /// persisted key, the masked display, and any inline status messaging.
+  func testRemoveAPIKeyConfirmedClearsState() async {
+    let deletes = LockIsolated<Int>(0)
+    let initialState = SettingsFeature.State(
+      apiKeyStatus: .storedAndValid,
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      apiKeyMaskedAccessibilityLabel: "Saved API key ending in W X Y Z",
+      apiKeyRequestStatus: .savedSuccessfully,
+      isAPIKeyRemovalConfirmationPresented: true)
+    let store = TestStore(initialState: initialState) {
+      SettingsFeature()
+    } withDependencies: {
+      $0.massiveAPIKey.delete = { deletes.withValue { $0 += 1 } }
+    }
+
+    await store.send(.removeAPIKeyConfirmed) {
+      $0.isAPIKeyRemovalConfirmationPresented = false
       $0.apiKeyStatus = .noStoredKey
       $0.apiKeyMaskedDisplay = nil
+      $0.apiKeyMaskedAccessibilityLabel = nil
       $0.apiKeyRequestStatus = .idle
     }
     XCTAssertEqual(deletes.value, 1)
   }
 
-  /// A failed delete keeps the existing state and surfaces a `.storeError`.
-  func testRemoveAPIKeyFailureSurfacesStoreError() async {
+  /// A failed delete after confirmation keeps the existing state and
+  /// surfaces a `.storeError`.
+  func testRemoveAPIKeyConfirmedFailureSurfacesStoreError() async {
     let initialState = SettingsFeature.State(
       apiKeyStatus: .storedAndValid,
-      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ")
+      apiKeyMaskedDisplay: "\u{2022}\u{2022}\u{2022}\u{2022}WXYZ",
+      isAPIKeyRemovalConfirmationPresented: true)
     let store = TestStore(initialState: initialState) {
       SettingsFeature()
     } withDependencies: {
       $0.massiveAPIKey.delete = { throw MassiveAPIKeyStoreError.underlying("denied") }
     }
 
-    await store.send(.removeAPIKeyTapped)
+    await store.send(.removeAPIKeyConfirmed) {
+      $0.isAPIKeyRemovalConfirmationPresented = false
+    }
     await store.receive(\.apiKeyRemovalFailed) {
       $0.apiKeyRequestStatus = .storeError(reason: "underlying(\"denied\")")
     }

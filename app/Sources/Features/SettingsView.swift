@@ -74,6 +74,32 @@ struct SettingsView: View {
       SettingsAccessibility.transitionAnnouncement(forAPIKeyRequest: status)
     }
     .confirmationDialog(
+      "Remove saved API key?",
+      isPresented: Binding(
+        get: { store.isAPIKeyRemovalConfirmationPresented },
+        set: { isPresented in
+          if !isPresented { store.send(.removeAPIKeyConfirmationDismissed) }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button("Remove", role: .destructive) {
+        store.send(.removeAPIKeyConfirmed)
+      }
+      .accessibilityIdentifier("settings.apiKey.remove.confirm")
+
+      Button("Cancel", role: .cancel) {
+        store.send(.removeAPIKeyConfirmationDismissed)
+      }
+      .accessibilityIdentifier("settings.apiKey.remove.cancel")
+    } message: {
+      Text(
+        "Removing your saved Massive API key wipes it from this device's Keychain. "
+          + "Market-data refreshes and key re-validation will stop working until "
+          + "you re-enter a key from Massive's developer dashboard."
+      )
+    }
+    .confirmationDialog(
       "Erase All My Data?",
       isPresented: Binding(
         get: { store.isErasureConfirmationPresented },
