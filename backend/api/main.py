@@ -58,7 +58,7 @@ from pydantic import (
     WithJsonSchema,
     model_validator,
 )
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -1199,6 +1199,15 @@ def patch_portfolio(
     alone keeps the row out of the retention-purge sweep documented in
     ``docs/legal/data-retention.md`` — consistent with every other
     authenticated touch.
+
+    On success the handler also emits a structured ``vca.api`` INFO log
+    entry (``event=dsr.rectification.portfolio …``) so a supervisory
+    inspection has a server-side record that the GDPR Art. 16 / CCPA
+    §1798.106 request was honored (GDPR Art. 5(2) accountability + CCPA
+    Regulations 11 CCR §7102(a) records-of-requests; issue #457 — the
+    write-side counterpart to issue #445's read-side export trail). The
+    line is redacted to the last-4 hex characters of the device UUID per
+    the ``docs/legal/data-retention.md`` "Application logs" row.
     """
     portfolio = _load_portfolio_or_503(db, device_uuid)
     if portfolio is None:
@@ -1221,14 +1230,34 @@ def patch_portfolio(
             ),
         )
 
+    fields_changed: list[str] = []
     if payload.name is not None:
         portfolio.name = payload.name
+        fields_changed.append("name")
     if payload.monthly_budget is not None:
         portfolio.monthly_budget = payload.monthly_budget
+        fields_changed.append("monthly_budget")
     if payload.ma_window is not None:
         portfolio.ma_window = payload.ma_window
+        fields_changed.append("ma_window")
     portfolio.last_seen_at = datetime.now(UTC)
+    portfolio_id = portfolio.id
     _commit_or_503(db, "portfolio rectification commit")
+    # GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a)
+    # records-of-requests obligation (issue #457): emit the audit line
+    # AFTER the commit so a failed transaction never leaves a misleading
+    # "honored" record. The field set lists exactly the columns that
+    # changed so an inspector can correlate a rectification against the
+    # subject's complaint without re-quoting the values themselves
+    # (GDPR Art. 25 data-protection-by-design — the changed *values*
+    # remain in the database, not the log).
+    log.info(
+        "event=dsr.rectification.portfolio device_uuid_suffix=%s "
+        "portfolio_id=%s fields=%s",
+        redact_device_uuid(device_uuid),
+        portfolio_id,
+        ",".join(sorted(fields_changed)),
+    )
 
     return PatchPortfolioResponse(
         portfolio_id=portfolio.id,
@@ -1274,6 +1303,16 @@ def patch_holding(
     iOS client can confirm its local state. Market-data fields are
     intentionally excluded — ``GET /portfolio/data`` is the canonical
     enriched view.
+
+    On success the handler also emits a structured ``vca.api`` INFO log
+    entry (``event=dsr.rectification.holding …``) so a supervisory
+    inspection has a server-side record that the GDPR Art. 16 / CCPA
+    §1798.106 request was honored (GDPR Art. 5(2) accountability + CCPA
+    Regulations 11 CCR §7102(a) records-of-requests; issue #457). The
+    line is redacted to the last-4 hex characters of the device UUID
+    per the ``docs/legal/data-retention.md`` "Application logs" row;
+    the corrected weight itself is **not** logged (it lives in the
+    database row, the system of record).
     """
     portfolio = _load_portfolio_or_503(db, device_uuid)
     if portfolio is None:
@@ -1308,7 +1347,19 @@ def patch_holding(
 
     holding.weight = payload.weight
     portfolio.last_seen_at = datetime.now(UTC)
+    portfolio_id = portfolio.id
+    rectified_ticker = holding.ticker
     _commit_or_503(db, "holding rectification commit")
+    # GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a)
+    # records-of-requests obligation (issue #457): emit AFTER commit so
+    # a failed write never leaves a misleading "honored" record.
+    log.info(
+        "event=dsr.rectification.holding device_uuid_suffix=%s "
+        "portfolio_id=%s ticker=%s",
+        redact_device_uuid(device_uuid),
+        portfolio_id,
+        rectified_ticker,
+    )
 
     return PatchHoldingResponse(ticker=holding.ticker, weight=holding.weight)
 
@@ -1346,6 +1397,18 @@ def delete_holding(
     issue #329 — it scopes strictly to one ``(portfolio, ticker)``
     pair and leaves every other row, including the parent portfolio,
     untouched.
+
+    On success the handler also emits a structured ``vca.api`` INFO log
+    entry (``event=dsr.row_delete.holding …``) so a supervisory
+    inspection has a server-side record that the GDPR Art. 16 /
+    Art. 17 (row-scoped) / CCPA §1798.105 (row-scoped) request was
+    honored (GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR
+    §7102(a) records-of-requests; issue #457). The event name is
+    distinct from ``dsr.erasure.full_account`` (``DELETE /portfolio``)
+    so an inspector can separate row-scoped corrections from
+    full-account erasures in the same journald window. The line is
+    redacted to the last-4 hex characters of the device UUID per the
+    ``docs/legal/data-retention.md`` "Application logs" row.
     """
     portfolio = _load_portfolio_or_503(db, device_uuid)
     if portfolio is None:
@@ -1380,7 +1443,23 @@ def delete_holding(
 
     db.delete(holding)
     portfolio.last_seen_at = datetime.now(UTC)
+    portfolio_id = portfolio.id
+    deleted_ticker = holding.ticker
     _commit_or_503(db, "holding delete commit")
+    # GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a)
+    # records-of-requests obligation (issue #457): emit AFTER commit so
+    # a failed delete never leaves a misleading "honored" record. The
+    # event name is deliberately ``dsr.row_delete.holding`` — not the
+    # account-level ``dsr.erasure.full_account`` — so inspectors can
+    # separate row-scoped typo corrections (Art. 16 path) from
+    # full-account erasures (Art. 17 path) in the same journald window.
+    log.info(
+        "event=dsr.row_delete.holding device_uuid_suffix=%s "
+        "portfolio_id=%s ticker=%s",
+        redact_device_uuid(device_uuid),
+        portfolio_id,
+        deleted_ticker,
+    )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -1438,6 +1517,20 @@ def delete_portfolio(
     parameter is the only selector, and the row-scoped ``DELETE``
     contract for holdings (#374) is preserved orthogonally: an
     account-level erasure on device A cannot reach device B's rows.
+
+    On success the handler also emits a structured ``vca.api`` INFO log
+    entry (``event=dsr.erasure.full_account …``) so a supervisory
+    inspection has a server-side record that the GDPR Art. 17 / CCPA
+    §1798.105 request was honored (GDPR Art. 5(2) accountability + CCPA
+    Regulations 11 CCR §7102(a) records-of-requests; issue #457). The
+    ``holdings_count`` field captures how many cascaded ``Holding`` rows
+    went with the parent portfolio so an inspector can correlate the
+    erasure scope against a complainant's recollection without
+    re-quoting the deleted personal data. The portfolio id and holdings
+    count are captured **before** the commit because the ORM reference
+    is detached afterwards. The line is redacted to the last-4 hex
+    characters of the device UUID per the ``docs/legal/data-retention.md``
+    "Application logs" row.
     """
     portfolio = _load_portfolio_or_503(db, device_uuid)
     if portfolio is None:
@@ -1447,8 +1540,40 @@ def delete_portfolio(
             message="Portfolio not found for device.",
         )
 
+    # Snapshot the audit-log fields BEFORE the ORM-level delete so the
+    # log line can be emitted post-commit even after the row + cascaded
+    # holdings have been removed from the session. The cascaded-row
+    # count is taken via ``SELECT COUNT(*)`` scoped to ``portfolio.id``
+    # (rather than ``len(portfolio.holdings)``) so populating a single
+    # audit field does not force the ORM to hydrate every ``Holding``
+    # row into memory on large accounts — the count stays O(1) memory
+    # and a single index scan on the DB side.
+    portfolio_id = portfolio.id
+    holdings_count = (
+        db.scalar(
+            select(func.count(Holding.id)).where(
+                Holding.portfolio_id == portfolio_id
+            )
+        )
+        or 0
+    )
+
     db.delete(portfolio)
     _commit_or_503(db, "portfolio erasure commit")
+    # GDPR Art. 5(2) accountability + CCPA Regulations 11 CCR §7102(a)
+    # records-of-requests obligation (issue #457): emit AFTER commit so
+    # a failed erasure never leaves a misleading "honored" record. The
+    # event name is deliberately ``dsr.erasure.full_account`` — distinct
+    # from the row-scoped ``dsr.row_delete.holding`` — so inspectors can
+    # separate Art. 17 right-to-be-forgotten erasures from Art. 16
+    # ticker-typo corrections in the same journald window.
+    log.info(
+        "event=dsr.erasure.full_account device_uuid_suffix=%s "
+        "portfolio_id=%s holdings_count=%d",
+        redact_device_uuid(device_uuid),
+        portfolio_id,
+        holdings_count,
+    )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

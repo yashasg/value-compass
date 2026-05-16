@@ -73,6 +73,20 @@ portfolio. Stamps `last_seen_at` on success so a DSR call alone keeps
 the row out of the retention purge documented in
 [`data-retention.md`](data-retention.md).
 
+A successful export also emits a structured `vca.api` INFO line of
+the form
+
+```
+event=dsr.export.portfolio device_uuid_suffix=…abcd portfolio_id=<uuid> holdings_count=N
+```
+
+so a supervisory inspection (GDPR Art. 5(2) + 11 CCR §7102(a)) can
+demonstrate the request was honored. The line is
+redacted to the last-4 hex characters of the device UUID via
+`backend/common/logging_utils.py::redact_device_uuid` and inherits the
+30-day journald retention floor — see the "DSR-fulfillment audit log"
+row in [`data-retention.md`](data-retention.md).
+
 Verbatim contract: `app/Sources/Backend/Networking/openapi.json` →
 `PortfolioExportResponse`.
 
@@ -94,6 +108,15 @@ Returns the rectified scalar fields on success so the iOS client can
 confirm its local SwiftData state matches the server. Stamps
 `last_seen_at`. Strictly scoped to the calling device.
 
+A successful rectification also emits `event=dsr.rectification.portfolio
+device_uuid_suffix=…abcd portfolio_id=<uuid> fields=<sorted-comma-list>`
+on the `vca.api` logger so a supervisory inspection can correlate the
+correction against the subject's complaint without the controller
+having to re-quote the rectified *values* (they live in the database
+row, the system of record). Same redaction + 30-day journald retention
+as the export trail — see [`data-retention.md`](data-retention.md)
+"DSR-fulfillment audit log" row.
+
 ### Rectification — `PATCH /portfolio/holdings/{ticker}`
 
 Corrects a single holding's `weight`. `DecimalString` preserves exact
@@ -107,6 +130,14 @@ portfolio."` — we deliberately do **not** invent a new
 `holdingNotFound` error code so the client surface remains a closed
 enumeration.
 
+A successful weight correction emits `event=dsr.rectification.holding
+device_uuid_suffix=…abcd portfolio_id=<uuid> ticker=<symbol>` on the
+`vca.api` logger. The corrected weight itself is **not** logged — it
+persists in the database row, which is the system of record. Same
+redaction + 30-day journald retention as the rest of the DSR audit-log
+surface — see [`data-retention.md`](data-retention.md)
+"DSR-fulfillment audit log" row.
+
 ### Rectification — ticker typo (`DELETE` + `POST`)
 
 A holding whose ticker symbol itself is wrong (`AAPL` intended as
@@ -118,6 +149,17 @@ row's natural key. The client routes through
 and leaves every other row, including the parent portfolio, untouched.
 It is **not** the broader full-account erasure mechanism tracked under
 issue #329.
+
+A successful row-scoped delete emits `event=dsr.row_delete.holding
+device_uuid_suffix=…abcd portfolio_id=<uuid> ticker=<symbol>` on the
+`vca.api` logger. The event name is deliberately distinct from
+`dsr.erasure.full_account` so an inspector can separate row-scoped
+Art. 16 ticker-typo corrections from full-account Art. 17 erasures in
+the same journald window. Same redaction + 30-day journald retention
+as the rest of the DSR audit-log surface — see
+[`data-retention.md`](data-retention.md) "DSR-fulfillment audit log"
+row. (See also "Open questions for counsel" #3 below — this is the
+engineering-side resolution of that question.)
 
 ### Erasure — full account (`DELETE /portfolio`)
 
@@ -147,6 +189,20 @@ Scoped strictly to the calling device's portfolio. A regression
 that drops the `where(device_uuid == ...)` filter is caught by
 `test_delete_portfolio_does_not_touch_other_devices` in
 `backend/tests/test_api.py`.
+
+A successful erasure emits `event=dsr.erasure.full_account
+device_uuid_suffix=…abcd portfolio_id=<uuid> holdings_count=N` on the
+`vca.api` logger. `holdings_count` captures the cascaded `Holding`
+rows that went with the parent portfolio so an inspector can correlate
+the erasure scope against a complainant's recollection without
+re-quoting the deleted personal data. The portfolio id and holdings
+count are snapshotted **before** the ORM-level delete because the
+relationship cascade detaches the holdings from the session at commit;
+the log line itself is emitted **after** the commit so a failed
+erasure transaction never produces a misleading "honored" record. Same
+redaction + 30-day journald retention as the rest of the DSR audit-log
+surface — see [`data-retention.md`](data-retention.md)
+"DSR-fulfillment audit log" row.
 
 The companion iOS Settings flow ("Erase All My Data" → calls this
 endpoint, rotates the Keychain UUID, re-fires onboarding) lives in
@@ -227,10 +283,19 @@ lives in [`privacy-policy.md`](privacy-policy.md) §10.
    who cannot use the in-product paths (e.g. lost device, deleted
    app)? Issue #374 proposes one; the engineering-side gate is
    identity verification on a channel that cannot rely on App Attest.
-3. Does the row-scoped `DELETE /portfolio/holdings/{ticker}` need an
-   audit-log retention period for fraud-prevention purposes (typical:
-   30 days post-delete, retained as access-restricted log only), or
-   is the operational record in `data-retention.md` sufficient?
+3. **Resolved** (engineering side; counsel sign-off still required on
+   the retention window itself): the row-scoped
+   `DELETE /portfolio/holdings/{ticker}` and the three sibling
+   PATCH/DELETE handlers emit a structured `event=dsr.*` INFO line on
+   the success path (`backend/api/main.py` — issue #457). The line is
+   captured by the `vca.api` journald floor (30 days, redacted to the
+   last-4 hex characters of the device UUID — see
+   [`data-retention.md`](data-retention.md) "DSR-fulfillment audit
+   log" row). Counsel must confirm whether the 30-day journald window
+   satisfies the CCPA §7102(a) 24-month records-of-requests obligation
+   or whether a persisted audit-only store is required; if the latter,
+   a new retention row + endpoint surface lands under a separate
+   issue.
 4. For California users, do we need a separate "Notice of Right to
    Correct" surface at the point of collection per 11 CCR §7023, or
    does the existing privacy-policy linkage in Settings → Legal
