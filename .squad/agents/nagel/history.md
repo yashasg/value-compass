@@ -2419,3 +2419,92 @@ None. Window contains zero code/spec/Swift activity.
 - Drift discipline holds: 3 consecutive clean cycles, unannounced-drift counter remains zero at cycle #42.
 
 (end Nagel cycle #42)
+
+---
+
+## Cycle #43 — Nagel
+
+**Date:** 2026-05-16T01:40:16Z  
+**HEAD:** `54d9df5`  
+**Window:** `1662b32..54d9df5` (6 commits)  
+**Anchor justification:** Continues directly from cycle #42 Nagel commit `0928cf8`. Window covers cycles #42 specialist-history writes from Turk, Yen, Reuben, Saul, and Frank.
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `0928cf8` | chore(nagel): cycle #42 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `5dd6585` | chore(turk): cycle #42 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `4eba7dd` | chore(yen): cycle #42 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `5f7e774` | compliance(reuben): cycle #42 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `5e58594` | research(saul): cycle #42 NO_OP | Saul | NO — `.squad/agents/saul/history.md` + Frank inbox |
+| `54d9df5` | aso(frank): cycle #42 6-peer probe | Frank | NO — `.squad/agents/frank/history.md` |
+
+`git --no-pager diff --stat 1662b32..54d9df5 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/` → **empty output, zero hunks.** Window is 100% specialist-history.
+
+---
+
+### Four-Invariant Pass
+
+**1. Parity gate — PASS.**
+```
+diff openapi.json app/Sources/Backend/Networking/openapi.json
+exit: 0 (empty)
+```
+Both files SHA-256 `d9c7f1eb5b90a557a5ab2d46740dcf60d454ff311445d91b32b553b7e2db5fff` (unchanged vs cycle #42). Byte-for-byte match.
+
+**2. Swift public-surface stability — PASS.**
+```
+git --no-pager diff 1662b32..54d9df5 -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b'
+→ 0 matches (grep exit 1)
+```
+Zero Swift files touched in window.
+
+**3. Locked-surface scan — PASS.**
+Window `1662b32..54d9df5`: 0 hunks against `openapi.json`, mirror, `backend/`, `app/Sources/Backend/`. All 6 commits are specialist-history-only writes. **No drift.**
+
+**4. Roster integrity — PASS (5 open, exact match to carry-forward).**
+`gh issue list --label "squad:nagel" --state open` returns exactly `#423, #416, #348, #317, #316` — identical to cycle #42 carry-forward. All five PERSISTING; line refs hold against `54d9df5` openapi.json (hash unchanged, so per-issue evidence from cycle #42 still applies verbatim).
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** 1 (cycle #39 / PR #503 / #303).
+- **Locked-surface-clean cycles since last sanctioned change:** **4** (cycles #40, #41, #42, #43).
+- **Unannounced-drift counter:** **0**. Discipline holds 43/43.
+
+---
+
+### Findings
+
+Zero new findings. Locked surface untouched. openapi.json hash unchanged vs cycle #42. Roster identical to carry-forward.
+
+### Decisions
+
+None. NO_OP cycle.
+
+### Duplicate-Check Proof
+
+Open Nagel issues (5): `#423, #416, #348, #317, #316`. Recently-closed Nagel (last 50): `#463, #461, #460, #439, #429, #402, #392, #381, #363, #359, …` — none reopened or regressed. No new contract candidate to file (window contains no spec mutation), so duplicate-check is a NO-OP confirmation, not a filing gate.
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP** | All 5 (#423, #416, #348, #317, #316) — line refs hold, no regression |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains zero code/spec/Swift activity.
+
+### Forward Watch / Handoff
+
+- Still waiting for first sanctioned `paths.*` or `components.schemas.*` mutation since #303 (PR #503). Likely vehicle: #317 (Decimal-money normalization) or a batched spec-hygiene PR.
+- Drift discipline: 4 consecutive clean cycles, unannounced-drift counter remains zero entering cycle #44.
+
+(end Nagel cycle #43)
