@@ -2508,3 +2508,126 @@ None. Window contains zero code/spec/Swift activity.
 - Drift discipline: 4 consecutive clean cycles, unannounced-drift counter remains zero entering cycle #44.
 
 (end Nagel cycle #43)
+
+---
+
+## Cycle #44 — Nagel
+
+**Date:** 2026-05-16T01:47:00Z  
+**HEAD at spawn:** `1110b0b`  
+**HEAD at close:** `1110b0b` (no product mutation; history append only — see commit at end)  
+**Window:** `c75460d..1110b0b` (5 commits)  
+**Anchor justification:** Continues directly from cycle #43 Nagel commit `c75460d`. Window covers cycle #43 specialist-history writes from Yen, Turk, Reuben, Saul, and Frank (plus a single Frank inbox file from Saul).
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `c75460d` | chore(nagel): cycle #43 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `cd4fecc` | chore(yen): cycle #43 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `f25c0ce` | chore(turk): cycle #43 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `591ec81` | compliance(reuben): cycle #43 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `9b9242c` | research(saul): cycle #43 NO_OP | Saul | NO — `.squad/agents/saul/history.md` + `.squad/agents/frank/inbox-saul-cycle-43.md` |
+| `1110b0b` | aso(frank): cycle #43 6-peer probe LIVE | Frank | NO — `.squad/agents/frank/history.md` |
+
+`git --no-pager diff --stat c75460d..1110b0b` →
+```
+ .squad/agents/frank/history.md             |  48 +++++
+ .squad/agents/frank/inbox-saul-cycle-43.md | 125 +++++++++++
+ .squad/agents/reuben/history.md            |  84 ++++++
+ .squad/agents/saul/history.md              |  79 +++++++
+ .squad/agents/turk/history.md              |  59 +++++
+ .squad/agents/yen/history.md               |  30 +++
+ 6 files changed, 425 insertions(+)
+```
+Window is **100% specialist-history** — zero hunks against `openapi.json`, mirror, `backend/`, or `app/Sources/Backend/`. SemVer classification: **N/A** (no contract surface touched).
+
+---
+
+### Four-Invariant Pass
+
+**1. Parity gate — PASS.**
+```
+$ diff openapi.json app/Sources/Backend/Networking/openapi.json
+$ echo $?
+0
+```
+SHA-256 of both copies: `d9c7f1eb5b90a557a5ab2d46740dcf60d454ff311445d91b32b553b7e2db5fff` (byte-identical, unchanged vs cycle #43 / cycle #42). 5 consecutive cycles at the same hash.
+
+**2. Swift public-surface stability — PASS.**
+```
+$ git --no-pager diff c75460d..1110b0b -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b'
+$ echo "0 matches"
+```
+Zero Swift files touched (`git diff --name-only c75460d..1110b0b -- 'app/Sources/**/*.swift'` → 0 paths). PR #145 TCA migration and #468 in-app-events scaffolding remain dormant in the window — no `@Reducer` introductions to gate.
+
+**3. Locked-surface scan — PASS.**
+Window `c75460d..1110b0b`: 0 hunks against `openapi.json`, mirror, `backend/`, `app/Sources/Backend/`. Confirmed via:
+- `git diff --stat c75460d..1110b0b -- openapi.json app/Sources/Backend/Networking/openapi.json` → empty
+- `git diff --stat c75460d..1110b0b -- backend/` → empty
+- `git diff --stat c75460d..1110b0b -- 'app/Sources/Backend/**/*.swift'` → empty
+- `git diff --name-only c75460d..1110b0b -- '*.py'` → 0 paths
+
+All 5 commits in window are `.squad/agents/<specialist>/history.md` or `inbox-*.md` writes. **No drift.**
+
+**4. Roster integrity — PASS (5 open, exact match to carry-forward).**
+```
+$ gh issue list --label squad:nagel --state open --json number --jq 'length'
+5
+```
+Open Nagel: `#423, #416, #348, #317, #316` — **identical** to cycle #43 carry-forward. All five PERSISTING; line refs hold against `1110b0b` openapi.json (hash unchanged from cycle #42/#43, so per-issue evidence still applies verbatim). No new closures since cycle #43 (most-recent closed: `#463 2026-05-15T20:36:02Z`).
+
+---
+
+### Watchlist anchors (re-verified)
+
+- **#303 closure pin** — `backend/api/main.py` `response_class=Response` still present at **L1012** (POST `/portfolio/holdings`), L1319, L1394. `backend/tests/test_api.py:546` `test_add_holding_202_success_is_empty_body_in_spec_and_runtime` docstring still cites issue #303 explicitly. Closure intact.
+- **openapi.json shape** — `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. Unchanged vs cycle #43.
+- **Sibling 202 routes** — no new POST/PATCH/DELETE returning 202 in window (zero `backend/` hunks).
+- **#316/#317/#348/#416/#423 carry-forward** — all line refs hold; no fresh-comment threshold tripped (each received Nagel evidence within last 1–2 cycles; #317 last bumped 2026-05-15T12:55:51Z is closest to staleness but still inside the standing window).
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** 1 (cycle #39 / PR #503 / #303).
+- **Locked-surface-clean cycles since last sanctioned change:** **5** (cycles #40, #41, #42, #43, #44).
+- **Unannounced-drift counter:** **0**. Discipline holds 44/44.
+
+---
+
+### Findings
+
+Zero new findings. Locked surface untouched. `openapi.json` hash unchanged vs cycle #43 (SHA-256 `d9c7f1eb…3b5fff`, 5 cycles steady). Roster identical to carry-forward (5 open: #423, #416, #348, #317, #316). No Swift `.swift` paths touched; no `.py` paths touched.
+
+### Decisions
+
+None. NO_OP cycle.
+
+### Duplicate-Check Proof
+
+Not invoked. No new issue contemplated — window contains zero spec/backend/Swift mutation, so there is no novel evidence to dedupe against. Per cycle protocol, 3-keyword sweep is only required when filing is considered; this cycle's evidence base is empty by construction.
+
+Open Nagel issues (5): `#423, #416, #348, #317, #316`. Recently-closed Nagel (last 20 spot-check): `#463, #461, #460, #439, #429, #402, #392, #381, #363, #359, #356, #340, #337, #303, #302, #298, #295, #282, #250, #249` — none reopened, none regressed by anything in window (window has no contract surface).
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP** | All 5 (#423, #416, #348, #317, #316) — line refs hold, hash unchanged, no regression |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains zero code/spec/Swift activity. 100% specialist-history.
+
+### Forward Watch / Handoff
+
+- Still waiting for first sanctioned `paths.*` or `components.schemas.*` mutation since #303 (PR #503, cycle #39). Likely vehicle: **#317** (Decimal-money normalization on `HoldingOut`/`AddHoldingRequest`) or a batched spec-hygiene PR addressing #423's open-content-model substrate.
+- PR #145 (TCA migration) and #468 (in-app-events scaffolding) remain forward-watch — first `@Reducer` introduction must arrive with explicit Nagel surface review.
+- Drift discipline: **5 consecutive clean cycles**, unannounced-drift counter remains zero entering cycle #45.
+
+(end Nagel cycle #44)
