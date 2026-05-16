@@ -442,3 +442,74 @@ Backend-only PRs that touch `app/Sources/Backend/Networking/openapi.json` (the g
 Roster 13 stable. Standing watchlist 5/5 PASS. Deferred-audit queue empty. PR #513 dispatched as not-a-HIG-surface in one targeted check (new classifier banked). No file requests, no engineer routing, no cross-lane co-signs needed.
 
 (end Turk cycle #45)
+
+---
+
+## Cycle #46 — 2026-05-16T02:26:20Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `baa7bb0` (`compliance(reuben): cycle #45 — PR #513 …`).
+**Orchestrator anchor:** `0baf956` (Saul cycle #44 close).
+**Window:** `0baf956..HEAD` — 5 commits, all `.squad/agents/*/history.md` cycle-#45 appends (`6f89af8` turk, `9aadc34` yen, `72939ed` frank, `6310c57` nagel, `baa7bb0` reuben). Coordination note: Saul cycle #45 commit MISSING from main lineage at spawn (orchestrator flagged uncommitted inboxes) — does not affect Turk-lane (no product surface in Saul's lane).
+
+### Window scan — PRODUCT-EMPTY (5 history-only commits)
+
+`git --no-pager diff 0baf956..HEAD -- 'app/Sources/Features/**' 'app/Sources/App/AppFeature/**' 'app/Sources/DesignSystem/**' 'app/Sources/App/Info.plist' 'app/Sources/App/PrivacyInfo.xcprivacy'` → **empty** (zero bytes, zero files).
+
+`git --no-pager diff --stat 0baf956..HEAD` (full window): 5 files, all `.squad/agents/{frank,nagel,reuben,turk,yen}/history.md`, +565 / -0 lines. No `app/`, `docs/`, `backend/`, `openapi.json`, or asset path touched. Window is **product-empty** by every Turk-lane axis (UI control, SF Symbol, app icon, launch screen, `Info.plist`, `Assets.xcassets`, navigation modifier, modal modifier, keyboard shortcut, pointer interaction, motion/transition, multitasking affordance).
+
+### PR #513 re-confirm — STILL NOT-A-HIG-SURFACE
+Re-verified merge commit `9a2fe85` (merged `2026-05-16T01:55:25Z`, base `main`, head `users/squad/457-dsr-write-audit-log`) via `gh pr view 513 --json files`:
+```
+app/Sources/Backend/Networking/openapi.json   (docstring-text-only mirror — 8 lines)
+backend/api/main.py                           (Python)
+backend/tests/test_api.py                     (Python tests)
+docs/legal/data-retention.md
+docs/legal/data-subject-rights.md
+docs/legal/privacy-policy.md
+openapi.json                                  (root mirror — 8 lines)
+```
+No iOS UI control change: zero `app/Sources/Features/**`, zero `app/Sources/App/AppFeature/**`, zero `app/Sources/DesignSystem/**`, zero `app/Sources/App/Info.plist`, zero `Assets.xcassets`, zero SF Symbol substitution, zero `.sheet`/`.alert`/`.confirmationDialog`/`.fullScreenCover`/`.toolbar`/`.navigationBarTitleDisplayMode`/`.contextMenu`/`.swipeActions` modifier touched. The lone `app/`-prefixed path is the generated OpenAPI-spec mirror consumed by the networking layer; the 8-line delta is text-only inside `"description"` strings on `/portfolio` and `/portfolio/holdings/{ticker}` PATCH/DELETE operations — server-doc copy that never reaches the UI. **Disposition unchanged from cycle #45: not-a-HIG-surface, no carry-forward to watchlist.** Cycle-#45 "openapi.json-docstring-only" fast-path classifier applied cleanly in one `gh pr view` call.
+
+### Standing watchlist — 5/5 PASS at HEAD `baa7bb0`
+
+| # | Concern | HIG section | Evidence (file:line at HEAD baa7bb0) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts (destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog(`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog(`; `app/Sources/Features/ContributionHistoryView.swift:118` `.confirmationDialog(` | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheet compact context) | `app/Sources/Features/PortfolioEditorView.swift:50` `.navigationBarTitleDisplayMode(.inline)`; `app/Sources/Features/HoldingsEditorView.swift:491` `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; consumed at `app/Sources/Features/ContributionResultView.swift:46` + `app/Sources/Features/PortfolioDetailView.swift:71` via `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` | **PASS** |
+| #471 | Settings → Erase routes in-process (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-101` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` + `.destination(.main(.path(.element(_, .settings(.delegate(.dataErased))))))`; `app/Sources/App/AppFeature/MainFeature.swift:27, :168` doc-confirm compact-toolbar path-scoping; `app/Sources/App/AppFeature/SettingsFeature.swift:392` `return .send(.delegate(.dataErased))` after Keychain wipe | **PASS** |
+| #459 | `UILaunchScreen` populated (color-only, brand-continuous cold start) | HIG → Launching → Launch Screens ("design a launch screen that looks like the first screen of your app") | `app/Sources/App/Info.plist:38-42` `<key>UILaunchScreen</key><dict><key>UIColorName</key><string>AppBackground</string></dict>`; `app/Sources/Assets/Assets.xcassets/AppBackground.colorset/Contents.json` carries universal sRGB `#F8FAFC` (light) + dark-luminosity `#0B1120` so the launch tint tracks the in-app `AppBackground` token across appearance modes | **PASS** |
+
+Every anchor line:column matches cycle #45 byte-for-byte, confirming the product-empty window classification — no UI surface mutated.
+
+### HIG axis sweep at HEAD — no novel violation
+With the window product-empty, axis-sweep cannot surface novel deltas by definition. Re-spot-check confirms no off-window drift:
+- **Modals / sheets / alerts / confirmationDialog / popover** — same 8 carrier files (`AppFeature/MainFeature.swift`, `PortfolioEditorView.swift`, `SettingsView.swift`, `ContributionHistoryView.swift`, `ContributionResultView.swift`, `PortfolioListView.swift`, `PortfolioDetailView.swift`, `HoldingsEditorView.swift`); closures #325 / #328 / #389 still stand.
+- **Navigation patterns / toolbars** — 23 NavigationLink/destination/title/toolbar sites unchanged; #358 + #373 toolbar concerns remain open in roster, no PR landed.
+- **Motion / animation / reduce-motion** — `OnboardingView.swift:38, :93-101` `accessibilityReduceMotion` gate intact (post-#360 / PR #507 cleared at cycle #44).
+- **Lists / grids / context menus / swipe actions** — `PortfolioListView.swift` + `ContributionHistoryView.swift` parity pattern intact (post-#341 / PR #512 cleared at cycle #44).
+- **Dark mode / launch screen** — `AppBackground.colorset` light/dark pair feeds `UILaunchScreen.UIColorName`; no `Info.plist` or `Assets.xcassets` delta.
+- **SF Symbols / app icon** — no symbol substitution or icon variant added; `AppLogoMark` raster decision still Tess/Basher-owned.
+- **Dynamic Type / pointer / keyboard / iPadOS multitasking** — adjacent-lane orphans (#234, #222, #259, #320) still open, no Turk-side regression.
+
+### Dedupe proof (3-axis sweep + standing roster)
+- Probe 1 — `gh issue list --search "launch screen OR cold start OR splash" --label squad:turk --state all --limit 10`: 4 results (#459 closed, #471 closed, #486 closed, #480 closed) — all already booked; no novel match.
+- Probe 2 — `gh issue list --search "sf-symbol OR app-icon OR symbol" --label squad:turk --state all --limit 10`: 11 results, all already in open roster (#234, #259, #323, #376, #403) or closed (#275 app-icon-alpha, #341, #414, #426, #459); no novel match.
+- Probe 3 — `gh issue list --search "openapi OR audit-log OR dsr" --label squad:turk --state all --limit 10`: 2 results (#361 closed, #471 closed) — both unrelated false-positives via incidental keyword overlap; confirms PR #513's OpenAPI-docstring surface still has zero HIG-lane analog.
+- Standing roster — `gh issue list --label squad:turk --state open --limit 50`: 13 open `[222, 231, 234, 259, 291, 300, 319, 320, 323, 358, 373, 376, 403]`. Identical to cycle #45 close. Roster delta: **0**.
+- Most-recent Turk closures (no new closures this cycle): #486, #480, #471, #462, #459, #426, #414, #389, #361, #360, #341, #328 — all already booked in prior cycles.
+
+### Filing decision: **NO_OP**
+- Rationale: window is product-empty (5 history-only commits); off-window PR #513 re-confirmed not-a-HIG-surface via fast-path classifier banked at cycle #45; standing watchlist 5/5 PASS at same line numbers; axis sweep confirms no off-window drift; 3-axis dedupe + roster sweep show no missed coverage; roster steady at 13. No `gh issue create` and no `gh issue comment` warranted.
+
+### Carry-forward to cycle #47
+1. **Standing watchlist remains 5 items** (#389, #361, #426, #471, #459) — all PASSing at HEAD `baa7bb0`. Continue per-cycle ancestor + line-citation re-verification.
+2. **PR #513** dropped from forward watch (cycle #45 + #46 both confirmed not-a-HIG-surface; fast-path classifier validated twice).
+3. **Saul cycle-#45 commit absence** — flagged by orchestrator. Not Turk-lane-actionable; record only.
+4. **Deferred raster `AppLogoMark` decision** — still Tess/Basher-owned; revisit only on design-system PR with `squad:turk` tag.
+5. **Cross-lane orphans (no action this cycle):** #234 pointer-hover, #222 keyboard-shortcuts, #259/#320 multi-window/split-views, #358/#373 toolbars — all already in open roster, awaiting their next implementation PR before specialist re-audit triggers.
+
+### Forward watch / handoff
+Roster 13 stable (6 cycles unchanged: #41 → #46). Standing watchlist 5/5 PASS (6 cycles unchanged). Deferred-audit queue empty. PR #513 classifier re-applied cleanly (2nd application — fast-path validated). No file requests, no engineer routing, no cross-lane co-signs needed.
+
+(end Turk cycle #46)
