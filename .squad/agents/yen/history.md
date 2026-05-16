@@ -93,3 +93,36 @@ Value Compass is a local-first iOS/iPadOS app (iOS 17+, SwiftUI + SwiftData) tha
 - **Settings/API key entry (#133) AX scope.** Massive API key handling lives behind Settings. Secure text fields + paste-from-clipboard flows have their own AT pitfalls (paste announcement, character-by-character readout). Coordinate with Basher on the entry pattern before he implements.
 
 
+## Cycle #41 — 2026-05-16T00:47:17Z
+
+**Window:** prior orchestrator anchor `98424f0` → HEAD `9ba571e`. Two commits in window: `9e344ad` (Saul cycle #40 history), `9ba571e` (Nagel cycle #40 history). `git diff 98424f0..HEAD -- app/Sources/ docs/` returns 0 lines — **CLEAN**, no product/spec change. Only files touched in window: `.squad/agents/{frank,nagel,saul}/*.md` (history appends + one inbox file). Nothing leaks outside `.squad/`.
+
+**Roster reconciliation (11 → 8, delta -3):** open at cycle #41 = {#239, #260, #299, #318, #366, #371, #394, #415} = 8 ✓. Three closures since cycle #39 close (anchor 2026-05-16T00:22:37Z):
+- **#326** a11y(brand-header) AppBrandHeader subtitle dropped — closed 2026-05-16T00:45:55Z by @yashasg, commit ref `f9169302` in close event (PR-style direct close).
+- **#386** a11y(disabled-button-hint) Settings Save / PortfolioDetail Calculate missing hints — closed 2026-05-16T00:40:19Z by @yashasg, direct close (no commit linked in event).
+- **#401** a11y(large-content-viewer) icon-only toolbar items lack `.accessibilityShowsLargeContentViewer` — closed 2026-05-16T00:33:05Z by @yashasg, direct close.
+
+**Adjacent regression scans (all PASS):**
+- `SettingsView.swift` `.accessibility*` modifier count = **42** (`grep -c "accessibility" app/Sources/Features/SettingsView.swift`) — window-stable at baseline.
+- Settings welcome-screen canonical strings: `SettingsView.swift:345` ("automatically, exactly like a fresh install.") and `:370` ("Returning to the welcome screen…") — both literal-match unchanged.
+- PortfolioDetailView ticker-row composer (#227/#228/#394 pin): `PortfolioDetailView.swift:185` carries `.accessibilityElement(children: .ignore)` + `:186` label = `FinancialRowAccessibility.label(forTicker:)` + `:187–188` value = `FinancialRowAccessibility.value(forTicker:maWindow:)`, with explanatory comment block at `:166–172` referencing the FinancialRowAccessibilityTests pin. **Intact.**
+- 7 known-safe `.frame(width:)` call-sites in `app/Sources/Features/` all still present and still safe:
+  - `ForcedUpdateView.swift:23` (96×96 decorative SF Symbol + `.accessibilityHidden(true)` at `:25`) ✓
+  - `PortfolioDetailView.swift:174,180,193,203` (all bound to `@ScaledMetric(relativeTo: .caption)` vars `tickerSymbolColumnWidth=80` / `tickerStatusColumnWidth=88` declared at `:44,:45`) ✓ Dynamic-Type-reflow-gated.
+  - `MainView.swift:218` (1×1 invisible split-focus anchor, `Color.clear` + label + `.isHeader`) ✓
+  - `OnboardingView.swift:193` (28×28 decorative SF Symbol + `.accessibilityHidden(true)` at `:194`) ✓
+- `.minimumScaleFactor` occurrences in `app/Sources/Features/`: **0** (still zero — no truncation-hider regressions).
+
+**Duplicate-check (for the deferred VoiceOver runtime-pin ask):**
+- `gh issue list --label squad:yen --state all --search "XCUITest VoiceOver snapshot" --limit 10` → `[]` (0 hits).
+- `gh issue list --state all --search "XCUITest accessibility snapshot harness" --limit 10` → `[]` (0 hits).
+- `gh issue list --state all --search "VoiceOver UI test target" --limit 10` → 2 hits (#370, #400) but both are ASO screenshot-frame tickets, unrelated.
+- Decision: no Yen-lane file. XCUITest target creation is QA/test-infra ownership, not accessibility-audit lane. Restated as a top-action ask to orchestrator below.
+
+**VoiceOver runtime-pin status:** Still deferred. `app/Tests/` contains only `VCATests` (unit target). Repo-wide grep for `XCUIApplication` and `accessibilitySnapshot` returns zero matches. No XCUITest target exists; my unit-level `FinancialRowAccessibilityTests` composer pin remains the only mechanical guard against #227/#228/#394 regressions, which does not validate live VoiceOver utterances — only the `label/value` function outputs.
+
+**Filing decision this cycle: NO_OP.** Rationale: (a) window is CLEAN of product code change — no new surface to audit; (b) all 4 adjacent regression invariants (Settings .accessibility count = 42, welcome strings at :345/:370, ticker composer pin at :185–188, 7 .frame(width:) safe sites) PASS; (c) zero `.minimumScaleFactor` reintroductions; (d) the one outstanding ask (VoiceOver runtime-pin via XCUITest snapshot) is test-infra ownership and a duplicate-check confirmed no existing Yen ticket conflict — but it's not mine to file.
+
+**Top action / next ask (orchestrator + QA-infra, restated):** Create an XCUITest target under `app/Tests/` and an `accessibilitySnapshot()` helper (or pointfreeco/swift-snapshot-testing accessibility strategy) so the FinancialRowAccessibilityTests-style unit pins can be augmented with live VoiceOver utterance pins. Without this, the #227/#228/#394 ticker-composer pin and the Settings welcome-string pin are unit-validated only — a UI re-wire could silently break VoiceOver output without tripping any test. Not a Yen lane to file; restating each cycle until infra lands.
+
+**Learning:** Three closures in one window all on the same day (2026-05-16) by the same actor (@yashasg) without PR refs suggests an offline batch-close pass — worth checking commit `f9169302` (the one event-linked close for #326) for the actual fix in next cycle's window-scan to confirm closures are evidence-backed rather than declarative.
