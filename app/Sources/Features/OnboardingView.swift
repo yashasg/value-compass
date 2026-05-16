@@ -29,6 +29,14 @@ struct OnboardingView: View {
   /// auto-focus heuristics (#330).
   @AccessibilityFocusState private var focusedSection: OnboardingAccessibility.FocusTarget?
 
+  /// Pulled from the environment so the disclaimer→setup-intro swap
+  /// can swap its motion-based transition for a cross-fade when the
+  /// user has Settings → Accessibility → Motion → Reduce Motion turned
+  /// on (#360). SwiftUI's `.animation` would auto-substitute, but
+  /// reading the flag explicitly here keeps the chosen transition
+  /// deterministic and the AT contract self-documenting.
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   init(store: StoreOf<OnboardingFeature>) {
     self.store = store
   }
@@ -41,13 +49,23 @@ struct OnboardingView: View {
 
         if store.hasAcknowledgedDisclaimer {
           portfolioSetupIntro
+            .transition(stepTransition)
         } else {
           disclaimerAcknowledgment
+            .transition(stepTransition)
         }
       }
       .padding(24)
       .frame(maxWidth: 640)
       .frame(maxWidth: .infinity)
+      // HIG → Foundations → Motion: animate transitions so users see
+      // forward progress. Without this, tapping "I Understand" snaps
+      // the disclaimer card off-screen and the setup-intro in with no
+      // spatial cue — the most-jarring possible first-launch moment
+      // (#360). Duration kept ≤ 0.35 s per HIG ("transitions should
+      // not feel slow"); the easing curve matches SwiftUI's system
+      // default for push/pop transitions.
+      .animation(.easeInOut(duration: 0.3), value: store.hasAcknowledgedDisclaimer)
     }
     .background(Color.appBackground)
     .onChange(of: store.hasAcknowledgedDisclaimer) { _, acknowledged in
@@ -63,6 +81,23 @@ struct OnboardingView: View {
     .appAnnounceOnChange(of: store.hasAcknowledgedDisclaimer) { acknowledged in
       OnboardingAccessibility.transitionAnnouncement(forAcknowledged: acknowledged)
     }
+  }
+
+  /// Step-swap transition picked from the live environment. The
+  /// motion-based form pushes the leaving card off the leading edge
+  /// and slides the entering card in from the trailing edge — the
+  /// HIG-canonical forward-navigation direction. When Reduce Motion is
+  /// enabled, the slide collapses to a cross-fade so vestibular-
+  /// sensitive users still get a perceivable transition without the
+  /// horizontal translation (#360).
+  private var stepTransition: AnyTransition {
+    if reduceMotion {
+      return .opacity
+    }
+    return .asymmetric(
+      insertion: .move(edge: .trailing).combined(with: .opacity),
+      removal: .move(edge: .leading).combined(with: .opacity)
+    )
   }
 
   private var disclaimerAcknowledgment: some View {
