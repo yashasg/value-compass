@@ -287,11 +287,13 @@ struct SettingsView: View {
     case .validating:
       HStack(spacing: 8) {
         ProgressView()
+          .accessibilityHidden(ProgressViewAccessibility.decorativeSpinnerIsAccessibilityHidden)
         Text("Validating with Massive…")
           .valueCompassTextStyle(.bodySmall)
           .foregroundStyle(Color.appContentSecondary)
       }
-      .accessibilityIdentifier("settings.apiKey.request.validating")
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier(ProgressViewAccessibility.apiKeyValidatingRowAccessibilityIdentifier)
     case .rejected(let reason):
       Text("Rejected: \(reason)")
         .valueCompassTextStyle(.bodySmall)
@@ -370,11 +372,13 @@ struct SettingsView: View {
     case .erasing:
       HStack(spacing: 8) {
         ProgressView()
+          .accessibilityHidden(ProgressViewAccessibility.decorativeSpinnerIsAccessibilityHidden)
         Text("Erasing your data…")
           .valueCompassTextStyle(.bodySmall)
           .foregroundStyle(Color.appContentSecondary)
       }
-      .accessibilityIdentifier("settings.erase.status.erasing")
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier(ProgressViewAccessibility.accountErasingRowAccessibilityIdentifier)
     case .erased:
       VStack(alignment: .leading, spacing: 4) {
         Text("Your data has been erased.")
