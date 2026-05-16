@@ -295,7 +295,7 @@ struct SettingsView: View {
         .foregroundStyle(Color.appNegative)
         .accessibilityIdentifier("settings.apiKey.request.storeError")
     case .savedSuccessfully:
-      Text("API key saved.")
+      Text("Your API key is valid.")
         .valueCompassTextStyle(.bodySmall)
         .foregroundStyle(Color.appPositive)
         .accessibilityIdentifier("settings.apiKey.request.saved")

@@ -274,19 +274,26 @@ final class SettingsAccessibilityTests: XCTestCase {
 
   // MARK: - API-key request transition announcement: savedSuccessfully
 
-  func testTransitionAnnouncementForAPIKeySavedAcknowledgesSuccess() {
+  func testTransitionAnnouncementForAPIKeySavedSuccessfullyDescribesValidity() {
+    // The reducer funnels both Save (post-Keychain-write) and
+    // Re-validate (no write, just re-confirms the stored key) into
+    // `.savedSuccessfully`. The announcement must describe the
+    // observable outcome — Massive accepts the stored key — rather
+    // than the path, so a Re-validate-only tick does not falsely tell
+    // the user something was written this cycle (#493).
     let announcement = SettingsAccessibility.transitionAnnouncement(
       forAPIKeyRequest: .savedSuccessfully
     )
 
-    XCTAssertEqual(announcement, "API key saved.")
+    XCTAssertEqual(announcement, "Your API key is valid.")
   }
 
-  func testTransitionAnnouncementForAPIKeySavedNamesTheSurface() {
+  func testTransitionAnnouncementForAPIKeySavedSuccessfullyNamesTheSurface() {
     // The success announcement must self-identify the surface ("API
     // key") because it is posted without focus context — a VoiceOver
-    // user who tapped Save and swiped away should still hear "API key
-    // saved" and not just a bare "saved".
+    // user who tapped Save or Re-validate and swiped away should still
+    // hear which key Massive is confirming and not just a bare
+    // "valid".
     let announcement = SettingsAccessibility.transitionAnnouncement(
       forAPIKeyRequest: .savedSuccessfully
     )
