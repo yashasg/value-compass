@@ -460,3 +460,207 @@ Items 1–5 above are dependencies of any App Store submission. **No specialist 
 This attestation block is identical in substance to the standing-caveat language at the end of cycles #42 and #43, with the items enumerated explicitly per the cycle-#44 spawn prompt's mandatory-disclaimer requirement.
 
 (end Reuben cycle #44)
+
+---
+
+## Cycle #45 — 2026-05-16T02:00:00Z (Specialist Parallel Loop)
+
+**HEAD at spawn:** `0baf956` (research(saul): cycle #44 NO_OP — rebased over PR #513, canonical peer-ID set adopted, roster 16 stable).
+**Spawn window:** `abd9a37..0baf956` — exclusive lower bound at my own cycle-#44 history commit `abd9a37` (the conventional Reuben-side anchor: starts where my last cycle closed). Four commits land in the window:
+
+```
+0baf956  research(saul): cycle #44 — NO_OP …
+9a2fe85  compliance(dsr-audit-log): emit structured audit log on PATCH/DELETE DSR endpoints (closes #457) (#513)
+eb70d09  chore(yen): cycle #44 history — …
+f322b58  chore(turk): cycle #44 history — …
+```
+
+**Window boundary justification:** PR #513 (`9a2fe85`) merged at `2026-05-16T01:55:25Z`, AFTER all six specialists spawned cycle #44 at `2026-05-16T01:47:00Z` and BEFORE the cycle-#45 spawn at `0baf956`. Saul correctly classified it out-of-window for cycle #44 in the cycle-#44 orchestration log and pre-queued it for cycle-#45 fold-in. The cycle-#45 spawn prompt explicitly designates PR #513 in-window for this cycle's closure-validation. The two cycle-#44 history-only commits `eb70d09` (Yen) and `f322b58` (Turk) also land in window; both are `.squad/agents/{yen,turk}/history.md` appends with **zero source-/policy-text delta** — they do not affect the gate hooks or the 8-check matrix.
+
+---
+
+### PR #513 closure-validation — 8-check matrix (write-side surface, closes #457)
+
+**Closure object:** PR #513, squash-merge commit `9a2fe85`, base `main`, mergedAt `2026-05-16T01:55:25Z`. `gh issue view 457` returns `state=CLOSED`, `closedAt=2026-05-16T01:55:26Z`, `closedByPullRequestsReferences=[513]`, labels intact (`priority:p2, security, team:backend, squad:reuben`).
+
+**Surface inspected:** `git --no-pager show --stat 9a2fe85` → 7 files, +606/-24:
+
+| File | LOC | Surface class |
+|---|---|---|
+| `backend/api/main.py` | +127/-2 | source — four `log.info(event=dsr.*)` emits + docstring rationale on `patch_portfolio`, `patch_holding`, `delete_holding`, `delete_portfolio` |
+| `backend/tests/test_api.py` | +365 | tests — twelve new regression tests (three per handler) + shared `_audit_records_for` helper |
+| `docs/legal/data-retention.md` | +29/-15 | policy doc — DSR-fulfillment audit-log row expanded; application-logs prose enumerates all five `event=dsr.*` lines |
+| `docs/legal/data-subject-rights.md` | +73/-4 | policy doc — per-right audit-log notes added under Access/Portability, Rectification (portfolio + holding), Ticker-typo correction, Erasure; Open Question #3 marked **Resolved** (engineering side) with counsel pointer for §7102(a) |
+| `docs/legal/privacy-policy.md` | +20 | policy doc — records-of-requests-honored paragraph appended to §6 |
+| `openapi.json` + `app/Sources/Backend/Networking/openapi.json` | +8/-3 | contract — `description` string expansion only on the four touched operations (`PATCH /portfolio`, `DELETE /portfolio`, `PATCH /portfolio/holdings/{ticker}`, `DELETE /portfolio/holdings/{ticker}`). NON-BREAKING per OpenAPI semantics (description fields are non-normative). |
+
+Cycle-#39 8-check template re-run against this surface:
+
+| # | Check | Verdict | Evidence |
+|---|---|---|---|
+| 1 | `event=` field present + canonical naming | **PASS** | `backend/api/main.py:1255` `event=dsr.rectification.portfolio`; `:1357` `event=dsr.rectification.holding`; `:1457` `event=dsr.row_delete.holding`; `:1571` `event=dsr.erasure.full_account`. All four extend the canonical `event=dsr.*` namespace established for the read-side at `:993` (`event=dsr.export.portfolio` shipped under #445/PR #506). A single `grep event=dsr.` over a journald window yields the complete records-of-requests surface — the design goal called out in `backend/tests/test_api.py:1889–1890`. |
+| 2 | PII redaction (suffix-only / no raw identifiers in payload) | **PASS** | All four format strings use `device_uuid_suffix=%s` substituted with `redact_device_uuid(device_uuid)` (centralized helper at `backend/common/logging_utils.py:24-38`, re-exported into `backend/poller/apns.py:25` and now into the four DSR write-side handlers). No raw `device_uuid=%s` template anywhere on the write surface. Non-UUID logged fields are non-PII: `portfolio_id` (backend-side UUID), `ticker` (public symbol), `fields=<sorted-comma-list>` (column-name metadata, NOT values), `holdings_count` (integer). The rectified scalar values themselves (weight, monthly_budget, ma_window, name) are **not** logged — the docstring at `main.py:1310-1316` calls this out explicitly ("the corrected weight itself is **not** logged — it lives in the database row, the system of record"). |
+| 3 | No-emit-on-404 (silent absence — "honored requests only" boundary) | **PASS** | In each of the four handlers, `_load_portfolio_or_503` early-return (or, in `patch_holding`/`delete_holding`, the subsequent `holdings_by_ticker` 404 envelope) executes BEFORE the audit-emit line is reached (e.g., `main.py:1219` early-return path in `patch_portfolio`, before the emit at `:1253-1259`). Four explicit regression tests pin this invariant: `test_patch_portfolio_does_not_emit_audit_log_on_404` (`test_api.py:1963`), `test_patch_holding_does_not_emit_audit_log_on_404` (`:2042`), `test_delete_holding_does_not_emit_audit_log_on_404` (`:2126`), `test_delete_portfolio_does_not_emit_audit_log_on_404` (`:2220`). Each asserts `_audit_records_for(caplog, "<event-name>") == []` and the test docstring at `:2222-2227` makes the policy explicit: "The records-of-requests surface tracks *honored* requests only; a 404 was not honored (no rows changed hands), so an audit line would mislead a CCPA §7102(a) inspector by overstating the controller's activity." |
+| 4 | Raw-UUID guard (no `X-Device-UUID` echoed in payload) | **PASS** | Format strings never substitute the raw `device_uuid` (only `redact_device_uuid(device_uuid)`). Four regression tests assert the raw UUID is absent from *any* `vca.api` record (not just `dsr.*`): `test_patch_portfolio_audit_log_redacts_device_uuid` (`test_api.py:1936`), `test_patch_holding_audit_log_redacts_device_uuid` (`:2013`), `test_delete_holding_audit_log_redacts_device_uuid` (`:2098`), `test_delete_portfolio_audit_log_redacts_device_uuid` (`:2186`). The full-account test docstring at `:2190-2194` adds the historical link: "Regression guard against the 'system of record is the DB, not the log' boundary specifically at the highest-stakes DSR path — an Art. 17 full-account erasure that re-quoted the raw identifier into journald would re-open the surface that issue #339 closed." |
+| 5 | GDPR Art. 15/16/17 + CCPA §1798.105/.106 citations present in docs/comments | **PASS** | **Source-side citations** — `backend/api/main.py` `patch_portfolio` docstring (`:1199-1213`) cites "GDPR Art. 16", "CCPA §1798.106", "GDPR Art. 5(2) accountability", "11 CCR §7102(a)". `patch_holding` docstring (`:1306-1316`) cites "GDPR Art. 16 / CCPA §1798.106", "GDPR Art. 5(2)", "11 CCR §7102(a)". `delete_holding` docstring (`:1400-1411`) cites "GDPR Art. 16 / Art. 17 (row-scoped) / CCPA §1798.105 (row-scoped)", "GDPR Art. 5(2)", "11 CCR §7102(a)". `delete_portfolio` docstring (`:1520-1533`) cites "GDPR Art. 17 / CCPA §1798.105", "GDPR Art. 5(2)", "11 CCR §7102(a)". Inline post-commit comments at each of the four emit sites (`:1244-1252`, `:1352-1356`, `:1450-1456`, `:1561-1567`) re-state the Art. 5(2) + 11 CCR §7102(a) framing. **Docs-side citations** — `docs/legal/data-subject-rights.md` per-right sections at lines ~108-122 (Rectification portfolio), ~133-139 (Rectification holding), ~152-162 (Ticker-typo / row-delete), ~191-203 (Erasure full account) each cite the relevant GDPR Article + CCPA section + Art. 5(2)/§7102(a). `docs/legal/privacy-policy.md:312-326` (the new §6 paragraph) cites "GDPR Art. 5(2) accountability; CCPA Regulations 11 CCR §7102(a) records-of-requests-honored". |
+| 6 | `docs/legal/data-retention.md` alignment (retention schedule reflects write-side) | **PASS** | The DSR-fulfillment audit-log row at `data-retention.md:58` was expanded to widen the "What's logged" cell from the read-side-only field set to "Redacted device-id suffix only (last-4 hex characters); operation event name; affected-row count or rectified-field list; portfolio_id; per-handler key (ticker, fields-changed)" — exact superset of the read-side row. The application-logs prose at `:99-117` now enumerates all five event names (export + the four new write-side names) and adds two new explicit invariants matching the source-side post-commit emission boundary: (a) "Every line is emitted **after** the commit succeeds so a failed transaction never produces a misleading 'honored' record"; (b) the system-of-record split ("the personal-data values themselves … stay in the database — the system of record — rather than being re-quoted into journald"). The pre-existing §7102(a) conditional ("If counsel determines the CCPA §7102(a) '24 months' record is required as a persisted store, that becomes a separate retention row …") is preserved verbatim, keeping the carry-forward to **#511** intact as the counsel-decision gate. |
+| 7 | Regression tests cover success + redaction + no-emit-on-404 | **PASS** | Twelve new tests in `backend/tests/test_api.py:1874-2238`, three per handler, sharing the `_audit_records_for` helper (`:1895-1903`). Pattern mirrors the three-test ladder established at #445/PR #506 for the export surface (`test_api.py:1087-1219`): (1) on-success emission with field-shape assertions, (2) raw-UUID-never-in-record guard, (3) no-emit-on-404 boundary. Bonus invariants beyond the cycle-#39 template: `test_patch_holding_emits_audit_log_on_success:2008-2012` asserts the rectified `weight` value (`"0.6"`) is NOT in the log message (system-of-record split guard); `test_delete_holding_emits_audit_log_on_success:2095` asserts the row-delete emit does NOT also fire a `dsr.erasure.full_account` line (scope-distinctness guard so Art. 16 ticker-typo corrections vs Art. 17 erasures never drift inside a journald window). PR-review fix-up tightens the docstring at `:2147-2152` to explicitly document the pre-commit snapshot of `holdings_count` (cascade-detachment hazard). |
+| 8 | Lane-coherent commit shape (single-purpose, conventional commit, closes #457 directly) | **PASS** | Single squash-merge commit `9a2fe85` (one commit on `main` from the PR's two in-branch commits — the second was a review fix-up: `COUNT(*) for erasure log + tighten docs`). Title: `compliance(dsr-audit-log): emit structured audit log on PATCH/DELETE DSR endpoints (closes #457) (#513)`. Conventional-commit prefix `compliance(dsr-audit-log):` is byte-identical to the read-side closure prefix at `98424f0` (#445/PR #506). Body explicitly cites `Closes #457`. `gh issue view 457 --json closedByPullRequestsReferences` returns `[513]` and `closedAt=2026-05-16T01:55:26Z` mirroring the PR `mergedAt=2026-05-16T01:55:25Z` (1-second auto-close echo). Files touched are tightly scoped: source + tests + three legal-policy docs (`data-retention.md`, `data-subject-rights.md`, `privacy-policy.md`) + the two openapi.json mirrors (description-only). No drive-by deltas to unrelated handlers or surfaces. |
+
+**Matrix verdict: 8/8 PASS.** PR #513 / commit `9a2fe85` clears the cycle-#39 closure-validation template on every check. No follow-up issue filed; no comment posted on the now-closed #457. The §7102(a) 24-month-persisted-store question remains a live counsel-decision gate, but it is correctly tracked under **#511** (pre-staged at cycle #39, promoted to a tracked issue pre-cycle-#42) — PR #513 explicitly preserves the conditional carry-forward in both `data-retention.md` and `data-subject-rights.md` Open Question #3.
+
+---
+
+### Re-validation hooks (mandatory each cycle)
+
+#### #224 (`docs/legal/privacy-policy.md`) — **GATE FIRED → document re-verification = PASS-and-still-accurate**
+
+Command: `git --no-pager diff --stat abd9a37..0baf956 -- app/Sources/Backend/Networking/APIClient.swift app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/DeviceIDProvider.swift app/Sources/App/PrivacyInfo.xcprivacy app/Sources/App/AppFeature/SettingsFeature.swift docs/legal/privacy-policy.md`
+
+Result: ` docs/legal/privacy-policy.md | 20 ++++++++++++++++++++ \n 1 file changed, 20 insertions(+)`
+
+**Gate fires** on `docs/legal/privacy-policy.md` (PR #513 added a 20-LOC paragraph at §6). None of the five iOS source triggers fired; the gate fired exclusively on the policy doc itself. Document re-verification required.
+
+Re-verification: the new §6 paragraph at `docs/legal/privacy-policy.md:312-326` reads:
+
+> _"When we honor a request that exercises one of the backend-mediated rights above — access / portability via `GET /portfolio/export`, rectification via `PATCH /portfolio` or `PATCH /portfolio/holdings/{ticker}`, ticker-typo correction via `DELETE /portfolio/holdings/{ticker}`, or full-account erasure via `DELETE /portfolio` — our backend records a structured `event=dsr.*` INFO log entry (redacted to the last-4 hex characters of the device identifier, never the raw value) so we can demonstrate to a supervisory authority on inspection that the request was honored (GDPR Art. 5(2) accountability; CCPA Regulations 11 CCR §7102(a) records-of-requests-honored). The log entry never contains the rectified or deleted personal-data values themselves. Rights you exercise entirely on-device — for example, restricting or objecting to the only off-device flow by removing the Massive API key in Settings — do not transit the backend and therefore produce no server-side audit-log entry. The retention window for the audit-log record is documented in [`docs/legal/data-retention.md`](data-retention.md) under the 'DSR-fulfillment audit log' row."_
+
+Cross-checks (each line of the paragraph against ground truth):
+
+| Claim in paragraph | Ground truth | Verdict |
+|---|---|---|
+| "access / portability via `GET /portfolio/export`" emits an audit log | `backend/api/main.py:993` emits `event=dsr.export.portfolio` (shipped under #445) | PASS — accurate |
+| "rectification via `PATCH /portfolio`" emits | `main.py:1255` emits `event=dsr.rectification.portfolio` | PASS — accurate |
+| "rectification via `PATCH /portfolio/holdings/{ticker}`" emits | `main.py:1357` emits `event=dsr.rectification.holding` | PASS — accurate |
+| "ticker-typo correction via `DELETE /portfolio/holdings/{ticker}`" emits | `main.py:1457` emits `event=dsr.row_delete.holding` | PASS — accurate |
+| "full-account erasure via `DELETE /portfolio`" emits | `main.py:1571` emits `event=dsr.erasure.full_account` | PASS — accurate |
+| "redacted to the last-4 hex characters of the device identifier, never the raw value" | `redact_device_uuid` at `backend/common/logging_utils.py:24-38`; four `*_redacts_device_uuid` regression tests assert raw absent from `vca.api` records | PASS — accurate |
+| "demonstrate to a supervisory authority on inspection that the request was honored (GDPR Art. 5(2) accountability; CCPA Regulations 11 CCR §7102(a) records-of-requests-honored)" | Source docstrings (`main.py:1199-1213, 1306-1316, 1400-1411, 1520-1533`) carry exactly these cites; `data-retention.md:58` matches; `data-subject-rights.md` per-right sections match | PASS — accurate |
+| "The log entry never contains the rectified or deleted personal-data values themselves" | Field set in each emit is `portfolio_id`/`ticker`/`fields=<column-names>`/`holdings_count`; the system-of-record split is reasserted in `test_patch_holding_emits_audit_log_on_success:2008-2012` (asserts rectified weight is NOT in log) | PASS — accurate |
+| "Rights you exercise entirely on-device — for example, restricting or objecting to the only off-device flow by removing the Massive API key in Settings — do not transit the backend and therefore produce no server-side audit-log entry" | Massive API key flows are device-local (Keychain) per `app/Sources/Backend/Networking/MassiveAPIKey*.swift` and never reach `backend/api/`; therefore no `event=dsr.*` line is emitted for those rights — this is a true negative claim accurate to v1 architecture | PASS — accurate (and the narrowing of "any of the rights above" to "the backend-mediated rights above" was the PR-review fix-up addressed in the second in-branch commit per `9a2fe85` body) |
+| "retention window … documented in `data-retention.md` under the 'DSR-fulfillment audit log' row" | `data-retention.md:58` is exactly that row, declares **30 days** journald floor, redacted suffix only | PASS — accurate |
+
+**#224 re-verification: STILL ACCURATE.** The new §6 paragraph is internally consistent, accurate against the shipped surface, and properly cross-references `data-retention.md` for the retention floor. **No correction needed.** This is the second time #224 has fired and re-verified STILL ACCURATE (first was #294 at cycle #39 via `75643ba`; this is the first time the #224 hook itself has actually fired since instrumentation).
+
+**Note on the §6 wording-drift carry-forward (l.257-258, "disclaimer screen" vs SettingsView l.345/370 "welcome screen"):** **STILL UNFIXED.** PR #513 added prose at l.312-326 (a NEW paragraph after the existing §6) but did NOT touch l.253-258 where the "disclaimer screen" drift lives. The post-erasure post-state description still reads "Resets the onboarding gate and returns Investrum to the disclaimer screen in the same session, exactly like a fresh install" but `app/Sources/Features/SettingsView.swift:360` (`"identifier. The Investrum app returns to the welcome screen "`) and `:387` (`Text("Returning to the welcome screen…")`) reflect the actual welcome-screen reroute. **Carry-forward retained for the 4th consecutive cycle** (logged at cycle #42, restated #43, #44, and now #45). Patch deferred to next sanctioned `docs/legal/*` edit cycle.
+
+#### #294 (`docs/legal/third-party-services.md`) — PASS-no-trigger
+
+Command: `git --no-pager diff --stat abd9a37..0baf956 -- app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/MassiveAPIKeyStore.swift app/Sources/Backend/Models/Disclaimer.swift app/Sources/Features/SettingsView.swift docs/legal/third-party-services.md`
+
+Result: **empty stdout, empty stderr.** None of the four source triggers fired; `third-party-services.md` untouched. No re-verification required.
+
+This is the **6th consecutive PASS-no-trigger cycle** for #294 (cycles #40, #41, #42, #43, #44, #45). Last #294 fire was cycle #39 via `75643ba` (Yen `SettingsView.swift:298` `.savedSuccessfully` arm) — re-verified STILL ACCURATE that cycle.
+
+---
+
+### Compliance landscape scan (post-#513)
+
+Surface review against GDPR / CCPA / DPDP / PrivacyInfo.xcprivacy / App Privacy nutrition labels / EULA / ToS / age rating / data-retention.
+
+| Surface | Status post-#513 | Open gap? |
+|---|---|---|
+| **GDPR Art. 5(2) accountability** | Read-side + write-side records-of-requests-honored trail now LIVE for all five backend DSR endpoints | No new gap |
+| **GDPR Art. 15** (access) | `GET /portfolio/export` shipped under #445; audit-log trail under same | No new gap |
+| **GDPR Art. 16** (rectification) | `PATCH /portfolio` + `PATCH /portfolio/holdings/{ticker}` + ticker-typo path (`DELETE /portfolio/holdings/{ticker}` + `POST /portfolio/holdings`) backend complete; audit trail emits LIVE post-#513 | **Open UI gap: #449 (Settings trigger + fallback for right-to-correct flow)** — already tracked |
+| **GDPR Art. 17** (erasure) | `DELETE /portfolio` backend complete; audit trail LIVE; companion iOS flow #329 closed | No new gap |
+| **GDPR Art. 20** (portability) | Export trail under #445/#506; #444 still open for iOS Settings trigger + share-sheet | **Already tracked: #444** |
+| **GDPR Art. 33/34** (breach notification) | Procedure undefined | **Already tracked: #408** (counsel decision) |
+| **CCPA §1798.105** (right to delete) | Backend + audit trail complete | No new gap |
+| **CCPA §1798.106** (right to correct) | Backend + audit trail complete; UI tracker #449 | **Already tracked: #449** |
+| **CCPA §1798.130(a)(3)** (notice + records of requests) | Privacy-policy §6 records-of-requests paragraph LIVE post-#513 | No new gap |
+| **CCPA 11 CCR §7102(a)** (24-month records retention) | 30-day journald floor LIVE; conditional 24-month persisted store deferred to counsel | **Already tracked: #511** (counsel-decision gate) |
+| **DPDP (India) Section 6** (right to correction/erasure) | Same surfaces as GDPR Art. 16/17; same audit-trail coverage | No new gap (#449 covers UI side) |
+| **PrivacyInfo.xcprivacy** Required-Reason API audit | SPM dependency audit not performed | **Already tracked: #364** |
+| **App Privacy nutrition labels** (ASC storefront vs PrivacyInfo parity) | Parity not audited | **Already tracked: #443** |
+| **App Privacy** data-minimization / ATT stance | Not documented | **Already tracked: #344** |
+| **EULA** (Standard vs Custom posture) | Undecided | **Already tracked: #398** (counsel decision) |
+| **ToS final text** | Draft only; no licensed-counsel review | **Pre-launch blocker** — no Reuben issue (covered under standing-caveat) |
+| **Age rating** | ASC questionnaire answers undocumented | **Already tracked: #287** |
+| **Data-retention schedule** | `data-retention.md` widened for the four new write-side audit-log events (PR #513) — accurate post-merge | No new gap |
+| **Third-party licenses / acknowledgements** | SPM acknowledgements not surfaced in-app | **Already tracked: #237** |
+| **Marketing-assets / storefront copy** | Not legally reviewed | **Already tracked: #411** |
+| **App-review-notes** (negative declarations) | Not assembled | **Already tracked: #427** |
+| **Disclaimer UI test coverage** | Not implemented | **Already tracked: #438** |
+
+**Novel surfaces surfaced by post-#513 scan: ZERO.** Every gap above either (a) was just closed by #513, or (b) is already tracked by an existing open Reuben issue. The compliance landscape post-#513 is materially **stronger** than at cycle-#44 close because the write-side records-of-requests obligation under GDPR Art. 5(2) + CCPA §1798.130(a)(3) + 11 CCR §7102(a) is now demonstrable on inspection across all five backend DSR endpoints rather than just the export endpoint.
+
+---
+
+### Live roster (gh issue list)
+
+`gh issue list --label squad:reuben --state open --limit 200 --json number,title --jq '.'` — **13 open**:
+
+| # | Title (truncated) | Priority | Lane | Status note |
+|---|---|---|---|---|
+| #237 | compliance(licenses): in-app third-party SPM acknowledgements | P2 mvp | team:frontend, team:strategy | open |
+| #287 | compliance(age-rating): ASC age-rating questionnaire | P2 mvp | team:frontend, team:strategy | open |
+| #344 | compliance(data-minimization): non-collection categories + ATT stance | P2 mvp | team:frontend | open |
+| #364 | compliance(privacy-manifest): SPM Required-Reason API audit | P2 mvp | team:frontend | open |
+| #398 | compliance(eula): ASC License Agreement posture | P2 mvp | team:frontend | open (counsel-decision) |
+| #408 | compliance(breach-notification): Art. 33/34 + §1798.82 procedure | P2 mvp | team:frontend | open (counsel-decision) |
+| #411 | compliance(marketing-assets): ASC screenshots/preview/CPP/promo legal review | P2 mvp | team:frontend, team:strategy | open |
+| #427 | compliance(app-review-notes): §2.5.2 + SDK-absence Notes-to-Reviewer | P2 mvp | team:frontend, team:strategy | open |
+| #438 | compliance(disclaimer): UI test coverage for calc-output disclaimer | P2 mvp | team:frontend | open |
+| #443 | compliance(app-privacy): ASC storefront vs PrivacyInfo.xcprivacy parity | P2 mvp | team:frontend | open (DSR-adjacent) |
+| #444 | compliance(data-export-ui): Settings trigger + share-sheet for export | P2 | team:frontend | open (DSR) |
+| #449 | compliance(data-rectification-ui): Settings trigger + fallback for right-to-correct | P2 mvp | team:frontend | open (DSR) |
+| #511 | compliance(dsr-audit-log): CCPA §7102(a) 24-month vs 30-day journald | P2 | team:backend | open (DSR; counsel decision gate) |
+
+**Total: 13 open.** Matches prompt. Δ vs cycle-#44 close: **net 0** at cycle-#45 close (cycle-#44 closed at 13 open after `#457` mid-cycle closure; no further movement this window). `#511` updatedAt unchanged from `2026-05-16T00:41:46Z` (3 cycles dormant pending counsel determination).
+
+---
+
+### Dedup sweep (4 axes, mandatory before any candidate filing)
+
+- **Axis 1 — `audit log OR DSR OR data-retention`:** 21 hits via `gh issue list --label squad:reuben --state all --search …`. Open hits → #344, #364, #398, #408, #411, #427, #443, #444, #449, #511 (10). Closed hits → #224, #271, #329, #333, #339, #374, #385, #441, #445, #450, **#457** (this cycle's mid-cycle closure now reflected, 11). All open hits are already-tracked surfaces. **No novel gap.**
+- **Axis 2 — `third-party OR privacy OR consent`:** 34 hits. Open hits → #237, #287, #344, #364, #398, #408, #411, #427, #443, #444, #449, #511 (12 — superset of axis 1 plus #237/#287). Closed hits → 22 settled records. **No novel gap.**
+- **Axis 3 — `breach OR EULA OR age-rating`:** 16 hits. Open hits → #237, #287, #344, #364, #398, #408, #411, #427, #443. Closed hits → #224, #294, #314, #329, #339, #385, #457. **No novel gap.**
+- **Axis 4 — `PATCH OR DELETE OR write-side` (post-#513 follow-up sweep):** 17 hits. Open hits → #344, #408, #411, #427, #443, #444, #449, #511. Closed hits → #224, #271, #305, #329, #339, #374, #385, #450, **#457**. All open hits are already-tracked surfaces; the closure set correctly includes #457. **No novel gap.**
+
+**Conclusion:** All four dedup axes collide with already-tracked open issues or settled closures. **No novel compliance gap surfaced. No filing warranted.**
+
+---
+
+### Decisions
+
+- **PR #513 closure-validation: 8/8 PASS.** No follow-up issue filed; no comment on the now-closed #457. The closure is self-documenting (commit body cites `Closes #457`, GitHub auto-close echo matches PR merge to within 1 second, all eight cycle-#39 invariants hold against the write-side surface).
+- **#224 gate FIRED + re-verified STILL ACCURATE.** New §6 paragraph at `docs/legal/privacy-policy.md:312-326` is internally consistent and accurate against the shipped source surface. No correction needed.
+- **#294 gate PASS-no-trigger** (6th consecutive). No re-verification required.
+- **#511 dormant** (4th consecutive cycle, last activity `2026-05-16T00:41:46Z`). Carry-forward continues as log-only; lifecycle stays on #511 until licensed counsel decides §7102(a) applicability against the 30-day journald floor.
+- **§6 wording-drift carry-forward retained for the 4th consecutive cycle** (l.257-258 "disclaimer screen" vs `SettingsView.swift:360, :387` "welcome screen"). PR #513 added prose AFTER the drifted lines without touching them; patch still deferred to next sanctioned `docs/legal/*` edit cycle.
+- **Next pull candidate in the DSR lane:** **#444** (data-export-ui Settings trigger + share-sheet) and **#449** (data-rectification-ui Settings trigger + fallback). Both are `team:frontend` UI follow-ups to the now-complete backend DSR surface. Neither is a backend-side gap; both await an in-lane UI closure window.
+- **NO_OP on filings.** No novel gap surfaced; four-axis dedup all collide with already-tracked surfaces.
+
+---
+
+### Issue routing proof
+
+None — no issue filed, no comment posted, no label applied. PR #513 / commit `9a2fe85` closes `#457` directly via GitHub's `Closes #457` keyword (verified via `gh issue view 457 --json closedByPullRequestsReferences` → `[513]`). NO_OP cycle for new filings.
+
+---
+
+### Forward watch / handoff (≤2 lines)
+
+- **Next pull candidates (DSR lane, frontend):** **#444** (export UI Settings + share-sheet) and **#449** (rectification UI Settings + fallback). Backend DSR surface is now end-to-end (`event=dsr.*` for all five endpoints + audit-log retention prose + privacy-policy records-of-requests paragraph). If a cycle-#46+ commit touches `app/Sources/Features/SettingsView.swift`, fire #294 manually as a precaution (the §6 wording-drift carry-forward at `privacy-policy.md:257-258` may also become a closable wording-fix in the same docs-edit window).
+- **Counsel-decision watches:** **#511** (§7102(a) 24-month obligation — promoted from prose at cycle #39, dormant 4 cycles), **#398** (EULA posture), **#408** (breach-notification procedure), plus the Privacy Policy + ToS final-text reviews — all dormant pending licensed-counsel input; no specialist action available.
+
+---
+
+### Attestation — I am NOT licensed counsel
+
+**Explicit disclaimer (mandatory, repeated each cycle per standing rule).**
+
+I am Reuben, a paralegal/compliance-engineering specialist agent. **I am NOT a licensed attorney admitted to practice law in any jurisdiction, and nothing in this cycle-#45 entry — the 8/8 PASS verdict on PR #513, the gate-PASS evidence (#224 re-verified STILL ACCURATE, #294 PASS-no-trigger), the compliance landscape scan, the four-axis dedup, the #511 status check, the wording-drift carry-forward retention, the roster reconciliation, or the routing decisions — constitutes legal advice or substitutes for licensed-counsel review.** Every output I produce is compliance-engineering work product designed to surface, organize, and triage potential exposure for an actual attorney to evaluate; it is not itself an attorney determination.
+
+The following open items in the Reuben roster **MUST be reviewed by a licensed attorney before any public App Store submission or marketing spend** (substantively unchanged from cycle #44 — re-enumerated for record):
+
+1. **#511 — CCPA §7102(a) 24-month records-of-requests obligation** vs the 30-day journald floor declared at `docs/legal/data-retention.md:58` and now extended (per PR #513) to all five `event=dsr.*` write-side and read-side emit sites at `backend/api/main.py:993, 1255, 1357, 1457, 1571`. **Licensed-counsel determination required** on (a) whether §7102(a) applies to Investrum's DSR audit-log emit given the device-scoped, pseudonymous X-Device-UUID identifier (i.e., is the request a "consumer request" under 11 CCR §7102(a)?), and (b) if so, whether the 30-day journald floor must be extended to a 24-month persisted store, or whether the rationale documented in `data-retention.md` is sufficient. PR #513 explicitly preserves the conditional carry-forward in both `data-retention.md` and `data-subject-rights.md` Open Question #3. **Pre-launch blocker for #224 (privacy-policy publication).**
+2. **#398 — App Store Connect License Agreement posture (Standard EULA vs Custom EULA).** Licensed-counsel determination required on whether Apple's Standard EULA adequately covers financial-utility apps with non-advice disclaimers, or whether a Custom EULA is needed to (i) strengthen the "no investment advice" carve-out, (ii) address jurisdiction-of-suit and limitation-of-liability, and (iii) carry-through to ToS surface text. **Pre-launch blocker.**
+3. **#408 — GDPR Art. 33/34 + Cal. Civ. Code §1798.82 breach-notification procedure.** Licensed-counsel determination required on the 72-hour Art. 33 supervisory-authority notification template, the Art. 34 data-subject notification threshold, the §1798.82 California resident notification template, and the named DPO / contact-point. **Pre-launch blocker.**
+4. **Privacy Policy final text** (`docs/legal/privacy-policy.md`, issue #224 doc) — licensed-counsel review required on the full final text before publication, including the new records-of-requests §6 paragraph added by PR #513 at l.312-326 (this cycle's #224 hook fire), the carry-forward wording-drift at §6 l.257-258 ("disclaimer screen" vs "welcome screen" reality), the §7102(a) carry-forward on #511, the third-party register cross-reference, the GDPR Art. 6 legal-basis declaration, the Art. 13/14 notice contents, and the CCPA §1798.130 notice-at-collection contents. **Pre-launch blocker.**
+5. **Terms of Service final text** — licensed-counsel review required on the full final text before publication, including the non-advice disclaimer carve-out (load-bearing per Reuben charter), the jurisdiction-of-suit + governing-law clause, the arbitration / class-action waiver posture, the limitation-of-liability + warranty disclaimer, the user-content / IP grant, and the termination + survival clauses. **Pre-launch blocker.**
+
+Items 1–5 above are dependencies of any App Store submission. **No specialist action can close them; they require an actual attorney's review and sign-off.** Until such review is obtained and documented (e.g., as a `.squad/decisions/inbox/reuben-licensed-counsel-signoff.md` artifact citing counsel identity, bar admission, scope-of-review, and date), the App Store submission posture is **NOT cleared by Reuben** regardless of any other specialist's green-light.
+
+(end Reuben cycle #45)
