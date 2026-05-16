@@ -67,10 +67,43 @@ def test_health_ok(client: TestClient) -> None:
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-    # Spec-mandated headers on every response:
-    assert resp.headers["Cache-Control"] == "max-age=3600"
-    assert "Last-Modified" in resp.headers
+    # Liveness probes must never be cached — a transient OK that gets
+    # cached as a 200 by URLCache or Cloudflare would mask a subsequent
+    # outage (issue #416).
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert "Last-Modified" not in resp.headers
     assert "X-Min-App-Version" in resp.headers
+
+
+def test_health_503_emits_retry_after_and_no_store() -> None:
+    """A 503 from /health emits Retry-After: 60 + Cache-Control: no-store.
+
+    Regression guard for issue #416. The previous blanket
+    ``Cache-Control: max-age=3600`` would let URLCache.shared and
+    Cloudflare re-serve the cached 503 envelope for an hour even though
+    the body's ``retry_after_seconds=60`` told clients to retry in one
+    minute. The 503 path now sets ``no-store`` and mirrors the body
+    field onto the RFC 7231 §7.1.3 ``Retry-After`` header.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    def _broken_db():
+        class _BrokenSession:
+            def execute(self, *_args, **_kwargs):  # noqa: ANN001
+                raise OperationalError("SELECT 1", {}, Exception("db down"))
+
+        yield _BrokenSession()
+
+    app.dependency_overrides[get_db] = _broken_db
+    try:
+        resp = TestClient(app).get("/health")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 503
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.headers["Retry-After"] == "60"
+    assert "Last-Modified" not in resp.headers
 
 
 def test_schema_version_requires_attest(client: TestClient) -> None:
@@ -2236,3 +2269,331 @@ def test_delete_portfolio_does_not_emit_audit_log_on_404(
     assert resp.status_code == 404
     assert _audit_records_for(caplog, "dsr.erasure.full_account") == []
 
+
+# ---------------------------------------------------------------------------
+# Cache-Control / Last-Modified / Retry-After policy — issue #416
+# ---------------------------------------------------------------------------
+def test_schema_version_200_is_publicly_cacheable(client: TestClient) -> None:
+    """GET /schema/version success advertises public, max-age=3600.
+
+    The endpoint changes only on backend deploy and is the same value
+    for every device, so an edge cache hit avoids a database round-trip
+    on every iOS app launch. The previous middleware applied the same
+    directive to *every* response status, which the issue #416 fix
+    confines to this single success.
+    """
+    resp = client.get("/schema/version", headers=ATTEST)
+
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == f"public, max-age={config.CACHE_MAX_AGE}"
+    assert "Last-Modified" not in resp.headers
+
+
+def test_schema_version_401_is_no_store(client: TestClient) -> None:
+    """Missing App Attest → 401 with Cache-Control: no-store.
+
+    The 401 envelope must never be edge-cached. Under the previous
+    blanket policy a missing-header response could persist in URLCache
+    for an hour even after the client started sending the header.
+    """
+    resp = client.get("/schema/version")
+
+    assert resp.status_code == 401
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert "Retry-After" not in resp.headers
+    assert "Last-Modified" not in resp.headers
+
+
+def test_portfolio_status_200_caches_short_and_sets_real_last_modified(
+    client: TestClient, db_session: Session
+) -> None:
+    """GET /portfolio/status 200 emits a real Last-Modified.
+
+    Resource time is sourced from ``StockCache.last_modified`` — the
+    same value that lands in the response body — so a conditional GET
+    based on the validator round-trips cleanly. RFC 7232 §2.2 mandates
+    the validator describe resource modification time, not
+    request-handling time (issue #416).
+    """
+    now = datetime(2026, 5, 14, 21, 5, 0, tzinfo=UTC)
+    db_session.add(
+        StockCache(
+            ticker="AAPL",
+            current_price=Decimal("100"),
+            sma_50=Decimal("99"),
+            sma_200=Decimal("98"),
+            last_modified=now,
+            next_modified=now + timedelta(hours=24),
+            job_status="success",
+        )
+    )
+    db_session.commit()
+
+    resp = client.get("/portfolio/status", headers=ATTEST)
+
+    assert resp.status_code == 200
+    assert (
+        resp.headers["Cache-Control"]
+        == "public, max-age=60, stale-while-revalidate=60"
+    )
+    assert resp.headers["Last-Modified"] == "Thu, 14 May 2026 21:05:00 GMT"
+
+
+def test_portfolio_status_omits_last_modified_when_cache_empty(
+    client: TestClient,
+) -> None:
+    """No StockCache rows → Last-Modified omitted, not faked to now().
+
+    Emitting a request-time validator on an empty cache would defeat
+    the entire conditional-GET cycle the moment the cache is populated
+    (the client would already hold a "newer" cached timestamp). The
+    issue #416 fix omits the header rather than fabricate one.
+    """
+    resp = client.get("/portfolio/status", headers=ATTEST)
+
+    assert resp.status_code == 200
+    assert (
+        resp.headers["Cache-Control"]
+        == "public, max-age=60, stale-while-revalidate=60"
+    )
+    assert "Last-Modified" not in resp.headers
+
+
+def test_portfolio_data_404_is_no_store(client: TestClient) -> None:
+    """A 404 portfolio lookup must not be edge-cached for an hour.
+
+    Under the previous blanket ``max-age=3600`` policy, an iOS client
+    that hit ``/portfolio/data`` before its first portfolio existed
+    would cache the 404 envelope for an hour — so the UI stayed empty
+    well after the user had created the portfolio. The issue #416 fix
+    pins ``private, no-store`` on every status of this personalised
+    read, success or error.
+    """
+    resp = client.get(
+        "/portfolio/data",
+        params={"device_uuid": str(uuid.uuid4())},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 404
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert "Last-Modified" not in resp.headers
+
+
+def test_portfolio_data_200_is_private_no_store(
+    client: TestClient, db_session: Session
+) -> None:
+    """Personalised reads are never shared-cacheable.
+
+    GET /portfolio/data returns device-scoped data and must never spill
+    into a Cloudflare edge cache. ``private, no-store`` forbids both
+    shared and ``URLCache.shared`` storage so two devices sharing a NAT
+    can never receive each other's holdings.
+    """
+    device_uuid, _ = _seed_portfolio(
+        db_session,
+        holdings=(("AAPL", Decimal("0.5")),),
+    )
+
+    resp = client.get(
+        "/portfolio/data",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "private, no-store"
+    assert "Last-Modified" not in resp.headers
+
+
+def test_portfolio_export_200_is_private_no_store(
+    client: TestClient, db_session: Session
+) -> None:
+    """GDPR Art. 20 export response must never sit in a shared cache."""
+    device_uuid, _ = _seed_portfolio(
+        db_session,
+        holdings=(("AAPL", Decimal("0.5")),),
+    )
+
+    resp = client.get(
+        "/portfolio/export",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "private, no-store"
+
+
+def test_post_portfolio_holdings_202_is_no_store(
+    client: TestClient, db_session: Session
+) -> None:
+    """POST 202 carries no cacheable payload — directive locks it in."""
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.post(
+        "/portfolio/holdings",
+        json={
+            "device_uuid": str(device_uuid),
+            "ticker": "MSFT",
+            "weight": 0.25,
+        },
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 202
+    assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_patch_portfolio_success_is_private_no_store(
+    client: TestClient, db_session: Session
+) -> None:
+    """Rectification responses are per-device and must not be cached."""
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"name": "Renamed"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "private, no-store"
+
+
+def test_delete_portfolio_204_is_no_store(
+    client: TestClient, db_session: Session
+) -> None:
+    """A 204 erasure response has no cacheable body, but lock the directive."""
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.delete(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 204
+    assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_validation_422_is_no_store(client: TestClient) -> None:
+    """RequestValidationError 422 envelopes are never cached."""
+    resp = client.post(
+        "/portfolio/holdings",
+        json={"device_uuid": "not-a-uuid"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_503_emits_retry_after_header(client: TestClient) -> None:
+    """503 ApiErrors mirror retry_after_seconds onto Retry-After."""
+    from sqlalchemy.exc import OperationalError
+
+    def _broken_db():
+        class _BrokenSession:
+            def execute(self, *_args, **_kwargs):  # noqa: ANN001
+                raise OperationalError("SELECT 1", {}, Exception("db down"))
+
+        yield _BrokenSession()
+
+    app.dependency_overrides[get_db] = _broken_db
+    try:
+        resp = TestClient(app).get("/portfolio/status", headers=ATTEST)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 503
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.headers["Retry-After"] == "60"
+
+
+def test_openapi_declares_retry_after_on_503_responses(
+    client: TestClient,
+) -> None:
+    """Every 503 response advertises the Retry-After header.
+
+    Generated clients should know to read the standard wire header
+    rather than parsing ``ErrorEnvelope.retry_after_seconds`` out of the
+    body — Cloudflare and ``URLSession`` already honour the header
+    natively (RFC 7231 §7.1.3).
+    """
+    schema = client.get("/openapi.json").json()
+    for path, path_item in schema["paths"].items():
+        for method, operation in path_item.items():
+            responses = operation.get("responses", {})
+            if "503" in responses:
+                headers = responses["503"].get("headers", {})
+                assert "Retry-After" in headers, (
+                    f"{method.upper()} {path} 503 must declare Retry-After"
+                )
+                assert headers["Retry-After"]["schema"]["type"] == "integer"
+
+
+def test_openapi_only_status_endpoint_declares_last_modified(
+    client: TestClient,
+) -> None:
+    """Only GET /portfolio/status 200 advertises a real Last-Modified.
+
+    Every other operation's response now omits the header. The
+    contract documents exactly the wire shape the middleware emits, so
+    generated clients don't expect a validator on every response.
+    """
+    schema = client.get("/openapi.json").json()
+    last_modified_routes: set[tuple[str, str, str]] = set()
+    for path, path_item in schema["paths"].items():
+        for method, operation in path_item.items():
+            responses = operation.get("responses", {})
+            for status_code, response in responses.items():
+                if "Last-Modified" in response.get("headers", {}):
+                    last_modified_routes.add(
+                        (method.upper(), path, status_code)
+                    )
+
+    assert last_modified_routes == {("GET", "/portfolio/status", "200")}
+
+
+def test_openapi_no_response_advertises_blanket_max_age(
+    client: TestClient,
+) -> None:
+    """Only ``/schema/version`` 200 advertises the long edge-cache window.
+
+    Every other operation either omits ``Cache-Control`` or pins a
+    ``no-store``/short-cache directive. Locks in the issue #416 fix so a
+    future regression that re-introduces blanket ``max-age=3600`` fails
+    contract tests.
+    """
+    schema = client.get("/openapi.json").json()
+    cache_examples: dict[tuple[str, str, str], str] = {}
+    for path, path_item in schema["paths"].items():
+        for method, operation in path_item.items():
+            responses = operation.get("responses", {})
+            for status_code, response in responses.items():
+                header = response.get("headers", {}).get("Cache-Control")
+                if header is None:
+                    continue
+                example = header.get("schema", {}).get("example", "")
+                cache_examples[(method.upper(), path, status_code)] = example
+
+    # The only entry that should reference ``max-age=3600`` (the long
+    # edge-cache window) is /schema/version 200.
+    long_cache = {
+        key for key, value in cache_examples.items() if "max-age=3600" in value
+    }
+    assert long_cache == {("GET", "/schema/version", "200")}
+
+    # Every other response either omits Cache-Control or sets a
+    # no-store / short-cache directive.
+    for key, value in cache_examples.items():
+        if key == ("GET", "/schema/version", "200"):
+            continue
+        if key == ("GET", "/portfolio/status", "200"):
+            assert value == (
+                "public, max-age=60, stale-while-revalidate=60"
+            )
+        else:
+            assert "no-store" in value, f"{key} should be no-store, got {value!r}"

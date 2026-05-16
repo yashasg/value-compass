@@ -157,15 +157,14 @@ app = FastAPI(
     ),
 )
 
+# ``X-Min-App-Version`` is the only response header that is *unconditionally*
+# emitted on every response — it is the iOS client's machine-readable
+# force-upgrade channel (consumed by ``MinAppVersionClient.observe``). Other
+# response headers (``Cache-Control``, ``Last-Modified``, ``Retry-After``) are
+# emitted conditionally by the per-route cache policy below + the
+# :class:`ApiError` handler, so they belong on the relevant operation /
+# status entries, not on the global STANDARD_RESPONSE_HEADERS block.
 STANDARD_RESPONSE_HEADERS = {
-    "Cache-Control": {
-        "description": "Cloudflare-cacheable max-age in seconds.",
-        "schema": {"type": "string"},
-    },
-    "Last-Modified": {
-        "description": "UTC RFC 7231 timestamp for the response.",
-        "schema": {"type": "string"},
-    },
     "X-Min-App-Version": {
         "description": "Minimum supported iOS app version.",
         "schema": {"type": "string"},
@@ -173,8 +172,104 @@ STANDARD_RESPONSE_HEADERS = {
 }
 
 
+# Per-(method, path_template) cache-control policy. The value is a mapping
+# from response status code (or the ``"*"`` wildcard) to the
+# ``Cache-Control`` header value. Unmatched routes and unmatched status
+# codes default to ``no-store`` so the safe choice always wins (issue #416).
+#
+# Design notes:
+#
+# * ``GET /schema/version`` and ``GET /portfolio/status`` are the only
+#   routes that benefit from edge / URLCache caching. Everything else is
+#   either per-device personalised data (``private, no-store``), a write,
+#   an error envelope, or a liveness probe.
+# * Error responses (4xx / 5xx) are *always* ``no-store`` so a transient
+#   503 with ``retry_after_seconds=60`` is not re-served by URLCache /
+#   Cloudflare for the full ``max-age=3600`` window the previous blanket
+#   policy advertised. RFC 7231 §7.1.3 ``Retry-After`` is the canonical
+#   retry signal and is emitted by :func:`api_error_handler`.
+# * POST/PATCH/DELETE responses default to ``no-store``. RFC 7234 §3
+#   already excludes them from caching by default but the explicit
+#   directive defends against any intermediary that decides otherwise.
+_CACHE_POLICY: dict[tuple[str, str], dict[int | str, str]] = {
+    ("GET", "/health"): {"*": "no-store"},
+    ("GET", "/schema/version"): {
+        200: f"public, max-age={config.CACHE_MAX_AGE}",
+        "*": "no-store",
+    },
+    ("GET", "/portfolio/status"): {
+        200: "public, max-age=60, stale-while-revalidate=60",
+        "*": "no-store",
+    },
+    ("GET", "/portfolio/data"): {"*": "private, no-store"},
+    ("GET", "/portfolio/export"): {"*": "private, no-store"},
+    ("POST", "/portfolio/holdings"): {"*": "no-store"},
+    ("PATCH", "/portfolio"): {"*": "private, no-store"},
+    ("PATCH", "/portfolio/holdings/{ticker}"): {"*": "private, no-store"},
+    ("DELETE", "/portfolio/holdings/{ticker}"): {"*": "no-store"},
+    ("DELETE", "/portfolio"): {"*": "no-store"},
+}
+
+
+def _resolve_cache_control(
+    method: str, path_template: str | None, status_code: int
+) -> str:
+    """Return the ``Cache-Control`` directive for a response.
+
+    Falls back to ``no-store`` for unmatched routes or unmatched status
+    codes. ``200`` lookups take precedence over the ``"*"`` wildcard so a
+    cacheable success can sit alongside ``no-store`` errors on the same
+    operation.
+    """
+    if path_template is None:
+        return "no-store"
+    operation = _CACHE_POLICY.get((method, path_template))
+    if operation is None:
+        return "no-store"
+    if status_code in operation:
+        return operation[status_code]
+    return operation.get("*", "no-store")
+
+
+# RFC 7231 GMT formatter used by ``portfolio_status`` to emit a
+# ``Last-Modified`` header sourced from ``StockCache.last_modified`` — the
+# canonical resource time for the cached aggregate. Centralised so any
+# future endpoint that gains a real validator stamp can reuse the same
+# format.
+_HTTP_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+
+
+def format_http_date(value: datetime) -> str:
+    """Return a UTC RFC 7231 timestamp suitable for ``Last-Modified``."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).strftime(_HTTP_DATE_FORMAT)
+
+
 def custom_openapi() -> dict[str, Any]:
-    """Generate OpenAPI with middleware-provided standard response headers.
+    """Generate OpenAPI with response headers that match middleware output.
+
+    Per-operation response headers are derived from :data:`_CACHE_POLICY`
+    + the :class:`ApiError` handler behaviour so a generated client sees
+    the contract the wire actually carries (issue #416):
+
+    * ``X-Min-App-Version`` is declared on every response (it is the
+      iOS force-upgrade signal, always emitted by
+      :func:`add_standard_headers`).
+    * ``Cache-Control`` is declared on every response with the value
+      this operation will emit for that status (e.g. cacheable on
+      ``GET /schema/version 200``, ``no-store`` on every error
+      envelope).
+    * ``Last-Modified`` is declared only on operations that emit a real
+      resource time: today, ``GET /portfolio/status 200``. Other
+      operations no longer falsely advertise a ``now()`` validator
+      (RFC 7232 §2.2 — validators must reflect resource modification
+      time, not request-handling time).
+    * ``Retry-After`` is declared on every documented ``503`` response
+      because :func:`api_error_handler` emits it from
+      :attr:`ErrorEnvelope.retry_after_seconds`. RFC 7231 §7.1.3 makes
+      this the canonical retry channel; the body field is now mirrored
+      onto the standard wire header.
 
     Also marks the ``X-App-Attest`` header parameter as ``required: true`` on
     every operation that declares it. The runtime dependency
@@ -212,15 +307,22 @@ def custom_openapi() -> dict[str, Any]:
         description=app.description,
         routes=app.routes,
     )
-    for path_item in openapi_schema.get("paths", {}).values():
-        for operation in path_item.values():
+    for path, path_item in openapi_schema.get("paths", {}).items():
+        for method, operation in path_item.items():
             if not isinstance(operation, dict):
                 continue
+            method_upper = method.upper()
             responses = operation.get("responses", {})
-            for response in responses.values():
+            for status_str, response in responses.items():
                 if not isinstance(response, dict):
                     continue
-                response.setdefault("headers", {}).update(STANDARD_RESPONSE_HEADERS)
+                try:
+                    status_code = int(status_str)
+                except (TypeError, ValueError):
+                    status_code = 0
+                response.setdefault("headers", {}).update(
+                    _response_headers_for(method_upper, path, status_code)
+                )
             for parameter in operation.get("parameters", []):
                 if (
                     isinstance(parameter, dict)
@@ -249,6 +351,60 @@ def custom_openapi() -> dict[str, Any]:
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
+
+# Routes whose ``200`` response sets a real ``Last-Modified`` validator.
+# Today only ``GET /portfolio/status`` qualifies: the handler writes the
+# header from ``StockCache.last_modified`` so iOS / Cloudflare get a
+# meaningful conditional-GET validator. Other endpoints stopped emitting
+# ``Last-Modified`` altogether under the issue #416 fix.
+_LAST_MODIFIED_ROUTES: frozenset[tuple[str, str]] = frozenset({
+    ("GET", "/portfolio/status"),
+})
+
+
+def _response_headers_for(
+    method: str, path_template: str, status_code: int
+) -> dict[str, dict[str, Any]]:
+    """Return the OpenAPI ``headers`` block for one response status.
+
+    Mirrors the middleware + :class:`ApiError` handler behaviour so a
+    generated client decodes the same surface that the wire carries.
+    """
+    headers: dict[str, dict[str, Any]] = {
+        "X-Min-App-Version": dict(STANDARD_RESPONSE_HEADERS["X-Min-App-Version"]),
+        "Cache-Control": {
+            "description": (
+                "Per-operation cache directive. ``no-store`` on every error "
+                "envelope so transient 5xx are never re-served by URLCache "
+                "or Cloudflare."
+            ),
+            "schema": {
+                "type": "string",
+                "example": _resolve_cache_control(method, path_template, status_code),
+            },
+        },
+    }
+    if status_code == 503:
+        headers["Retry-After"] = {
+            "description": (
+                "Seconds the client should wait before retrying. Mirrors "
+                "``ErrorEnvelope.retry_after_seconds`` in the body so "
+                "Cloudflare and ``URLSession`` honour the same retry signal "
+                "(RFC 7231 §7.1.3)."
+            ),
+            "schema": {"type": "integer", "minimum": 0},
+        }
+    if (method, path_template) in _LAST_MODIFIED_ROUTES and status_code == 200:
+        headers["Last-Modified"] = {
+            "description": (
+                "RFC 7231 GMT timestamp sourced from "
+                "``StockCache.last_modified`` — the resource time, not the "
+                "request-handling time."
+            ),
+            "schema": {"type": "string"},
+        }
+    return headers
 
 
 _LEGACY_VALIDATION_SCHEMAS = ("HTTPValidationError", "ValidationError")
@@ -363,10 +519,23 @@ app.openapi = custom_openapi
 
 @app.exception_handler(ApiError)
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
-    """Render API errors as the documented top-level envelope."""
+    """Render API errors as the documented top-level envelope.
+
+    Also forces ``Cache-Control: no-store`` and, when the envelope carries
+    ``retry_after_seconds``, emits the RFC 7231 §7.1.3 ``Retry-After``
+    response header. The middleware's per-route policy already sets
+    ``no-store`` on every error status, but :class:`JSONResponse` is
+    constructed here with the values present in the envelope so the retry
+    signal mirrors the body field even before the middleware runs (issue
+    #416).
+    """
+    headers: dict[str, str] = {"Cache-Control": "no-store"}
+    if exc.envelope.retry_after_seconds is not None:
+        headers["Retry-After"] = str(exc.envelope.retry_after_seconds)
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.envelope.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -374,7 +543,12 @@ async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
 async def validation_error_handler(
     _: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Render request validation failures as the public error envelope."""
+    """Render request validation failures as the public error envelope.
+
+    Forces ``Cache-Control: no-store`` so a 422 request-validation
+    failure cannot be cached by Cloudflare or ``URLCache.shared`` and
+    re-served to a corrected client (issue #416).
+    """
     envelope = ErrorEnvelope(
         code=ErrorCode.SCHEMA_UNSUPPORTED,
         message="Request validation failed.",
@@ -383,6 +557,7 @@ async def validation_error_handler(
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=envelope.model_dump(mode="json"),
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -444,19 +619,33 @@ async def require_app_attest(
 async def add_standard_headers(request: Request, call_next):
     """Set the spec-mandated response headers on every response.
 
-    * ``Cache-Control: max-age=<CACHE_MAX_AGE>``
-    * ``Last-Modified: <UTC RFC 7231 timestamp>``
-    * ``X-Min-App-Version: <minimum supported iOS app version>``
+    * ``X-Min-App-Version`` is set unconditionally — the iOS client polls
+      it on every response to decide whether a force-upgrade banner
+      should appear.
+    * ``Cache-Control`` is resolved from :data:`_CACHE_POLICY` keyed by
+      ``(method, route.path, status_code)``. Unmatched routes / statuses
+      default to ``no-store`` so the safe choice always wins. Errors
+      raised by :class:`ApiError` already set their own ``no-store`` +
+      ``Retry-After`` in :func:`api_error_handler`; this middleware
+      ``setdefault``-s so those explicit values are preserved.
+
+    The previous implementation blanket-set ``Cache-Control:
+    max-age=3600`` and a request-time ``Last-Modified`` on every response
+    — including 503 envelopes carrying ``retry_after_seconds=60`` —
+    which let URLCache / Cloudflare amplify transient outages into hour-
+    long client-visible blackouts and falsely advertised an always-now()
+    validator that defeats RFC 7232 §2.2 conditional GET (issue #416).
     """
     response: Response = await call_next(request)
-    response.headers.setdefault(
-        "Cache-Control", f"max-age={config.CACHE_MAX_AGE}"
-    )
-    response.headers.setdefault(
-        "Last-Modified",
-        datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"),
-    )
     response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)
+    route = request.scope.get("route")
+    path_template = getattr(route, "path", None) if route is not None else None
+    response.headers.setdefault(
+        "Cache-Control",
+        _resolve_cache_control(
+            request.method, path_template, response.status_code
+        ),
+    )
     return response
 
 
@@ -770,6 +959,7 @@ def schema_version(_: str = Depends(require_app_attest)) -> SchemaVersionRespons
     },
 )
 def portfolio_status(
+    response: Response,
     db: Session = Depends(get_db),
     _: str = Depends(require_app_attest),
 ) -> PortfolioStatusResponse:
@@ -780,6 +970,13 @@ def portfolio_status(
     503 envelope (matching ``/portfolio/data`` and ``/health``) so the
     iOS client sees a decodable retry signal instead of FastAPI's default
     500 body when the DB is unreachable (issue #439).
+
+    Sets ``Last-Modified`` from ``StockCache.last_modified`` — the actual
+    resource time, mirroring the body field of the same name — so the
+    response carries a meaningful RFC 7232 §2.2 validator. When the
+    cache table is empty the header is omitted (faking a validator
+    would defeat any future ``If-Modified-Since`` round-trip). See
+    issue #416.
     """
     try:
         row = db.execute(
@@ -798,6 +995,8 @@ def portfolio_status(
 
     if row is None:
         return PortfolioStatusResponse(last_modified=None, next_modified=None)
+    if row[0] is not None:
+        response.headers["Last-Modified"] = format_http_date(row[0])
     return PortfolioStatusResponse(last_modified=row[0], next_modified=row[1])
 
 
