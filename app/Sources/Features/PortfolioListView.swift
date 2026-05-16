@@ -45,13 +45,44 @@ private struct PortfolioListContent: View {
           ForEach(store.portfolios) { portfolio in
             row(for: portfolio)
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button("Delete", role: .destructive) {
+                Button(PortfolioRowContextActions.delete.title, role: .destructive) {
                   store.send(.deleteTapped(id: portfolio.id))
                 }
-                Button("Edit") {
+                Button(PortfolioRowContextActions.edit.title) {
                   store.send(.editTapped(id: portfolio.id))
                 }
                 .tint(.blue)
+              }
+              // Mirror every `.swipeActions` button as a `.contextMenu`
+              // entry so pointer users (right-click / Control-click on
+              // iPad with trackpad, mouse, or Magic Keyboard) and
+              // long-press users on touch reach the same per-row
+              // actions. HIG → *Context menus*: "When you provide a
+              // context menu for a list row, use the same actions you
+              // offer with swipe gestures so that people who can't
+              // perform a swipe gesture — for example, when using a
+              // pointer — can still access the actions." (#341)
+              //
+              // Pulls titles, icons, and destructive role from the
+              // pure `PortfolioRowContextActions` catalog so the swipe
+              // strings above and the context-menu strings below
+              // cannot drift apart; `RowContextActionsTests` pins the
+              // catalog.
+              .contextMenu {
+                Button {
+                  store.send(.editTapped(id: portfolio.id))
+                } label: {
+                  Label(
+                    PortfolioRowContextActions.edit.title,
+                    systemImage: PortfolioRowContextActions.edit.systemImage)
+                }
+                Button(role: .destructive) {
+                  store.send(.deleteTapped(id: portfolio.id))
+                } label: {
+                  Label(
+                    PortfolioRowContextActions.delete.title,
+                    systemImage: PortfolioRowContextActions.delete.systemImage)
+                }
               }
               // Mirror both `.swipeActions` buttons as semantic
               // `.accessibilityAction(named:)`s so Edit and the
@@ -67,10 +98,10 @@ private struct PortfolioListContent: View {
               // WCAG 2.5.1 (Pointer Gestures): any single-point
               // gesture-only path must have an equivalent non-gesture
               // alternative (#285).
-              .accessibilityAction(named: Text("Edit")) {
+              .accessibilityAction(named: Text(PortfolioRowContextActions.edit.title)) {
                 store.send(.editTapped(id: portfolio.id))
               }
-              .accessibilityAction(named: Text("Delete")) {
+              .accessibilityAction(named: Text(PortfolioRowContextActions.delete.title)) {
                 store.send(.deleteTapped(id: portfolio.id))
               }
           }
