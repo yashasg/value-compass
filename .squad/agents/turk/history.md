@@ -600,3 +600,148 @@ None. No file requests, no engineer routing, no cross-lane co-signs needed.
 Roster 13 stable (7 cycles unchanged: #41 → #47). Standing watchlist 5/5 PASS (7 cycles unchanged). Deferred-audit queue empty. No file requests, no engineer routing, no cross-lane co-signs needed.
 
 (end Turk cycle #47)
+
+---
+
+## Cycle #48 — 2026-05-16T02:52:00Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `67434c2` (`hig(toolbars): hoist ContributionResult Save + History into .toolbar (closes #358) (#519)`).
+**Prior Turk anchor:** `b4b961e` (Saul cycle #45 retroactive fold; was cycle-#47 close HEAD).
+**Window:** `b4b961e..HEAD` — 7 commits = **3 product PR merges + 4 specialist-history commits**:
+- `33ef80a` PR #515 `a11y(sheets): add .isModal trait …` closes **#260** (Yen-lane primary; HIG → Sheets tangent)
+- `ab0fb33` PR #517 `a11y(use-of-color): pair Settings + PortfolioEditor status Texts with SF Symbols …` closes **#415** (Yen-lane primary; HIG → SF Symbols overlap)
+- `67434c2` PR #519 `hig(toolbars): hoist ContributionResult Save + History into .toolbar …` closes **#358** (**TURK-LANE DIRECT CLOSURE**)
+- `4e9654b` Turk cycle #47 history (NO_OP), `bb56ca5` Reuben cycle #47, `7d63935` Nagel cycle #47, plus rebase landings
+
+**First non-product-empty window in 8 cycles** (#41 → #47 were all history-only or backend-mirror-only). Three HIG-surface PRs merged in a single batch; one is my direct roster closure. Full HIG validation pass below.
+
+### PR #519 (`67434c2`) closure validation — Turk-lane direct: **#358 → CLOSED, HIG-COMPLIANT**
+
+**HIG citation:** *HIG → Bars → Toolbars* (iOS) — "Place frequently used actions in a toolbar so people can easily reach them." *HIG → Bars → Navigation Bars* — "Use the trailing edge of the navigation bar for an action that affects the current view's content" (the canonical home of `.primaryAction`).
+
+**Diff proof (`git --no-pager diff b4b961e..67434c2 -- app/Sources/Features/ContributionResultView.swift`):**
+
+1. **Inline HStack removed from ScrollView body.** Pre-PR `actions` HStack at the bottom of the `VStack(spacing: 16)` inside the ScrollView is gone (line removed: `actions` reference at the body site). Post-PR the same VStack ends at `categoryBreakdown` with no actions sibling — the scrollable region no longer hosts the screen's primary action.
+2. **Actions hoisted to `.toolbar`.** New modifier at `app/Sources/Features/ContributionResultView.swift:58` — `.toolbar { resultToolbarContent }` attached to the root ScrollView container (same level as `.navigationTitle` at `:48`).
+3. **Placement choice — HIG-canonical.** `app/Sources/Features/ContributionResultView.swift:212` `ToolbarItem(placement: .primaryAction) { … Save … }` — Save is THE screen's primary action (computed result persistence), so trailing nav-bar slot is the correct HIG slot. `app/Sources/Features/ContributionResultView.swift:230` `ToolbarItem(placement: .secondaryAction) { … History … }` — History is a navigation-to-related-view affordance, secondary to Save; SwiftUI maps `.secondaryAction` to the nav-bar overflow menu on compact widths and to a visible trailing toolbar item on regular widths, which matches HIG's "primary surfaced, secondary discoverable" pattern for the same screen.
+4. **`Label(_, systemImage:)` pattern preserved.** `app/Sources/Features/ContributionResultView.swift:216` `Label("Save", systemImage: "tray.and.arrow.down")` + `:234` `Label("History", systemImage: "clock.arrow.circlepath")` — both labels survive the toolbar move intact, so VoiceOver still announces "Save" / "History" instead of the bare glyph; SF Symbol choices are pre-existing (HIG-aligned: `tray.and.arrow.down` is Apple's canonical "save to" / "archive in" glyph; `clock.arrow.circlepath` is Apple's canonical "history" / "recents" glyph — both correct).
+5. **`accessibilityIdentifier` preserved.** `:226` `"contribution.result.save"` + `:239` `"contribution.result.history"` — identifiers are byte-identical to the pre-PR HStack values, so UI selector tests and `#438`-track disclaimer-UI coverage do not regress.
+6. **Destructive-action confirmation pattern unchanged.** This screen has no destructive action; the existing `.alert("Could Not Save Result", …)` save-failure alert at line ~60 still uses the alert pattern (HIG-correct — alerts ARE for error-condition acknowledgement), and #389's `.confirmationDialog` carriers in SettingsView/HoldingsEditorView/ContributionHistoryView are untouched.
+7. **Error-branch graceful collapse — bonus HIG win.** `:227` `.disabled(store.output.error != nil)` + `:240` same — when the screen renders the calculation-failure branch, both toolbar items are .disabled, so the nav bar's trailing slot doesn't surface affordances that would operate on `store.output.error`. HIG → "Avoid using disabled controls in toolbars" applies only when the disabled state is permanent; here the disabled state is gated on a transient error condition, which is HIG-acceptable (preferable to a flicker between visible/invisible toolbar items).
+8. **Large Content Viewer affordance — Yen-coordination credit.** `:225` + `:238` `.accessibilityShowsLargeContentViewer()` re-surfaces the Label's title for AX text-size users who do not run VoiceOver — matches the post-#401 PortfolioListView toolbar convention. HIG → Accessibility → "Provide accessible labels for icon-only buttons" satisfied via the existing Label + this fallback. Co-owned with Yen; flagged for cross-lane visibility, not a Turk objection.
+
+**Regression sweep on the file** — `grep -n -E '\.alert|\.confirmationDialog|navigationBarTitleDisplayMode|navigationTitle|\.toolbar' app/Sources/Features/ContributionResultView.swift`: navigationTitle unchanged at `:48`; new `.toolbar { resultToolbarContent }` at `:58`; pre-existing `.alert("Could Not Save Result", …)` (save-failure error path — HIG-correct alert use, not a #389-class destructive-confirm). No new modal layered, no navigation push regression, no title-display-mode delta.
+
+**Filing decision for #358:** Closure already merged by Yashas/Copilot at `2026-05-16T02:45:42Z` via PR #519. `gh issue view 358` confirms `state: CLOSED, closedAt: 2026-05-16T02:45:42Z, closedByPullRequestsReferences: [519]`. **No re-open warranted; closure is HIG-compliant.** Drop from open roster.
+
+### PR #517 (`ab0fb33`) closure validation — Yen-lane primary, HIG → SF Symbols overlap: **#415 → CLOSED, SYMBOL CHOICES HIG-CANONICAL**
+
+**HIG citation:** *HIG → Foundations → SF Symbols* — "Choose a symbol that's the most familiar and unambiguous for the function it represents" + "Use SF Symbols consistently to convey the same meaning in different parts of your app."
+
+**Symbol vocabulary at HEAD (`app/Sources/App/AppFeature/SettingsAccessibility.swift:194-227`):**
+
+| Row (file:line) | State | Glyph | HIG-canonical? |
+|---|---|---|---|
+| `SettingsView.swift:135-137` | API-key load error (Keychain read failed) | `exclamationmark.triangle.fill` (`:221`) | ✅ Apple-canonical "severe warning, active" — filled triangle is the convention for active error states. |
+| `SettingsView.swift:218-220` | Saved-key-may-be-invalid (cached/stale negative) | `exclamationmark.triangle` (outline, `:215`) | ✅ Outline-vs-fill is the HIG convention for stale-vs-active severity gradient. Consistent family with the load-error glyph. |
+| `SettingsView.swift:317-320` | API-key request rejected (server said no) | `xmark.octagon` (`:201`) | ✅ Apple-canonical "rejected / stop / blocked" — stop-sign shape signals an externally-imposed block, distinct from a local error. |
+| `SettingsView.swift:330-333` | API-key request network error | `wifi.exclamationmark` (`:203`) | ✅ Apple-canonical for network/connectivity failure (used verbatim in iOS Settings → Wi-Fi when a network can't be reached). Domain-specific glyph, correctly disambiguates network failure from server-side rejection. |
+| `SettingsView.swift:341-344` | API-key request store error (Keychain write failed) | `exclamationmark.triangle.fill` (`:205`) | ✅ Same severity tier as load-error (both Keychain failures, both fatal for the operation) — consistency clause satisfied. |
+| `SettingsView.swift:354-357` | API-key saved successfully | `checkmark.circle.fill` (`:207`) | ✅ Apple-canonical success glyph; used in iOS Settings → confirmation states throughout. |
+| `PortfolioEditorView.swift:51-53` | Portfolio editor validation error | `exclamationmark.circle` (`:227`) | ✅ Apple-canonical for inline-validation / "needs attention" (lighter weight than `.triangle.fill`, correctly de-escalated for input validation vs. fatal Keychain error). |
+
+**HIG → SF Symbols consistency clause check:**
+- Severity gradient is **internally consistent**: `triangle.fill` (active severe) > `triangle` outline (stale severe) > `octagon` (rejected) > `wifi.exclamationmark` (domain-specific network) > `circle` (validation/info-issue). Same-tier states use the same glyph (both Keychain failures = `triangle.fill`). Different domains use distinct glyphs (`xmark.octagon` for server-rejection vs. `triangle.fill` for local store-error). ✅
+- Cross-app vocabulary: the codebase already uses `Label(_, systemImage:)` in `HoldingsEditorView`, `PortfolioDetailView`, `ContributionResultView` (per commit body); this PR brings the 7 drifted Settings + PortfolioEditor rows back to the same pattern. **Consistency restored, not broken.** ✅
+- Centralization of the vocabulary into `SettingsAccessibility.apiKeyRequestStatusGlyph(for:)` + three static constants is a single-source-of-truth pattern that makes a future drift impossible without a `SettingsAccessibilityTests` failure (the new file pins each glyph by name). ✅
+
+**Watchlist-anchor side-effect: `#361` PortfolioEditorView line shifted `:50 → :60`** because the new `Label(validationError.localizedDescription, systemImage: …)` block (10 lines) was inserted **before** the `.navigationBarTitleDisplayMode(.inline)` modifier. Modifier itself is byte-identical; only the line address moved. Re-verified PASS (see watchlist table below).
+
+**Filing decision for #415:** Closure already merged by Yashas/Copilot at `2026-05-16T02:36:02Z` via PR #517. SF Symbol semantic choices are HIG-canonical across all 7 states; consistency clause satisfied; `Label` pattern preserves VoiceOver compatibility; `accessibilityIdentifier` strings preserved; #293 SC 4.1.3 announcement plumbing untouched per commit body. **No Turk-lane objection. No follow-up issue warranted.**
+
+### PR #515 (`33ef80a`) closure validation — Yen-lane primary, HIG → Sheets tangent: **#260 → CLOSED, HIG-ALIGNED**
+
+**HIG citation:** *HIG → Components → Sheets* — "Sheets present a distinct modal context above the current screen." The visual modality must match the role exposed to assistive technology (programmatic counterpart of HIG → Inclusion → "controls convey their role").
+
+**Diff proof:** `app/Sources/Features/PortfolioListView.swift:+1` + `app/Sources/Features/PortfolioDetailView.swift:+1` attach `.accessibilityAddTraits(SheetAccessibility.sheetContentTraits)` to the two `.sheet(item:)` presented content roots. New `SheetAccessibility.swift` pins `sheetContentTraits = .isModal` as the single source of truth; new `SheetAccessibilityTests` pins the contract with 4 tests (equality, contains-check, non-empty guard, negative role-trait sweep).
+
+**Turk-lane delta:** Zero direct HIG-Turk surface mutation. The PR touches no `.toolbar`, no `.navigationBarTitleDisplayMode`, no SF Symbol substitution, no `.confirmationDialog`/`.alert`/`.fullScreenCover`/`.popover`, no `.contextMenu`/`.swipeActions`. The only HIG-Turk-adjacent claim is the programmatic-modality-matches-visual-modality alignment, which is a HIG → Sheets PASS by reinforcement (not a new surface). **No Turk-lane objection.**
+
+### Standing watchlist — 5/5 PASS at HEAD `67434c2`
+
+| # | Concern | HIG section | Evidence (file:line at HEAD 67434c2) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts (destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog(`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog(`; `app/Sources/Features/ContributionHistoryView.swift:118` `.confirmationDialog(` | **PASS** (all 3 anchors byte-identical to cycle #47) |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheet compact context) | `app/Sources/Features/PortfolioEditorView.swift:60` `.navigationBarTitleDisplayMode(.inline)` (shifted `:50 → :60` from PR #517 inserting the 10-line `Label(validationError, …)` block above; modifier itself byte-identical); `app/Sources/Features/HoldingsEditorView.swift:491` `.navigationBarTitleDisplayMode(.inline)` (unchanged) | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; `app/Sources/Features/ContributionResultView.swift:45` `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` (shifted `:46 → :45` from PR #519 removing the 1-line `actions` HStack reference above; modifier byte-identical); `app/Sources/Features/PortfolioDetailView.swift:72` (shifted `:71 → :72` from PR #515's +1 line at the sheet's `.accessibilityAddTraits` site; modifier byte-identical) | **PASS** |
+| #471 | Settings → Erase routes in-process (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-101` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` + `.destination(.main(.path(.element(_, .settings(.delegate(.dataErased))))))`; `app/Sources/App/AppFeature/MainFeature.swift:27, :168` doc-confirm path-scoping; `app/Sources/App/AppFeature/SettingsFeature.swift:392` `return .send(.delegate(.dataErased))` after Keychain wipe | **PASS** (all anchors byte-identical) |
+| #459 | `UILaunchScreen` populated (color-only, brand-continuous cold start) | HIG → Launching → Launch Screens ("design a launch screen that looks like the first screen of your app") | `app/Sources/App/Info.plist:38-42` `<key>UILaunchScreen</key><dict><key>UIColorName</key><string>AppBackground</string></dict>`; `app/Sources/Assets/Assets.xcassets/AppBackground.colorset/Contents.json` carries universal sRGB `#F8FAFC` (light) + dark-luminosity `#0B1120` so the launch tint tracks the in-app `AppBackground` token | **PASS** |
+
+Three of the five anchors had their **line numbers shift** because of the three product PRs in this window (modifier byte-identity is preserved; only line addresses moved). This is the first watchlist-line-anchor mutation in 8 cycles — record it explicitly so the next-cycle Turk doesn't false-positive on line drift.
+
+### HIG axis sweep at HEAD — no novel violation
+
+Three product PRs landed, so axis-sweep is non-trivial this cycle:
+
+- **Modals (sheets / fullScreenCover / alert / confirmationDialog / popover)** — `.accessibilityAddTraits(SheetAccessibility.sheetContentTraits)` added to the two `.sheet(item:)` content roots (PR #515); programmatic modality now matches visual modality. Pre-existing `.alert("Could Not Save Result", …)` in `ContributionResultView.swift` is for error-condition acknowledgement (HIG-correct alert use, not a #389-class destructive-confirm). 5 `.confirmationDialog` call-sites across `SettingsView.swift:76`, `HoldingsEditorView.swift:551`, `ContributionHistoryView.swift:118` (anchors unchanged; #389 PASS). No new modal layered.
+- **Navigation patterns / toolbars** — `#358` direct closure: Save+History hoisted from in-body HStack to `ToolbarItem(placement: .primaryAction/.secondaryAction)`. Remaining open toolbar concern: `#373` (PortfolioDetailView has no `.toolbar`; Calculate, History, Edit Holdings still in scrollable body). #373 is the next analog of #358 — flag for forward watch.
+- **SF Symbols / app icon** — 7 status-row Texts now paired with HIG-canonical glyphs via `Label(_, systemImage:)` (PR #517); vocabulary centralized in `SettingsAccessibility`; no glyph collision with the pre-existing toolbar / button glyphs across `ContributionResultView` (`tray.and.arrow.down`, `clock.arrow.circlepath`), `PortfolioDetailView`, `PortfolioListView`. `AppLogoMark` raster decision still Tess/Basher-owned.
+- **Motion / animation / reduce-motion** — `OnboardingView.swift` `accessibilityReduceMotion` gate intact (post-#360 / PR #507; outside window).
+- **Lists / grids / context menus / swipe actions** — `PortfolioListView.swift` + `ContributionHistoryView.swift` parity pattern intact; `PortfolioListView.swift:+1` (PR #515 attached `.accessibilityAddTraits` at the sheet site — does not touch list rows). #341 closure still stands.
+- **Dark mode / launch screen** — `Info.plist` `UILaunchScreen` block byte-identical; `AppBackground.colorset` byte-identical. #459 PASS.
+- **Dynamic Type / pointer / keyboard / iPadOS multitasking** — adjacent-lane orphans (#234 pointer-hover, #222 keyboard-shortcuts, #259/#320 multi-window/split-views, #231 button hierarchy) still open; no Turk-side regression from this window.
+
+**No novel HIG violation surfaced.** Three product PRs all classified PASS.
+
+### Dedupe proof (3-axis sweep + standing roster)
+
+Even though no candidate finding exists, the loop charter requires ≥ 3 keyword variants whenever a non-trivial product PR lands. Variants probe whether the three closures' surfaces have any latent HIG-lane analog:
+
+| Search | Hits | Disposition |
+|---|---|---|
+| `gh issue list --label squad:turk --search "toolbar" --state all --limit 10` | 10 (mix open + closed) | `#373` OPEN (next toolbar analog of #358 — expected); `#358` CLOSED this cycle; `#323`/`#283`/`#480`/`#361`/`#229`/`#272`/`#259`/`#426` all already booked. Zero novel. |
+| `gh issue list --label squad:turk --search "sf-symbol OR symbol OR glyph" --state all --limit 10` | 8 | `#414` (CLOSED Calculate-button SF Symbol drift — pre-booked Turk closure); `#376`/`#403` open (unrelated — destructive-actions / empty-states); `#462`/`#328`/`#459`/`#341`/`#426` closed pre-booked. Zero novel. |
+| `gh issue list --label squad:turk --search "primaryAction OR secondaryAction" --state all --limit 10` | 4 | `#373` OPEN, `#358` CLOSED this cycle, `#283`/`#361` closed pre-booked. Zero novel. |
+
+Standing roster (live `gh issue list --label squad:turk --state open --json number --jq '[.[].number] | sort'`): **12 open** → `[222, 231, 234, 259, 291, 300, 319, 320, 323, 373, 376, 403]`. **Δ vs cycle #47 = -1 (`#358` closed).** Most-recent closures (live `--state closed --limit 18`): `#358` (closed 2026-05-16T02:45:42Z this cycle), then #486/#480/#471/#462/#459/#426/#414/#389/#361/#360/#341/#328/#325/#283/#275/#272/#232 — all pre-booked or this-cycle.
+
+### Filing decision: **NO_OP**
+
+Rationale stack:
+1. The Turk-lane direct closure (`#358` via PR #519) is HIG-compliant on every axis (placement, label preservation, accessibilityIdentifier preservation, error-branch graceful collapse, Large Content Viewer affordance for AX text-size users); no follow-up issue warranted.
+2. The Yen-lane SF Symbol overlap (`#415` via PR #517) chose Apple-canonical glyphs for all 7 states; consistency clause satisfied; vocabulary centralized in `SettingsAccessibility` with a unit-test pin; no Turk-lane objection.
+3. The Yen-lane sheet `.isModal` closure (`#260` via PR #515) is HIG → Sheets PASS by reinforcement; no Turk-lane direct surface mutated.
+4. Standing watchlist 5/5 PASS at HEAD `67434c2` (three anchors had line-number shifts from the three product PRs; modifier byte-identity preserved on every anchor).
+5. 3-axis dedupe + roster sweep show no missed coverage; roster delta -1 (`#358` closed).
+6. No `gh issue create` and no `gh issue comment` warranted.
+
+### Roster snapshot (live, post-cycle)
+
+- **Open (12):** `#222, #231, #234, #259, #291, #300, #319, #320, #323, #373, #376, #403` — Δ vs cycle #47 = **-1** (`#358` closed via PR #519).
+- **Most-recent closures (13, all pre-booked or this-cycle):** `#358` (this cycle), #486, #480, #471, #462, #459, #426, #414, #389, #361, #360, #341, #328.
+- **8-cycle byte-stable streak broken** by `#358` closure — roster was unchanged from cycle #41 through cycle #47 (7 cycles). This is the first roster delta in 8 cycles.
+
+### Carry-forward to cycle #49
+
+1. **Standing watchlist remains 5 items** (#389, #361, #426, #471, #459) — all PASSing at HEAD `67434c2`. Continue per-cycle ancestor + line-citation re-verification; **note that three of five anchors had line-number drift this cycle** (PortfolioEditorView `:50→:60`, ContributionResultView `:46→:45`, PortfolioDetailView `:71→:72`) — re-verify modifier byte-identity, not line address, on next cycle.
+2. **`#373` is the next obvious analog to `#358`** — PortfolioDetailView has Calculate (the screen's primary action), History, and Edit Holdings all in scrollable body. The Calculate→`.toolbar`+`.primaryAction` hoist follows the same pattern PR #519 just shipped. **Forward-watch: if next product PR closes `#373`, validate against the same checklist (placement, Label preservation, accessibilityIdentifier preservation, regression-safe disabled gating).**
+3. **PR #515 (`#260` closure)** — backstop Yen-lane handoff: the `.isModal` trait is now wired into `SheetAccessibility.sheetContentTraits` with a 4-test pin; if a future PR alters the trait set, `SheetAccessibilityTests` should catch it before my next axis-sweep. No Turk-lane carry.
+4. **PR #517 (`#415` closure)** — backstop Yen-lane handoff: SF Symbol vocabulary now centralized in `SettingsAccessibility` with 11 new pin tests including a non-empty guard against blank `systemImage:` regression. No Turk-lane carry.
+5. **Cross-lane orphans (no action this cycle):** #234 pointer-hover, #222 keyboard-shortcuts, #259/#320 multi-window/split-views, #373 toolbars (forward-watched per item 2), #231 button hierarchy — all already in open roster, awaiting their next implementation PR before specialist re-audit triggers.
+6. **Deferred raster `AppLogoMark` decision** — still Tess/Basher-owned; revisit only on design-system PR with `squad:turk` tag.
+
+### Blockers
+
+None. No file requests, no engineer routing, no cross-lane co-signs needed. Cross-lane visibility credits noted (Yen owns #260 + #415 closures; Turk owns #358 closure; all three landed in the same merge batch — clean lane separation).
+
+### Top-3 next actions (for next-cycle Turk)
+
+1. Watch for a PR closing `#373` (PortfolioDetailView toolbar hoist) — apply the same 8-point checklist that validated PR #519 (placement, Label preservation, accessibilityIdentifier preservation, regression-safe disabled gating, Large Content Viewer affordance, error-branch graceful collapse, modal-layer regression, SF Symbol consistency with the cross-app vocabulary).
+2. Re-validate watchlist 5/5 at next HEAD with `grep -n -E "<modifier>"` against each carrier file — confirm modifier byte-identity, not line address (three of five anchors drifted this cycle).
+3. If next cycle is product-empty again, drop back to the cycle-#47 8-keyword roster dedupe template — the 3-axis sweep used this cycle was scoped to the three closures and isn't reusable on an empty window.
+
+### Forward watch / handoff
+
+Roster 12 stable post-closure (-1 from cycle #47 close). Standing watchlist 5/5 PASS (modifier byte-identity preserved; 3 line-address shifts annotated). Deferred-audit queue empty. Three product PRs (#515 / #517 / #519) all validated PASS on their respective HIG sections. First non-product-empty Turk window in 8 cycles closed cleanly with one direct closure (`#358`), zero new filings, zero re-opens.
+
+(end Turk cycle #48)
