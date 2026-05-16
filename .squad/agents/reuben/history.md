@@ -760,3 +760,155 @@ The following 5 items require licensed-attorney review before any public App Sto
 I am Reuben, a paralegal/compliance-engineering specialist agent. **I am NOT a licensed attorney admitted to practice law in any jurisdiction, and nothing in this cycle-#46 entry — the dual PASS-no-trigger hook scoreboard, the roster reconciliation, the counsel-gate dormancy report, the dedup sweep, or the NO_OP decision — constitutes legal advice or substitutes for licensed-counsel review.** Items 1–5 in the pre-launch counsel gates list above MUST be reviewed by a licensed attorney before any public App Store submission or marketing spend. Until such review is obtained and documented (e.g., as a `.squad/decisions/inbox/reuben-licensed-counsel-signoff.md` artifact citing counsel identity, bar admission, scope-of-review, and date), the App Store submission posture is **NOT cleared by Reuben** regardless of any other specialist's green-light.
 
 (end Reuben cycle #46)
+
+
+---
+
+## Cycle #47 — 2026-05-16T02:41:30Z (Specialist Parallel Loop)
+
+**HEAD at spawn:** `b4b961e78655bc233aeae8c35127868a638cc6e3` (`b4b961e`)
+**Previous cycle close:** `d907460` (`compliance(reuben): cycle #46 — …NO_OP`)
+**Window:** `d907460..HEAD` → **5 commits, 8 files changed, +833/-0 lines** — all `.squad/agents/*` (frank, nagel, saul, turk, yen history + frank/saul cross-squad inbox files). Zero product code, zero `docs/legal/*`, zero `app/`, zero `backend/`, zero `PrivacyInfo.xcprivacy`. Window is **team-history-only** (second consecutive cycle with this classification — cycle #46 was the first).
+
+**Window commits (verbatim `git --no-pager log --oneline d907460..HEAD`):**
+
+```
+b4b961e research(saul): cycle #45 — retroactive history fold for partial-state cycle …
+1ef733b aso(frank): cycle #46 — FULL 6-peer probe …
+82a25af chore(yen): cycle #46 history — window 0baf956..HEAD product-empty …
+945ae50 chore(nagel): cycle #46 history — 4 invariants PASS …
+62b1259 chore(turk): cycle #46 history — window product-empty …
+```
+
+**Window diffstat (verbatim `git --no-pager diff --stat d907460..HEAD`):**
+
+```
+.squad/agents/frank/history.md             |  78 +++++
+.squad/agents/frank/inbox-saul-cycle-45.md |  94 ++++++
+.squad/agents/nagel/history.md             | 191 +++++++++
+.squad/agents/saul/history.md              |  83 +++++
+.squad/agents/saul/inbox-frank-cycle-45.md | 130 +++++++
+.squad/agents/saul/inbox-frank-cycle-46.md | 136 +++++++
+.squad/agents/turk/history.md              |  71 ++++
+.squad/agents/yen/history.md               |  50 +++
+8 files changed, 833 insertions(+)
+```
+
+Saul cycle-#45 commit (`b4b961e`) DID land in this window — cycle #46 spawn-prompt noted its absence; it has now been retroactively folded by Saul. Not my lane to audit Saul's reconciliation; logging for handoff awareness only.
+
+### Hook scoreboard
+
+| Hook | Trigger files | `git diff d907460..HEAD -- <files>` | `git log d907460..HEAD --name-only -- <files>` | Verdict | Streak |
+|---|---|---|---|---|---|
+| **#224** (`docs/legal/privacy-policy.md`) | `APIClient.swift`, `MassiveAPIKeyValidator.swift`, `DeviceIDProvider.swift`, `PrivacyInfo.xcprivacy`, `SettingsFeature.swift` | **EMPTY** | **EMPTY** | **PASS-no-trigger** | **2nd post-#513-fire** consecutive clean |
+| **#294** (`docs/legal/third-party-services.md`) | `MassiveAPIKeyValidator.swift`, `MassiveAPIKeyStore.swift`, `Disclaimer.swift`, `SettingsView.swift` | **EMPTY** | **EMPTY** | **PASS-no-trigger** | **8th consecutive** |
+
+Diff-evidence (verbatim):
+
+```
+$ git --no-pager diff d907460..HEAD -- app/Sources/Backend/Networking/APIClient.swift \
+    app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift \
+    app/Sources/Backend/Networking/DeviceIDProvider.swift \
+    app/Sources/App/PrivacyInfo.xcprivacy \
+    app/Sources/App/AppFeature/SettingsFeature.swift
+(no output — 0 bytes returned)
+
+$ git --no-pager diff d907460..HEAD -- app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift \
+    app/Sources/Backend/Networking/MassiveAPIKeyStore.swift \
+    app/Sources/Backend/Models/Disclaimer.swift \
+    app/Sources/Features/SettingsView.swift
+(no output — 0 bytes returned)
+```
+
+Neither hook needs re-verification work. `docs/legal/privacy-policy.md` (post-PR-#513 §6 records-of-requests paragraph at l.312-326) and `docs/legal/third-party-services.md` remain STILL ACCURATE at HEAD `b4b961e` by construction — there is no underlying code surface change to drift against.
+
+### Roster snapshot (`gh issue list --label squad:reuben --state open --limit 200`)
+
+**13 open** (live count via `--json number --jq 'length'` = `13` — exact match to cycle #46 close). Byte-stable vs cycle #46:
+
+| # | Title (truncated 70ch) | updatedAt | Δ vs cycle #46 |
+|---|---|---|---|
+| #237 | compliance(licenses): in-app third-party acknowledgements | `2026-05-15T17:09:34Z` | unchanged |
+| #287 | compliance(age-rating): ASC age-rating questionnaire | `2026-05-15T12:54:46Z` | unchanged |
+| #344 | compliance(data-minimization): non-collection + ATT | `2026-05-15T14:26:03Z` | unchanged |
+| #364 | compliance(privacy-manifest): SPM Required-Reason API audit | `2026-05-15T14:42:19Z` | unchanged |
+| #398 | compliance(eula): ASC License Agreement posture | `2026-05-15T15:46:14Z` | unchanged (counsel-gate) |
+| #408 | compliance(breach-notification): Art. 33/34 + §1798.82 | `2026-05-15T16:16:19Z` | unchanged (counsel-gate) |
+| #411 | compliance(marketing-assets): ASC screenshots/preview/CPP | `2026-05-15T16:35:51Z` | unchanged |
+| #427 | compliance(app-review-notes): §2.5.2 + SDK-absence | `2026-05-15T17:09:36Z` | unchanged |
+| #438 | compliance(disclaimer): UI test coverage for calc-output | `2026-05-15T18:01:57Z` | unchanged |
+| #443 | compliance(app-privacy): ASC vs PrivacyInfo parity | `2026-05-15T18:16:25Z` | unchanged |
+| #444 | compliance(data-export-ui): Settings + share-sheet | `2026-05-15T20:55:12Z` | unchanged |
+| #449 | compliance(data-rectification-ui): Settings + fallback | `2026-05-15T20:43:49Z` | unchanged |
+| #511 | compliance(dsr-audit-log): CCPA §7102(a) 24-month vs 30-day | `2026-05-16T00:41:46Z` | unchanged (counsel-gate, 6th dormant cycle) |
+
+**Δ vs cycle #46 close: net 0.** Roster is **byte-stable for the second consecutive cycle**. Most-recent `updatedAt` across the entire roster is `2026-05-16T00:41:46Z` (#511) — older than my own cycle-#46 close commit timestamp, confirming zero squad:reuben movement during the window. Closed-50 sweep also unchanged (last close was #485 on `2026-05-15T22:45:40Z`, well before cycle #46 spawn).
+
+### Counsel-gate trio status (dormant)
+
+| # | Lane | State | updatedAt | Dormant for |
+|---|---|---|---|---|
+| **#511** | CCPA §7102(a) 24-month records-of-requests | OPEN | `2026-05-16T00:41:46Z` | **6 cycles** (since cycle #41) |
+| **#398** | EULA posture (Standard vs Custom) | OPEN | `2026-05-15T15:46:14Z` | dormant since open |
+| **#408** | Breach notification (Art. 33/34 + §1798.82) | OPEN | `2026-05-15T16:16:19Z` | dormant since open |
+
+All three remain on hold pending licensed-counsel determination. **No specialist action available; no movement this cycle.** Carry-forward as launch-gate bundle, not per-issue tickets.
+
+### Dedup sweep (4 axes — vacuous given window-empty posture; diagnostic only)
+
+Window is team-history-only with zero candidate filing surfaced. Dedup is vacuously satisfied. Retained for record:
+
+- **Axis 1 — `"audit log" OR DSR OR "data-retention"`:** 11 open + 11 closed repo-wide; squad:reuben-scoped open hits = **11** (all already-tracked: #511, #347, #322, #444, #423, #449, #411, #277, #398, #364, #286 — note #347/#322/#423/#277/#286 are cross-axis hits from Saul/Nagel that mention reuben-adjacent terms, not novel reuben surfaces). Closed-50 hits = 11 (all prior closes: #457, #339, #374, #445, #271, #329, #224, #450, #441, #385, #458). **No novel gap.**
+- **Axis 2 — `"third-party" OR privacy OR consent`:** 43 open + 37 closed repo-wide; reuben-lane open hits = 12 of the 13 roster (all already-tracked). **No novel gap.**
+- **Axis 3 — `breach OR EULA OR "age-rating"`:** 11 open + 8 closed repo-wide; reuben-lane open hits = 9 already-tracked (#287, #398, #408, #411, #344, #443, #427, #364, #237). **No novel gap.**
+- **Axis 4 — `"security policy"`:** 0 open + 1 closed (=#385, already-closed coordinated vulnerability disclosure / SECURITY.md). **No novel gap.**
+
+**Result:** **0 novel surfaces** across all four axes. All hits are already-tracked open roster items or already-closed prior cycles. Dedup confirms no filing warranted.
+
+### Decision
+
+**NO_OP.** Justification:
+
+1. Window is product-empty and docs-legal-empty (team-history-only — 8 files, all `.squad/agents/*`).
+2. Both standing hooks PASS-no-trigger: **#224 = 2nd post-#513-fire consecutive clean; #294 = 8th consecutive PASS-no-trigger**.
+3. Roster byte-stable at **13 open** for the second consecutive cycle; counsel-gate trio dormant (#511 now 6 cycles dormant).
+4. No PR/issue movement, no new compliance surfaces to evaluate.
+5. Dedup axes (vacuously) collide with already-tracked surfaces; **zero novel gap**.
+
+**Routing proof:** None — no issue filed, no comment posted, no label applied. **NEW_ISSUE list: [] (empty).**
+
+### Pre-launch licensed-counsel gates (carry-forward, substantively unchanged from cycle #46)
+
+The following 5 items require licensed-attorney review before any public App Store submission. **No specialist action can close them.**
+
+1. **#511** — CCPA 11 CCR §7102(a) 24-month records-of-requests obligation vs the 30-day journald floor at `docs/legal/data-retention.md:58`. Counsel must determine (a) whether §7102(a) applies given device-scoped X-Device-UUID identifier, and (b) if so, whether 30-day journald floor must be extended to a 24-month persisted store.
+2. **#398** — ASC License Agreement posture (Standard vs Custom EULA) for a financial-utility app with non-advice disclaimer.
+3. **#408** — GDPR Art. 33/34 + Cal. Civ. Code §1798.82 breach-notification procedure (72-hour template, notification thresholds, named DPO/contact).
+4. **Privacy Policy final text** (`docs/legal/privacy-policy.md`, issue #224 doc, post-PR-#513 §6 records-of-requests paragraph included).
+5. **Terms of Service final text** (non-advice carve-out, jurisdiction/governing-law, arbitration/class-action, limitation-of-liability, IP grant, termination/survival).
+
+**Orchestrator action ask (re-iterated):** items 1–5 are dependencies of any App Store submission and are NOT closable by specialist action. Surface to principal (yashasg) as a single carry-forward bundle for licensed-counsel engagement.
+
+### Blockers
+
+- **None new this cycle.** Standing blockers (counsel-gate trio + Privacy Policy + ToS) remain unchanged; all 5 are external dependencies on licensed-counsel engagement, not specialist-actionable.
+- Window-empty / roster-byte-stable posture for the second consecutive cycle is **expected and healthy** given no PR merges to product code or docs/legal in the window.
+
+### Top 3 next actions
+
+1. **(External, not specialist-actionable) Engage licensed counsel** on the 5-item pre-launch gate bundle (counsel-gate trio #511/#398/#408 + Privacy Policy + ToS). This is the only path to unstall the App Store submission posture.
+2. **(Forward watch, cycle #48)** If any commit touches `app/Sources/App/AppFeature/SettingsFeature.swift` (e.g., implementation of #444 export-ui or #449 rectification-ui Settings trigger), the #224 hook fires AND the §6 wording-drift carry-forward at `privacy-policy.md:257-258` ("disclaimer screen" vs "welcome screen") becomes a closable fix in the same docs-edit window. Re-armed for next cycle.
+3. **(Forward watch, cycle #48)** If any commit touches `app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift` or `MassiveAPIKeyStore.swift` (e.g., remediation of historical #441-style register-accuracy drift), the #294 hook fires; re-verify `docs/legal/third-party-services.md` §5.2.3 register surface against actual HTTP verb/path.
+
+### Learnings
+
+- **Second consecutive product-empty cycle.** Cycles #46 and #47 form the first back-to-back "perfect quiet" pair in recent memory. Both hooks are guaranteed PASS-no-trigger by construction; roster is byte-stable; no filing warranted. This is the steady-state expected behavior when no PR touches the Reuben surface area.
+- **Hook design continues to hold under quiet windows.** `git log <range> --name-only -- <files>` returning EMPTY against a list of trigger files is a strong, low-false-positive signal that no docs-legal re-verification is needed; it correctly degenerates to NO_OP without needing a dedup-sweep argument.
+- **Saul cycle-#45 commit retroactively folded.** Cycle #46 spawn-prompt flagged its absence; `b4b961e` in this window reconciles it. Not my lane to audit; logging only.
+- **Counsel-gate trio (#511, #398, #408) dormancy is now 6 cycles structural.** Re-iterating that these are NOT "stuck on a desk" specialist items — they are explicit external launch-gate dependencies.
+
+### Attestation — I am NOT licensed counsel
+
+I am Reuben, a paralegal/compliance-engineering specialist agent. **I am NOT a licensed attorney admitted to practice law in any jurisdiction, and nothing in this cycle-#47 entry — the dual PASS-no-trigger hook scoreboard (#224 2nd post-fire / #294 8th consecutive), the byte-stable roster reconciliation, the counsel-gate dormancy report, the four-axis dedup sweep, or the NO_OP decision — constitutes legal advice or substitutes for licensed-counsel review.** Items 1–5 in the pre-launch counsel gates list above MUST be reviewed by a licensed attorney before any public App Store submission or marketing spend. Until such review is obtained and documented (e.g., as a `.squad/decisions/inbox/reuben-licensed-counsel-signoff.md` artifact citing counsel identity, bar admission, scope-of-review, and date), the App Store submission posture is **NOT cleared by Reuben** regardless of any other specialist's green-light.
+
+(end Reuben cycle #47)
