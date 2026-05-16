@@ -168,3 +168,51 @@ Raw: `curl -sS 'https://itunes.apple.com/lookup?id=1488720155,6463484375,1288676
 - If Danny surfaces v1.0 description-copy decision, evaluate #322 7th-commitment-candidate fold-in.
 
 (end Frank cycle #42)
+
+## Cycle #43 — 2026-05-16T01:40Z — Specialist Parallel Loop
+
+**HEAD:** `54d9df5` · **Window:** `1662b32` → `54d9df5` (six commits — all six specialist history appends from cycle #42 close; zero source-tree commits).
+
+**Storefront-surface invariants scan:** `git diff 1662b32..54d9df5 -- docs/aso/ app/Sources/Features/SettingsView.swift app/Sources/App/PrivacyInfo.xcprivacy app/Sources/App/Info.plist` → **EMPTY**. Full-tree window touches 7 files — six `.squad/agents/*/history.md` and one inbox (`.squad/agents/frank/inbox-saul-cycle-42.md`). **Classification: 100% storefront-INVISIBLE.** Welcome-screen footer canonical (`SettingsView.swift` l.345/370) UNTOUCHED. `Info.plist` `UILaunchScreen` color-only UNTOUCHED. `PrivacyInfo.xcprivacy` declarations UNTOUCHED. No screenshot refresh, no preview re-shoot, no metadata revision triggered.
+
+**Peer-set probe — FULL 6-PEER (cadence cycle #43 trigger executed, 6/6 LIVE).**
+
+Method: `curl -sS "https://itunes.apple.com/lookup?id=<id>&country=us"` per-peer, sequential. iTunes egress fully open.
+
+| Peer | trackId | Cycle #42 baseline | Cycle #43 live | Δ rating | Δ count | Version |
+|---|---|---|---|---|---|---|
+| Stock Events (anchor) | 1488720155 | 4.80546 / 2087 | **4.80546 / 2087** | 0 (byte-identical, 7+ cycles #33→#37→#39→#42→#43) | 0 | v9.35.4 (2026-04-30) |
+| Snowball Analytics | 6463484375 | 4.84059 / 2045 | **4.84059 / 2045** | 0 (byte-identical) | 0 | v36.0 (2026-05-13) |
+| Delta by eToro | 1288676542 | 4.70737 / 11373 | **4.70737 / 11373** | 0 (byte-identical) | 0 | v2026.1.1 (2026-04-27) |
+| Yahoo Finance | 328412701 | 4.75152 / 617974 | **4.75150 / 617900** | −0.00002 (nil at n=617K) | −74 (current-version recount; v26.9.2 release-window cache flux) | v26.9.2 (2026-05-15, unchanged release) |
+| M1 Finance | 1071915644 | 4.68281 / 72549 | **4.68281 / 72549** | 0 (byte-identical) | 0 | v2026.5.2 (2026-05-12) |
+| Empower (Personal Capital lineage) | 1001257338 | 4.77663 / 381624 | **4.77661 / 381493** | −0.00002 (nil at n=381K) | −131 (build-label refresh `2603→2605.13.3`; recount window) | v2026.05.13 (2026-05-14, unchanged release) |
+
+**Aggregate verdict:** Peer-zone **4.68–4.84★** — identical band to cycles #37 / #42, **seven weeks zero rating drift**. Four peers byte-identical to cycle #42; Yahoo and Empower show sub-noise rating flux (∆ < 0.0001★) with modest count decreases consistent with Apple's current-version-aggregate recount window (both shipped versions 14–15 May, recount still open at probe time T+24h–48h). Zero new version releases in-window. No copy/screenshot/preview revision warranted from market signal.
+
+**⚠️ Methodology correction — three legacy IDs from cycle-#43 spawn brief are DEAD.** The coordinator brief listed Yahoo `328412086`, M1 `1145410103`, Empower `504672533`. All three return `resultCount=0`. Cycle-#42 canonical IDs (`328412701` / `1071915644` / `1001257338`) used for probe — same publishers, same names, verified live across multiple prior cycles. Pattern matches the cycle-#42 Snowball repair (`1407781015→6463484375`). **Instrument hygiene, not a market signal — no issue filing warranted.** Canonical-ID swap notified to Saul; Frank retains `1488720155 / 6463484375 / 1288676542 / 328412701 / 1071915644 / 1001257338` as the authoritative probe set from cycle #43 onward.
+
+**Cross-lane intel (6 cycle-#42 commits in window):** Frank #42 (`54d9df5`) — full-probe restored, Snowball ID repair; Saul #42 (`5e58594`) — NO_OP, #286 counter 28→29 banked, roster 16 stable; Reuben #42 (`5f7e774`) — both gates PASS-no-trigger, CCPA §7102(a) promoted to new issue **#511** (Reuben-lane, no shipped storefront-copy surface yet); Yen #42 (`4eba7dd`) — watchlist 4/4 PASS, roster 8 stable; Turk #42 (`5dd6585`) — roster 15→13 (#341/#360 closed off-HEAD); Nagel #42 (`0928cf8`) — 4/4 PASS, three clean cycles since #303. **None storefront-actionable today** — captured for cross-lane awareness only; #511 trajectory watched for potential #322 commitments-block fold-in.
+
+**Dedup sweep (15 ASO domain keywords vs 27-issue Frank roster):** `storefront, copy, screenshot, keyword, subtitle, aso, positioning, landing, metadata, marketing, preview-video, CPP, version-notes, promotional-text, app-privacy` →
+- storefront → #220 (source of truth); copy → #261/#327/#342 + frame caption issues #362/370/387/400/409/431/442;
+- screenshot → #246/#284/#292 + 7 frame issues; keyword → #245/#220; subtitle → #377/#245/#220; aso → roster-level (all 27 are `aso(...)`);
+- positioning → Saul's lane (#377 partial); landing → N/A for iOS; metadata → #220; marketing → #351 (Marketing URL);
+- preview-video → #251; CPP → #390; version-notes → #261/#270; promotional-text → #342; app-privacy → #353.
+
+**Zero novel candidates.** Coverage map byte-identical to cycle #42. All keywords either collide with existing slots, are owned by Saul (positioning), or N/A (landing).
+
+**Roster live-verified:** `gh issue list --label squad:frank --state open --limit 200 --json number --jq 'length'` → **27**. STABLE vs cycle #42 close. Zero new filings.
+
+**Saul handoff written:** `.squad/agents/frank/inbox-saul-cycle-43.md` (9,396 bytes, verified on disk). Contents: in-window verification + commit-by-commit storefront-impact table, cross-lane intel from all 6 cycle-#42 history commits, full 6-peer probe table vs cycle #42 baseline, methodology correction on the 3 dead spawn-brief IDs, #286 counter context (Saul-owned, peer-delta input ZERO), wording-drift §6 carry-forward (Reuben-owned), roster reconciliation, top-3 cycle-#44 asks.
+
+**Cycle outcome: NO_OP on issue filing.** Storefront-surface ZERO delta + peer-zone STABLE (seven weeks) + dedup-sweep ZERO novel = no Frank-side filing warranted. Three pieces of forward-value produced this cycle: (1) cadence held — full 6-peer probe re-executed successfully at the cycle-#43 trigger; (2) second methodology repair (3 dead spawn-brief IDs swapped to canonical) — same hygiene pattern as cycle-#42 Snowball repair; (3) confirmed 7-cycle Stock Events anchor parity + 7-week peer-zone rating stability.
+
+**Forward watch (cycle #44):**
+- Single-anchor Stock Events probe on cycle #44 (cadence: every cycle).
+- Next full 6-peer probe due cycle #46 (every-3rd cadence: #43 → #46).
+- Wording-drift §6 carry-forward continues (Reuben-owned).
+- #511 (CCPA §7102(a) accountability surface) trajectory watched — if Reuben ships, evaluate fold-in to #322 commitments-block candidate set.
+- #468 in-app-events scaffolding watch — Nagel three clean cycles, no surface yet.
+
+(end Frank cycle #43)
