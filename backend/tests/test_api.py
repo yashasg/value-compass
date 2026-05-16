@@ -2236,3 +2236,164 @@ def test_delete_portfolio_does_not_emit_audit_log_on_404(
     assert resp.status_code == 404
     assert _audit_records_for(caplog, "dsr.erasure.full_account") == []
 
+
+# ---------------------------------------------------------------------------
+# Issue #423 — request bodies are closed-content; response models stay open.
+# ---------------------------------------------------------------------------
+
+REQUEST_BODY_SCHEMAS: tuple[str, ...] = (
+    "AddHoldingRequest",
+    "PatchPortfolioRequest",
+    "PatchHoldingRequest",
+)
+
+OPEN_RESPONSE_SCHEMAS: tuple[str, ...] = (
+    "ErrorEnvelope",
+    "HealthResponse",
+    "SchemaVersionResponse",
+    "PortfolioStatusResponse",
+    "HoldingOut",
+    "PortfolioDataResponse",
+    "PatchPortfolioResponse",
+    "PatchHoldingResponse",
+    "PortfolioExportHolding",
+    "PortfolioExport",
+    "PortfolioExportResponse",
+)
+
+
+def test_request_bodies_are_closed_content_and_responses_stay_open(
+    client: TestClient,
+) -> None:
+    """Issue #423: requests reject unknown fields; responses allow additive evolution.
+
+    The closed/open split is the explicit posture documented in
+    ``docs/services-tech-spec.md`` §7: a client typo or stray field on
+    a request must surface as ``schemaUnsupported`` rather than being
+    silently dropped, while a server adding a new optional field to a
+    response must not break older app builds that decode the known
+    properties. A future Pydantic model that flips the posture (e.g.
+    drops ``extra="forbid"`` from a request, or adds it to a response)
+    will fail this contract pin.
+    """
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+
+    for name in REQUEST_BODY_SCHEMAS:
+        component = components[name]
+        assert component.get("additionalProperties") is False, (
+            f"{name} must declare additionalProperties: false so unknown "
+            "fields fail validation rather than being silently ignored "
+            "(issue #423)."
+        )
+
+    for name in OPEN_RESPONSE_SCHEMAS:
+        component = components[name]
+        assert "additionalProperties" not in component, (
+            f"{name} must leave additionalProperties unset so the server "
+            "can add optional response fields without breaking older app "
+            "builds (issue #423)."
+        )
+
+
+def test_add_holding_rejects_unknown_field_with_schema_unsupported(
+    client: TestClient, db_session: Session
+) -> None:
+    """Issue #423: unknown POST body field 422s with ``schemaUnsupported``.
+
+    Without ``extra="forbid"``, Pydantic's default would silently drop
+    the stray ``notes`` field and persist a holding with no signal to
+    the client that the contract had drifted. The closed-content
+    posture surfaces the drift on the first request that lands.
+    """
+    device_uuid, _ = _seed_portfolio(db_session)
+
+    resp = client.post(
+        "/portfolio/holdings",
+        json={
+            "device_uuid": str(device_uuid),
+            "ticker": "AAPL",
+            "weight": 0.5,
+            "notes": "bought in March",
+        },
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "schemaUnsupported"
+    # The holding must not have been persisted.
+    rows = db_session.scalars(
+        select(Holding).where(Holding.ticker == "AAPL")
+    ).all()
+    assert rows == []
+
+
+def test_patch_portfolio_rejects_unknown_field_with_schema_unsupported(
+    client: TestClient, db_session: Session
+) -> None:
+    """Issue #423: unknown PATCH body field 422s with ``schemaUnsupported``.
+
+    The risk is amplified on the rectification path: without
+    ``extra="forbid"``, an unknown field would no-op the correction
+    the user intended while ``last_seen_at`` was still stamped, giving
+    the user a false-positive "saved" signal and an inspector a
+    misleading honored-request audit line. The closed-content posture
+    rejects the call before either side-effect occurs.
+    """
+    device_uuid, portfolio = _seed_portfolio(
+        db_session, name="Original", last_seen_at=None
+    )
+
+    resp = client.patch(
+        "/portfolio",
+        params={"device_uuid": str(device_uuid)},
+        json={"display_name": "Renamed"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "schemaUnsupported"
+    # ``name`` must not have been rewritten and ``last_seen_at`` must
+    # not have been stamped — both would happen on a silent-drop path.
+    refreshed = db_session.scalars(
+        select(Portfolio).where(Portfolio.id == portfolio.id)
+    ).one()
+    assert refreshed.name == "Original"
+    assert refreshed.last_seen_at is None
+
+
+def test_patch_holding_rejects_unknown_field_with_schema_unsupported(
+    client: TestClient, db_session: Session
+) -> None:
+    """Issue #423: unknown PATCH holding body field 422s with ``schemaUnsupported``.
+
+    Guards specifically against a client mistakenly trying to rename a
+    holding via PATCH by sending ``ticker`` in the body — without
+    ``extra="forbid"`` the stray field would be ignored while
+    ``weight`` was rewritten, leaving the row's natural key intact
+    despite the apparent rename. The closed-content posture surfaces
+    the mistake instead of silently rewriting half the request.
+    """
+    device_uuid, _ = _seed_portfolio(
+        db_session, holdings=(("AAPL", Decimal("0.5")),)
+    )
+
+    resp = client.patch(
+        "/portfolio/holdings/AAPL",
+        params={"device_uuid": str(device_uuid)},
+        json={"weight": "0.25", "ticker": "MSFT"},
+        headers=ATTEST,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "schemaUnsupported"
+    # The persisted holding must be unchanged: original ticker, original weight.
+    refreshed = db_session.scalars(
+        select(Holding).where(Holding.ticker == "AAPL")
+    ).one()
+    assert refreshed.weight == Decimal("0.5")
+    assert db_session.scalars(
+        select(Holding).where(Holding.ticker == "MSFT")
+    ).all() == []
+
+

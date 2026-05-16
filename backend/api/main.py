@@ -541,7 +541,19 @@ class PortfolioDataResponse(BaseModel):
 
 
 class AddHoldingRequest(BaseModel):
-    """Request body for adding a holding to a device portfolio."""
+    """Request body for adding a holding to a device portfolio.
+
+    ``extra="forbid"`` closes the wire shape so an iOS client typo on a
+    future optional field (e.g. ``displayName`` vs ``display_name``) is
+    surfaced as a ``schemaUnsupported`` 422 envelope instead of being
+    silently discarded by Pydantic's default ``extra="ignore"`` and
+    persisted as the wrong row. The closed-content posture is
+    request-only — response models stay open so additive server-side
+    schema evolution does not break older app versions (issue #423,
+    ``docs/services-tech-spec.md`` §7).
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     device_uuid: UUID
     ticker: str = Field(min_length=1, max_length=10)
@@ -572,7 +584,18 @@ class PatchPortfolioRequest(BaseModel):
     documented ``unsupportedMovingAverageWindow`` envelope so the iOS
     client can surface a specific error rather than the generic
     ``schemaUnsupported`` validation failure.
+
+    ``extra="forbid"`` closes the wire shape so an unknown PATCH field
+    (e.g. a future ``currency`` the spec does not yet declare) is
+    surfaced as a ``schemaUnsupported`` 422 envelope instead of being
+    silently dropped — the bigger risk on a rectification path that
+    would otherwise stamp ``last_seen_at`` while no-op'ing the
+    correction the user intended. Request-only posture; response
+    models stay open for additive evolution (issue #423,
+    ``docs/services-tech-spec.md`` §7).
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str | None = Field(default=None, min_length=1)
     monthly_budget: DecimalString | None = Field(default=None, gt=Decimal("0"))
@@ -617,7 +640,17 @@ class PatchHoldingRequest(BaseModel):
     {ticker}`` + ``POST /portfolio/holdings``; PATCH does not rename
     the row's primary key. ``DecimalString`` preserves exact precision
     end-to-end (see #392).
+
+    ``extra="forbid"`` closes the wire shape so a client that sends an
+    unknown field (for example ``ticker`` in the body, mistakenly
+    trying to rename the row via PATCH) is rejected with the
+    documented ``schemaUnsupported`` 422 envelope instead of having
+    the stray field silently ignored while ``weight`` is rewritten.
+    Request-only posture; response models stay open for additive
+    evolution (issue #423, ``docs/services-tech-spec.md`` §7).
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     weight: DecimalString = Field(gt=Decimal("0"), le=Decimal("1"))
 
