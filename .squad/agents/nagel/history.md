@@ -2814,3 +2814,194 @@ PR #513 mutated the locked surface but the mutation is description-only with mir
 - **Drift discipline:** **6 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/45** entering cycle #46.
 
 (end Nagel cycle #45)
+
+---
+
+## Cycle #46 — Nagel
+
+**Date:** 2026-05-16T02:27:49Z  
+**HEAD at spawn:** `baa7bb0`  
+**HEAD at close:** `baa7bb0` (history-append-only — see commit at end)  
+**Window:** `0baf956..baa7bb0` (5 commits)  
+**Anchor justification:** `0baf956` is the cycle-#45 spawn-time HEAD and the same anchor used by Turk cycle #45 for the empty post-PR-#513 quiet window. Window contains exclusively the 5 cycle-#45 specialist-history commits authored downstream of my own cycle-#45 close. No new PRs landed; PR #513 (`9a2fe85`) remains the still-in-effect locked-surface mutation, already absorbed and re-baselined in cycle #45.
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `6f89af8` | chore(turk): cycle #45 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `9aadc34` | chore(yen): cycle #45 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `72939ed` | aso(frank): cycle #45 history | Frank | NO — `.squad/agents/frank/history.md` |
+| `6310c57` | chore(nagel): cycle #45 history (self) | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `baa7bb0` | compliance(reuben): cycle #45 history | Reuben | NO — `.squad/agents/reuben/history.md` |
+
+`git --no-pager diff --stat 0baf956..baa7bb0 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/` → **empty** (zero hunks). Window is 100% specialist-history.
+
+---
+
+### Four-Invariant Scoreboard
+
+**1. PARITY — PASS.**
+```
+$ diff openapi.json app/Sources/Backend/Networking/openapi.json ; echo $?
+0
+$ shasum -a 256 openapi.json app/Sources/Backend/Networking/openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  app/Sources/Backend/Networking/openapi.json
+```
+Byte-identical. Hash **matches** the cycle-#45 banked baseline `286a3a52…315378e`. Parity-discipline streak at the new (post-PR-#513) hash extends to **2 consecutive cycles** (cycles #45, #46).
+
+**2. SWIFT_PUBLIC_SURFACE — PASS.**
+```
+$ git --no-pager diff 0baf956..baa7bb0 -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b' | wc -l
+0
+$ git --no-pager diff --name-only 0baf956..baa7bb0 -- 'app/Sources/**/*.swift'
+(empty)
+```
+Zero `.swift` files touched in window. PR #145 (TCA migration) and PR #468 (in-app-events scaffolding) remain dormant; first `@Reducer` introduction still pending.
+
+**3. LOCKED_SURFACE — PASS.**
+```
+$ git --no-pager diff --stat 0baf956..baa7bb0 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty — zero hunks)
+$ git --no-pager diff --name-only 0baf956..baa7bb0 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty)
+```
+**Zero hunks across the locked surface.** Window is history-only — Turk/Yen/Frank/Nagel/Reuben cycle-#45 closures, every commit confined to `.squad/agents/<name>/history.md`.
+
+**4. ROSTER_INTEGRITY — PASS (5 open, exact match to carry-forward).**
+```
+$ gh issue list --label squad:nagel --state open --limit 200 --json number --jq 'length'
+5
+$ gh issue list --label squad:nagel --state open …
+#423 — open content model (no `additionalProperties: false`)
+#416 — blanket Cache-Control/Last-Modified middleware
+#348 — X-Device-UUID undeclared in spec
+#317 — bare `number` for money fields
+#316 — X-App-Attest as per-op header, not securityScheme
+```
+**Identical** to cycle-#44 and cycle-#45 carry-forward. Roster stable at **5/5** for **2 consecutive cycles** since PR #513 landed (cycles #45, #46).
+
+---
+
+### Five-Drift Re-Verification at HEAD `baa7bb0`
+
+**#316 — X-App-Attest is a per-op header parameter, not a securityScheme — STILL ACCURATE.**
+```
+$ grep -c securitySchemes openapi.json
+0
+$ grep -c '"X-App-Attest"' openapi.json
+18
+$ grep -n '"X-App-Attest"' openapi.json | head
+85:            "name": "X-App-Attest",
+89:              "title": "X-App-Attest",
+195:            "name": "X-App-Attest",
+199:              "title": "X-App-Attest",
+345:            "name": "X-App-Attest",
+…
+```
+`components.securitySchemes` still absent; `X-App-Attest` still declared as a per-operation `parameters[].name` with `in: header` on every protected operation. **9 declaration blocks × 2 hits each = 18 grep hits** (one for `"name": "X-App-Attest"`, one for the corresponding `"title": "X-App-Attest"` inside the inline parameter schema). Line refs at HEAD: `85, 195, 345, 525, 695, 908, 1096, 1278, 1475` (9 operations). All operations preserved post-PR-#513.
+
+**#317 — HoldingOut / AddHoldingRequest bare-number money fields — STILL ACCURATE.**
+Verified via `json.load(openapi.json)`:
+- `HoldingOut.weight` → `{"type": "number"}` (bare number, no `format`, no string union). **DRIFT INTACT.**
+- `AddHoldingRequest.weight` → `{"type": "number", "maximum": 1.0, "exclusiveMinimum": 0.0}` (bare number, range-constrained but precision-lossy on Swift Double decode). **DRIFT INTACT.**
+- `PatchHoldingRequest.weight` → `{"type": "string", "format": "decimal", "maximum": 1, "exclusiveMinimum": 0}` (asymmetric; this is the #461-closed path on the WRITE side only). Asymmetry persists.
+
+HoldingOut `required` block at HEAD = `['ticker', 'weight', 'current_price', 'sma_50', 'sma_200', 'midline', 'atr', 'upper_band', 'lower_band', 'band_position']` (all 10 fields required — unchanged from cycle #45). The pairing of "every field required" + "bare number for weight" + "anyOf nullable for indicators" is intact; #317's specific finger is on `weight` and the 8 indicator fields' bare-number substrate (#356 closed indicator nullability separately; the bare-number type underneath remains the #317 channel).
+
+**#348 — X-Device-UUID undeclared in spec; backend reads device identity from body/query — STILL ACCURATE.**
+- Spec parameter declarations naming `X-Device-UUID` (i.e., `parameters[].name == "X-Device-UUID"`): **0**. The header is sent by every authenticated iOS request (per cycle-#40 audit of `app/Sources/Backend/Networking/`) but never appears in any operation's `parameters` block.
+- Spec parameter declarations naming `device_uuid`: **5 hits** at openapi.json lines `335, 515, 898, 1086, 1268` — all as `in: query` or `requestBody` properties (NOT headers). These are the routes that read identity from URL/body instead of from the header iOS actually sends.
+- Backend reads of `device_uuid` in `backend/api/main.py` (request parameters): lines `546, 709, 821, 910, 1043, 1117, 1126, 1179, 1212, 1288` — all consume the body/query field, not the header.
+- Backend code that reads the literal header `X-Device-UUID`: **0** (the only `X-Device-UUID` references in `backend/api/main.py` are docstring/prose mentions at lines `644, 673, 914, 1492` — added by PR #513's GDPR DSR docstring expansion; they describe what the header *means* but do not extract it).
+- **NEW NUANCE post-PR-#513 (banked, not filed):** PR #513 introduced 4 new description-string references to "X-Device-UUID" in the spec's docstrings (openapi.json lines `511, 1082, 2067, 2099` — DSR export/erasure/PortfolioExportHolding/PortfolioExportResponse descriptions). The docstrings now *talk about* the header by name on 4 endpoints while the spec still does not *declare* it as a parameter. This is **adversarial to #348's resolution path** (a reader of the spec might now assume the header is canonical and miss that the actual routing key is the body/query `device_uuid` field). #348 remains the correct filing — no new issue is warranted, but the post-#513 docstring/parameter mismatch sharpens its severity. **DRIFT INTACT, slightly amplified.**
+
+**#416 — blanket Cache-Control + Last-Modified middleware on every operation — STILL ACCURATE.**
+
+⚠ **Spawn-prompt line-range note:** The spawn prompt asked for verification of `backend/api/main.py:297-316`. That range is **stale** — at HEAD `baa7bb0` (and at cycle-#45 HEAD `0baf956`), lines 290-325 contain the `_apply_decimal_string_bounds` registry handler (an unrelated #461-closure helper), not the cache middleware. The cache middleware is in fact at:
+- `backend/api/main.py:443-460` — decorator `@app.middleware("http")` at L443, function `add_standard_headers` defined L444-460
+- `backend/api/main.py:452-454` — `response.headers.setdefault("Cache-Control", f"max-age={config.CACHE_MAX_AGE}")`
+- `backend/api/main.py:455-458` — `response.headers.setdefault("Last-Modified", datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"))`
+- `backend/api/main.py:459` — `response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)`
+
+This matches the cycle-#45 banked anchor "`main.py:453,456`" exactly (cycle-#45's `setdefault` callsites). Since invariant 3 PASS confirms zero `backend/` hunks in window, the line refs are byte-stable; the spawn-prompt's "297-316" is a pre-PR-#513 artifact (a similar range applied at one point before file growth shifted lines downward across multiple sanctioned changes).
+
+Spec headers still attached to every operation block (sampled, all 9 operations × 2 status codes carry both): openapi.json lines `25, 31, 55, 61, 105, 111, 135, 141, 165, 171, 215, 221, 245, 251, 275, 281, 305, 311, 365, 371, …` (32+ Cache-Control/Last-Modified header-schema blocks across the 8 paths × success+error responses). Middleware unchanged; spec projection unchanged. **DRIFT INTACT.**
+
+**#423 — open content model substrate (no `additionalProperties: false`, no `extra="forbid"`) — STILL ACCURATE.**
+```
+$ grep -cE '"additionalProperties":\s*false' openapi.json
+0
+$ grep -cE '"additionalProperties"' openapi.json
+0
+$ grep -rE 'extra\s*=\s*"forbid"' backend/ | wc -l
+0
+$ grep -rnE '\bextra\s*=' backend/ | grep -v __pycache__
+(no hits)
+```
+**Spec has zero `additionalProperties` keys whatsoever** (neither `false` for closed-content nor `true` for documented-open). Backend has zero `extra="forbid"` Pydantic configs. The two `model_config = ConfigDict(...)` instances at `main.py:490` (HealthResponse) and `main.py:696` (PortfolioExport) carry `json_schema_extra={"required": [...]}` for #381/#463 required-field hoisting — neither sets `extra=`. **Open-content substrate untouched across 15 component schemas + 14 BaseModel classes.** DRIFT INTACT.
+
+---
+
+### Watchlist Anchors (re-verified at `baa7bb0`)
+
+- **#303 closure pin** — `backend/api/main.py:1012` (POST `/portfolio/holdings` `response_class=Response`) + `test_api.py:546` (`test_add_holding_202_success_is_empty_body_in_spec_and_runtime`). Zero `backend/` hunks in window ⇒ pins are byte-stable. Closure intact.
+- **openapi.json shape** — `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`, file size 2152 lines (mirror identical). Hash `286a3a52…315378e`. Steady-state.
+- **DSR audit-log family (post-#513)** — 4 `event=dsr.*` server-side log emissions still **outside** API surface (no HTTP body/header projection). Reuben-lane (#457 closure-validation) absorbed in cycle #45; no Nagel watchlist additions.
+- **#316/#317/#348/#416/#423** — all five line refs hold against `baa7bb0`; see drift re-verification above.
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** **2** — cycle #39 / PR #503 / #303 (response-body shape) and cycle #45 / PR #513 / #457 (description-only). No new sanctioned change in cycle #46.
+- **Locked-surface-clean-or-sanctioned cycles since #303 (PR #503, cycle #39):** **7** — cycles #40, #41, #42, #43, #44, #45, **#46**. Cycle #46 lands as a **history-only quiet cycle** (zero locked-surface hunks).
+- **Unannounced-drift counter:** **0**. Discipline holds **46/46**.
+
+---
+
+### Findings
+
+Cycle #46 is a clean quiet cycle. Window contains only specialist-history commits; the locked surface is untouched since PR #513 banked in cycle #45. Re-verification of all five open drifts (#316/#317/#348/#416/#423) confirms each persists with the byte-stable line refs and structural patterns documented in cycle #45.
+
+One forward-watch nuance worth banking: PR #513's docstring expansions added 4 new prose mentions of "X-Device-UUID" in the spec (openapi.json lines 511/1082/2067/2099 — DSR export/erasure/PortfolioExportHolding/PortfolioExportResponse `description` strings). The docstrings reference the header by name on 4 endpoints while the spec still does NOT declare it as a `parameters[]` block. This amplifies #348's adversarial reading surface — a spec consumer reading the docstrings might assume `X-Device-UUID` is the canonical identity key, when in reality the routing key is the body/query `device_uuid` field. No new filing — #348 remains the correct ticket — but flag for inclusion in #348's eventual resolution PR.
+
+### Decisions
+
+**NO_OP.** No new filings, no updates to existing filings, no novel watchlist entries. Re-baseline holds at openapi.json SHA-256 `286a3a52…315378e`.
+
+### Duplicate-Check Proof
+
+Three-keyword sweep against `squad:nagel` (open + closed, full 30-issue inventory loaded):
+
+1. **`description docstring docs comment annotation`** → 1 hit, `#363` (CLOSED, `ContributionCalculating has no doc-comment…` — protocol-doc drift, semantically distinct from PR #513's description-string expansion). No prior or current Nagel filing about OpenAPI `description`-only mutations; the cycle-#45 verdict that description expansions are not contract drift stands. Re-confirms: nothing to file for PR #513's continued visibility in the docstring channel.
+2. **`log.info audit dsr erasure rectification journald structured`** → **0 hits**. Server-side structured log emissions remain unowned by Nagel (Reuben-lane). PR #513's 4 `log.info(event=dsr.*)` calls are still outside the API surface; no novel drift channel introduced.
+3. **`X-Device-UUID device.uuid header`** → 5 hits (`#429` CLOSED X-App-Version header drift, `#402` CLOSED min_app_version dead-channel, `#348` OPEN X-Device-UUID drift, `#316` OPEN X-App-Attest substrate, `#226` CLOSED iOS transport omitting X-App-Attest). The post-PR-#513 docstring-expansion amplification of #348 maps cleanly onto the existing **#348** filing — no novel issue warranted, no fork needed. **#348 is the correct, exclusive home** for the X-Device-UUID drift surface, including its newly-amplified docstring projection.
+
+**Verdict: NO novel issue to file.** Roster of 5 is exact; all drift channels remain covered by their existing tickets.
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP carry-forward** | #423, #416, #348, #317, #316 | All line refs re-validated against `baa7bb0`; no regression, no expansion, no novel surface |
+| **Banked nuance (forward-watch, not filed)** | #348 | PR #513 added 4 docstring mentions of `X-Device-UUID` — increases adversarial reading surface; fold into #348's eventual resolution PR |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains zero locked-surface activity. 100% specialist-history quiet cycle.
+
+### Forward Watch / Handoff
+
+- **Baseline hash** for cycles #47+: openapi.json SHA-256 `286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e` (cycle #45 baseline holds — 2 cycles stable).
+- **Still waiting** for first sanctioned `paths.*` or `components.schemas.*` *structural* mutation since #303 (PR #503, cycle #39). PR #513 (cycle #45) was description-only; counter stays paused on structural-change vehicles. Likely next: **#317** (Decimal-money normalization on `HoldingOut`/`AddHoldingRequest` — would extend the #461 PatchHoldingRequest pattern to the read/add side) or a batched spec-hygiene PR addressing #423's open-content-model substrate.
+- **#348 amplification (banked)** — when #348 is taken on, the resolution PR must also reconcile PR #513's 4 docstring mentions of `X-Device-UUID` against whichever direction is chosen: (a) declare the header in the spec, or (b) rewrite docstrings to reference `device_uuid` (the body/query field actually used).
+- **PR #145** (TCA migration) and **#468** (in-app-events scaffolding) remain forward-watch — first `@Reducer` introduction must arrive with explicit Nagel surface review.
+- **Drift discipline:** **7 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/46** entering cycle #47.
+
+(end Nagel cycle #46)
