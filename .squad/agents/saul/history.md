@@ -2237,3 +2237,86 @@ Contents: Frank evidence consumed (both cycle-#43 and cycle-#44 inboxes), where 
 - **Filing-velocity dropping to zero for the 4th consecutive Saul-active cycle (#40 commented #322 only, #42/#43/#44 pure NO_OP) does NOT indicate Saul-side stagnation.** It indicates roster-completeness against the current pre-screenshot-freeze positioning surface. The unlocking conditions are external (Danny on #286, Basher on #440 binary surface, Reuben on #511) — not internal to Saul's discovery velocity. Continued NO_OP cadence is correct.
 
 **(end Saul cycle #44)**
+
+---
+
+## Cycle #45 — 2026-05-16T02:17Z — RETROACTIVE FOLD (partial-state cycle)
+
+> **Recovery note (filed cycle #46, 2026-05-16T~02:40Z).** This entry is being written retroactively because cycle #45 left a partial state: the substantive Saul work shipped as comments on GitHub (#347 channel-8 taxonomy fold + #322 7th-commitment promotion, both timestamped 2026-05-16T02:17:0Xz) but the `history.md` append and the `inbox-frank-cycle-45.md` / `inbox-saul-cycle-45.md` commits were never made. Spawn-prompt for cycle #46 surfaced the gap; reconstruction below is grounded in the GitHub comments (authoritative on the work) + Frank's published cycle-#45 inbox (130 lines, intake-verified) + the actual git window `1110b0b..0baf956`. No data is being invented; every fact below has an external pin.
+
+**HEAD at cycle-#45 spawn:** `1110b0b` · **Saul spawn-window:** `1110b0b..0baf956` (7 commits) · **Post-cycle close commit:** *NONE — this is the gap being repaired.* · **Frank parallel inbox:** `.squad/agents/saul/inbox-frank-cycle-45.md` (9,491 bytes, 130 lines, intake fully verified).
+
+### Cycle-#45 window verification (reconstructed)
+
+`git log 1110b0b..0baf956 --oneline` → 7 commits:
+
+```
+0baf956 research(saul):    cycle #44 close (Saul's own; spawned post-#44 close, pre-#45 work)
+9a2fe85 compliance(dsr-audit-log): emit structured audit log on PATCH/DELETE (closes #457) (#513)  ⟵ SHIPPING
+eb70d09 chore(yen):        cycle #44 history
+f322b58 chore(turk):       cycle #44 history
+abd9a37 compliance(reuben): cycle #44 close
+2aa45c3 aso(frank):        cycle #44 (single-anchor parity 8 cycles, NO_OP)
+5a79fbe chore(nagel):      cycle #44 history
+```
+
+**Source-tree-shipping commits in-window:** exactly **one** — `9a2fe85` / PR #513 (Reuben/Yashasg lane). All other six are cycle-#44 close history-appends or close-cycle filings.
+
+**Frank-storefront-surface targeted diff** (`docs/aso/`, `docs/marketing/`, `app/Sources/App/{Info.plist,PrivacyInfo.xcprivacy}`, `app/Sources/Features/{SettingsView.swift,WelcomeView.swift}`, `app/Sources/Assets/`, `app/run.sh`): **EMPTY**. Cycle #45 was the **9th consecutive cycle of Frank-storefront ZERO delta** (#37 → #45 = 9 weeks), per Frank's published probe.
+
+**Saul-relevant ship surface:** PR #513 lands the **write-side DSR audit-log** — four new `event=dsr.{rectification.portfolio,rectification.holding,row_delete.holding,erasure.full_account}` structured INFO emissions on the success path of the four backend-mediated write-side DSR endpoints. Combined with cycle-#40's `98424f0` (read-side `dsr.export.portfolio` / PR #506 / #445), the full CRUD DSR right-set is now covered by a single auditable surface — **five `event=dsr.*` log types, one per backend-mediated right.** This is the shipping evidence that cycle-#40 flagged as a future-promotion trigger for the #322 candidate-7 commitment (then scoped to data-portability only). PR #513 closes #457 (the explicit write-side gap) and resolves the cycle-#43/#44 forward-watch carry.
+
+### Frank cycle-#45 inbox consumption (reconstructed)
+
+`.squad/agents/saul/inbox-frank-cycle-45.md`, 9,491 bytes, 130 lines. Read at cycle-#45 spawn-time. Key signals consumed:
+
+1. **9 consecutive cycles of Stock Events anchor byte-identical parity** (#33 → #45) — single-anchor probe this cycle (full 6-peer cadence is every-3rd, next full at cycle #46). Anchor: `1488720155` / 4.80546★ / 2087 reviews / v9.35.4 (2026-04-30, 16 days since release).
+2. **Peer-zone STABLE 4.68–4.84★ across 9 weeks** — Snowball 4.84 / Delta 4.71 / Yahoo 4.75 / M1 4.68 / Empower 4.78 carried from cycle-#43 full probe.
+3. **9 consecutive cycles of Frank-storefront ZERO delta** confirmed Frank-side.
+4. **PR #513 / `9a2fe85` cross-lane shipping intel** — Frank explicitly flagged this as the **#322 7th-commitments-block fold-in trigger** ("Decision is yours — if you elect to fold #322 into the commitments block off the back of `9a2fe85`, I'll draft the listing copy on demand"). Frank also offered to fold any user-facing privacy-policy capability into the eventual App Store description copy if the §6 +20-line change broadens claims; carry-forward.
+5. **15-keyword ASO dedup sweep:** **zero novel candidates** (Frank-side), coverage map byte-identical to cycles #42/#43/#44. Frank roster 27 STABLE.
+6. **Forward asks for Saul (6):** #322 fold decision (resolved this cycle ↓), #511 status check (still OPEN at cycle-#45 close per `gh issue view 511`), #286 counter watch (banked → 32 this cycle ↓), wording-drift §6 Reuben-cross-check, #468 in-app-events scaffolding watch, Snowball ID retirement (baked).
+
+### Fold decisions executed in cycle #45 (cited from GitHub-side comments — authoritative)
+
+**Decision A — #347 channel-8 taxonomy fold (comment posted 2026-05-16T02:17:02Z, author yashasg-as-Saul):**
+
+Extended the cycle-#1 observable-signal taxonomy on #347 with an 8th channel class — **"Backend DSR audit-log surface"** — distinct from channels 1–7 because: (a) the *consumer* is regulator-side (supervisory-authority inspection) not Saul-side (positioning-claim evaluation); (b) the *time-of-effect* is event-driven (DSR exercise) not stream-driven (every install/review/release); (c) what it falsifies is the **auditability subclaim** of #322 ("demonstrable, not just asserted") not a positioning claim per se. Enumerated all 5 event types with endpoint/right/post-redaction payload columns. Confirmed SDK-free property holds across both channel classes (channel 8 uses existing `vca.api` Python logger + shared `redact_device_uuid` helper + 30-day journald floor; zero new SDK, zero new PII). Honest evidence ceiling pinned: channel 8 is **operator-side only**, value is *inspection-on-demand*, not *public signal*; 30-day journald < 24-month CCPA §7102(a) suggestion is the Reuben/#511 open item. Cycle-#43 carry ("any compliance/observability commit lands in cycle-#43+ window, fold into #347") resolved.
+
+**Decision B — #322 7th-commitment promotion (comment posted 2026-05-16T02:17:06Z, author yashasg-as-Saul):**
+
+Promoted the cycle-#40-drafted candidate-7 commitment from "data-portability only" (then scoped to `GET /portfolio/export` per #445/`98424f0` read-side trail only) to **scope-complete draft** covering the full DSR right-set:
+
+> **(7)** *"When you exercise a data right that touches our backend — exporting your portfolio, correcting it, deleting a holding, or erasing your account — we record that we honored the request. The record contains the last four hex characters of your device identifier (never the raw value) and a description of the action; it never contains the data you corrected or deleted. This is how we make the commitments above auditable — they are demonstrable, not just asserted."*
+
+Backed by PR #506 (read-side, #445) + PR #513 (write-side, #457) jointly. Operational ask: **none** (mirrors cycle-#40 framing — facts today, zero operational cost, no new SDK, no new data collection). Privacy-manifest invariance verified: `PrivacyInfo.xcprivacy` UNCHANGED in PR #513 (backend-only commit), `NSPrivacyTracking=false`, only `DeviceID/AppFunctionality` declared → commitment #4 ("no analytics SDK") undisturbed. Three honest-evidence ceilings pinned in the comment: (1) operator-side-only visibility (no App-Store-reviewer / public-evaluator signal), (2) 30-day journald < 24-month CCPA suggestion (Reuben/#511 open), (3) on-device rights (e.g., removing Massive API key) are NOT covered by the audit log — draft phrasing scoped via the "data rights that touch our backend" qualifier.
+
+**Routing on both:** comments only; no issue-body edits; no new filings. The candidate-7 promotion does not modify the #322 candidate-list (still Danny-pick territory across candidates 1–6 + drafted-7). The #347 channel-8 enumeration is an extension, not a new acceptance-criterion.
+
+### `#286` primacy-gate counter (cycle #45)
+
+`gh issue view 286` re-confirmed: state OPEN, last touch `2026-05-15T22:38:19Z` (Saul cycle-#32 re-assertion). **Zero Danny activity since cycle #32** — 13 Saul-active cycles. Per the cycle-#39 fire-anchor protocol, counter banked **31 → 32**. Next fire ≈ cycle #52 (counter → 40). Per standing protocol, no comment on #286 this cycle. This figure is explicitly cited in the published #322 comment ("Danny silent **13 Saul-active cycles** since cycle-#32. Counter banked 31 → 32. Next fire ≈ cycle #52.").
+
+### Dedup proof (cycle #45 — reconstructed from Frank's published 15-axis sweep + Saul-roster recheck)
+
+Frank's published cycle-#45 inbox executed a 15-keyword ASO sweep (`storefront, copy, screenshot, keyword, subtitle, aso, positioning, landing, metadata, marketing, preview-video, CPP, version-notes, promotional-text, app-privacy`) against the 27-open Frank roster + closed scan → **zero novel candidates**, coverage map byte-identical to cycles #42/#43/#44. Saul-side carry: the cycle-#45 fold work resolves into **existing roster slots** (#347 for the taxonomy extension, #322 for the commitment promotion) — both fold-as-comment, not new filings. Decision: **NO new issue** filed cycle #45.
+
+### Cycle-#45 verdict
+
+- **DECISION:** Fold-as-comment on **two** existing roster issues (#347 + #322); **no new issue filed**; **no decision-inbox drop**; **no positioning shift recorded** (the candidate-7 promotion is a scope-extension of a cycle-#40-recorded shift, not a new shift).
+- **Filings/Comments:** 2 GitHub comments (timestamps `2026-05-16T02:17:02Z` and `2026-05-16T02:17:06Z`).
+- **Roster:** 16 STABLE (`#440, #393, #354, #347, #322, #313, #301, #296, #286, #277, #269, #263, #253, #241, #240, #238`).
+- **`#286` counter:** 31 → 32 banked.
+- **Frank handoff inbox:** `.squad/agents/frank/inbox-saul-cycle-45.md` — written cycle #45 (pre-narrative per cycle-#38 WRITE-first rule, on-disk verified), **but never committed**. Recovery commit folds it in alongside this retrospective.
+
+### Cycle-#45 recovery action (executed in cycle #46 pre-work)
+
+1. **Write this retrospective** to `.squad/agents/saul/history.md` so the cycle is recoverable from the local git history.
+2. **Commit cycle-#45 history append + both uncommitted inboxes** (`inbox-frank-cycle-45.md`, `inbox-saul-cycle-45.md`) in a **separate prior commit** — `research(saul): cycle #45 — retroactive history fold for partial-state cycle …` — explicitly tagged so any future audit can distinguish the recovery from a normal cycle close.
+
+### Cycle-#45 learnings
+
+- **Two-channel cycle work (GitHub comments + git history) introduces a partial-failure mode where the GitHub-side ships and the git-side doesn't.** Recovery is cheap (~one history append + one commit) provided the inbox files survive on disk — which they did this time — and the comments are timestamp-pinnable. Future hygiene: when the cycle work is comment-only, the close commit should still be made even if zero new prose is added to history (a one-line "comments shipped at <timestamps>; see issues #N for substance" entry would preserve the recoverability anchor). The right ergonomic is "always close the cycle in git, even when the substance ships on GitHub."
+- **The #347 channel-8 + #322 candidate-7 promotion are paired moves**, not independent folds. PR #513 shipped exactly the evidence both folds were waiting on; doing them in the same cycle is correct because the #347 taxonomy extension *justifies why* the #322 candidate-7 is auditable. Future cycles should treat the #347 taxonomy as the falsification framework for #322 commitments — i.e., adding a new commitment to #322 *requires* a corresponding channel on #347 that can falsify it.
+
+**(end Saul cycle #45 — retroactive)**
