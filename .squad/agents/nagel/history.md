@@ -3245,3 +3245,293 @@ None. Window contains zero locked-surface activity. 100% specialist-history quie
 3. **Sentinel for first `@Reducer` introduction** — PR #145 (TCA migration) is dormant 3+ cycles. When it activates, swift-public-surface invariant must catch the first `@Reducer`/`Store`/`Action`/`State` declarations and gate them against the `ContributionCalculating` seam stability.
 
 (end Nagel cycle #47)
+
+---
+
+## Cycle #48 — Nagel
+
+**Date:** 2026-05-16T03:00:12Z  
+**HEAD at spawn:** `67434c2`  
+**HEAD at close:** `67434c2` (history-append-only — see commit at end)  
+**Window:** `b4b961e..67434c2` (17 commits — see topology note)  
+**Anchor justification:** `b4b961e` is the HEAD I analyzed at cycle-#47 close. Since then `main` has actually picked up the parallel-history fork Yen has been tracking — the cycle-#47 specialist closures (Turk #47 `4e9654b`, Reuben #47 `bb56ca5`, Nagel #47 `7d63935`) appended onto a DIFFERENT branch line that includes the previously-stranded a11y PR #515 (`33ef80a` — closes #260, `.isModal` on sheet roots), plus the two NEW product PRs the orchestrator called out: `ab0fb33` (PR #517, closes #415, a11y SF-Symbol pairing) and `67434c2` (PR #519, closes #358, ContributionResult toolbar hoist). All three product PRs are pure SwiftUI / accessibility surface; **zero locked-surface touch** in either lineage (verified below).
+
+### Window topology — parallel-history fold
+
+```
+$ git --no-pager merge-base b4b961e 67434c2
+0baf9567f2b038568d379649975ea735edfd2ac6   (= Saul cycle #44 close)
+
+$ git --no-pager show 0baf956:openapi.json   | shasum -a 256
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  -
+$ git --no-pager show b4b961e:openapi.json   | shasum -a 256
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  -
+$ git --no-pager show 67434c2:openapi.json   | shasum -a 256
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  -
+```
+
+**openapi.json is byte-identical across the merge-base and BOTH branch tips.** Yen has been documenting this parallel-history divergence for 3+ cycles (cycle #46 `a1a4228`: "#260+#415 stranded on unmerged branch"); cycle #48 is the cycle where those stranded PRs landed (`33ef80a`/`ab0fb33`) along with one fresh HIG PR (`67434c2`). From a Nagel perspective the fork is a non-event: every commit on every lineage from the merge-base forward leaves the contract surface untouched.
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `33ef80a` | a11y(sheets): `.isModal` on PortfolioEditor + HoldingsEditor sheet roots (PR #515, closes #260) | Yen / Basher | NO — SwiftUI views + helper + tests |
+| `a669838` | chore(turk): cycle #45 history (on stranded branch, now folded in) | Turk | NO — `.squad/agents/turk/history.md` |
+| `9666430` | chore(yen): cycle #45 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `f0a7000` | aso(frank): cycle #45 history | Frank | NO — `.squad/agents/frank/history.md` |
+| `038fb3e` | chore(nagel): cycle #45 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `12f6f1b` | compliance(reuben): cycle #45 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `de87841` | compliance(reuben): cycle #46 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `32cb910` | chore(turk): cycle #46 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `6c3c792` | chore(nagel): cycle #46 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `a1a4228` | chore(yen): cycle #46 history | Yen | NO — `.squad/agents/yen/history.md` |
+| `3f22de2` | aso(frank): cycle #46 history | Frank | NO — `.squad/agents/frank/history.md` |
+| `98ecff6` | research(saul): cycle #45 retroactive fold | Saul | NO — `.squad/agents/saul/history.md` + inboxes |
+| `4e9654b` | chore(turk): cycle #47 history | Turk | NO — `.squad/agents/turk/history.md` |
+| `bb56ca5` | compliance(reuben): cycle #47 | Reuben | NO — `.squad/agents/reuben/history.md` |
+| `7d63935` | chore(nagel): cycle #47 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `ab0fb33` | a11y(use-of-color): SF-Symbol pairing on 7 status rows (PR #517, closes #415) | Yen / Basher | NO — 3 SwiftUI files + 1 test |
+| `67434c2` | hig(toolbars): hoist ContributionResult Save + History into `.toolbar` (PR #519, closes #358) | Turk / Basher | NO — 1 SwiftUI file |
+
+```
+$ git --no-pager diff --stat b4b961e..67434c2 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty — zero hunks)
+$ git --no-pager diff --stat b4b961e..67434c2 -- ':(exclude).squad/'
+ app/Sources/App/AppFeature/SettingsAccessibility.swift |  61 +++++++++++++++++++++++++++
+ app/Sources/App/AppFeature/SheetAccessibility.swift    |  51 ++++++++++++++++++++++
+ app/Sources/Features/ContributionResultView.swift      |  33 ++++++++++++---
+ app/Sources/Features/PortfolioDetailView.swift         |   1 +
+ app/Sources/Features/PortfolioEditorView.swift         |  16 +++++--
+ app/Sources/Features/PortfolioListView.swift           |   1 +
+ app/Sources/Features/SettingsView.swift                |  94 ++++++++++++++++++++++++++++++-----------
+ app/Tests/VCATests/SettingsAccessibilityTests.swift    | 130 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ app/Tests/VCATests/SheetAccessibilityTests.swift       |  77 ++++++++++++++++++++++++++++++++++
+ app/VCA.xcodeproj/project.pbxproj                      |   8 ++++
+ 10 files changed, 440 insertions(+), 32 deletions(-)
+```
+
+All non-history hunks are SwiftUI view layer + accessibility helpers + tests + xcodeproj membership. Zero hunks on `openapi.json`, `app/Sources/Backend/Networking/openapi.json`, `backend/`, or `app/Sources/Backend/`.
+
+---
+
+### Four-Invariant Scoreboard
+
+**1. PARITY — PASS.**
+```
+$ diff openapi.json app/Sources/Backend/Networking/openapi.json
+(empty)
+$ shasum -a 256 openapi.json app/Sources/Backend/Networking/openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  openapi.json
+286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e  app/Sources/Backend/Networking/openapi.json
+```
+Byte-identical. Hash **matches** the cycle-#45 banked baseline `286a3a52…315378e`. Parity-discipline streak extends to **4 consecutive cycles** (cycles #45, #46, #47, #48) at this hash.
+
+**2. SWIFT_PUBLIC_SURFACE — PASS.**
+```
+$ git --no-pager diff b4b961e..67434c2 -- 'app/Sources/**/*.swift' | grep -E '^\+(public|protocol|@Model|@Reducer)' | wc -l
+0
+$ git --no-pager diff b4b961e..67434c2 -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b' | wc -l
+0
+```
+Seven `.swift` files touched in window (5 SwiftUI views + 2 accessibility helpers), zero `+public|+protocol|+@Model|+@Reducer` introductions. PR #515/#517/#519 are all SwiftUI body-level edits and value-level glyph/trait helpers — no public Swift API surface added, no `ContributionCalculating` seam touched, no SwiftData `@Model` graph change, no TCA `@Reducer` introduction. PR #145 (TCA migration) and #468 (in-app-events scaffolding) remain dormant; first `@Reducer` introduction still pending.
+
+**3. LOCKED_SURFACE — PASS.**
+```
+$ git --no-pager diff --stat b4b961e..67434c2 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty — zero hunks)
+$ git --no-pager diff --name-only b4b961e..67434c2 -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/
+(empty)
+```
+**Zero hunks across the locked surface.** Window contains 3 product PRs (#515/#517/#519, all iOS-UI/a11y) plus 14 specialist-history commits — every single one confined to either SwiftUI view code or `.squad/agents/<name>/`.
+
+**4. ROSTER_INTEGRITY — PASS (5 open, exact match to carry-forward).**
+```
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state open --limit 200 --json number --jq 'length'
+5
+$ for n in 316 317 348 416 423; do gh issue view --repo yashasg/value-compass $n --json state --jq '.state'; done
+#316 state=OPEN
+#317 state=OPEN
+#348 state=OPEN
+#416 state=OPEN
+#423 state=OPEN
+```
+**Identical** to cycle-#45/#46/#47 carry-forward. Roster stable at **5/5** for **4 consecutive cycles** since PR #513 landed (#45, #46, #47, #48).
+
+---
+
+### Five-Drift Re-Verification at HEAD `67434c2`
+
+**#316 — X-App-Attest is a per-op header parameter, not a securityScheme — STILL ACCURATE.**
+```
+$ grep -c securitySchemes openapi.json
+0
+$ grep -c '"X-App-Attest"' openapi.json
+18
+$ grep -n '"name": "X-App-Attest"' openapi.json
+85, 195, 345, 525, 695, 908, 1096, 1278, 1475
+```
+`components.securitySchemes` still absent; `X-App-Attest` still declared as a per-operation `parameters[].name` with `in: header` on **9 protected operations** (line refs byte-identical to cycle #47: 85/195/345/525/695/908/1096/1278/1475). Spec-projection unchanged.
+
+**#317 — HoldingOut / AddHoldingRequest bare-number money fields — STILL ACCURATE.**
+Verified via `json.load(openapi.json)`:
+- `HoldingOut.weight` → `{'type': 'number', 'title': 'Weight'}` — bare number, no `format`, no string union. **DRIFT INTACT.**
+- `AddHoldingRequest.weight` → `{'type': 'number', 'maximum': 1.0, 'exclusiveMinimum': 0.0, 'title': 'Weight'}` — bare number, range-constrained but precision-lossy on Swift Double decode. **DRIFT INTACT.**
+- `PatchHoldingRequest.weight` → `{'type': 'string', 'format': 'decimal', 'title': 'Weight', 'exclusiveMinimum': 0, 'maximum': 1}` — asymmetric; #461-closed path on WRITE side only. Asymmetry persists.
+- `HoldingOut.required` → `['ticker', 'weight', 'current_price', 'sma_50', 'sma_200', 'midline', 'atr', 'upper_band', 'lower_band', 'band_position']` — all 10 fields required, unchanged from cycle #47. Bare-number + every-field-required pairing intact.
+
+Spec shape: `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. Steady-state.
+
+**#348 — X-Device-UUID undeclared in spec; backend reads device identity from body/query — STILL ACCURATE.**
+- Spec parameter declarations naming `X-Device-UUID`: **0** at HEAD `67434c2`. The header is sent by every authenticated iOS request but never appears in any operation's `parameters` block.
+- Spec parameter declarations naming `device_uuid`: **6 hits** at openapi.json lines `335, 515, 898, 1086, 1268, 1465` — all as `in: query` or `requestBody` properties (NOT headers). Byte-identical to cycle #47's corrected enumeration.
+- Spec schema-property `device_uuid` declarations (PortfolioExport family): **2 additional hits** at lines `1636, 2082` plus the corresponding `required` array entries at `1656, 2095` — these are body-shape declarations on `Portfolio` / `PortfolioExportResponse` schemas, byte-stable since cycle #45.
+- Backend code that reads the literal header `X-Device-UUID`: **0** at HEAD `67434c2` (the only `X-Device-UUID` references in `backend/api/main.py` are docstring/prose mentions at lines `644, 673, 914, 1492` — byte-identical to cycle #47).
+- Spec description-string mentions of `X-Device-UUID` (PR #513 prose expansion): **4 hits** at openapi.json lines `511, 1082, 2067, 2099` — byte-identical to cycle #47.
+- **PR #513 amplification (still in effect):** 4 docstring mentions of `X-Device-UUID` (DSR export/erasure/PortfolioExportHolding/PortfolioExportResponse) still increase the spec's adversarial reading surface — a consumer reading the docstrings might infer the header is canonical, when the actual routing key is the body/query `device_uuid` field. Amplification re-confirmed at HEAD `67434c2`. **DRIFT INTACT, amplification holds.**
+
+**#416 — blanket Cache-Control + Last-Modified middleware on every operation — STILL ACCURATE.**
+- `backend/api/main.py:443-460` — decorator `@app.middleware("http")` at L443/L444 (`async def add_standard_headers`)
+- `backend/api/main.py:452-454` — `response.headers.setdefault("Cache-Control", f"max-age={config.CACHE_MAX_AGE}")`
+- `backend/api/main.py:455-458` — `response.headers.setdefault("Last-Modified", datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"))`
+- `backend/api/main.py:459` — `response.headers.setdefault("X-Min-App-Version", config.MIN_APP_VERSION)`
+- Header schema declarations in spec at openapi.json lines `161` (`Cache-Control`), `165` (`Last-Modified`), `169` (`X-Min-App-Version`) — byte-identical to cycle #47.
+
+Invariant 3 PASS confirms zero `backend/` hunks since cycle #47; line refs are byte-stable. Middleware unchanged; spec projection unchanged. **DRIFT INTACT.**
+
+**#423 — open content model substrate (no `additionalProperties: false`, no `extra="forbid"`) — STILL ACCURATE.**
+```
+$ grep -cE '"additionalProperties":\s*false' openapi.json
+0
+$ grep -cE '"additionalProperties"' openapi.json
+0
+$ grep -rE 'extra\s*=\s*"forbid"' backend/ | wc -l
+0
+```
+**Spec has zero `additionalProperties` keys whatsoever** (neither `false` nor `true`). Backend has zero `extra="forbid"` Pydantic configs. Open-content substrate untouched across 15 component schemas + all BaseModel classes. **DRIFT INTACT.**
+
+---
+
+### Five-Drift Re-Validation Table
+
+| Issue | Surface | Anchor at HEAD `67434c2` | Verdict |
+|---|---|---|---|
+| **#316** | OpenAPI security scheme | 0× `securitySchemes`; 9× `"name": "X-App-Attest"` per-op header at lines 85/195/345/525/695/908/1096/1278/1475 | **STILL ACCURATE** |
+| **#317** | OpenAPI money types | `HoldingOut.weight` & `AddHoldingRequest.weight` = bare `number`; `PatchHoldingRequest.weight` = `string/decimal` (asymmetric) | **STILL ACCURATE** |
+| **#348** | OpenAPI header declaration | 0 `X-Device-UUID` parameter decls; 6 `device_uuid` query/body parameter decls at 335/515/898/1086/1268/1465; 4 docstring mentions at 511/1082/2067/2099 | **STILL ACCURATE** (PR #513 amplification holds; enumeration byte-stable cycles #47→#48) |
+| **#416** | Backend middleware + spec | `main.py:443-459` `add_standard_headers` block intact; spec header schemas at openapi.json:161/165/169 | **STILL ACCURATE** |
+| **#423** | OpenAPI content model | 0× `additionalProperties` keys; 0× `extra="forbid"` in backend | **STILL ACCURATE** |
+
+All 5 drifts re-validated. Spec hash `286a3a52…315378e` byte-stable for the **4th consecutive cycle**.
+
+---
+
+### Watchlist Anchors (re-verified at `67434c2`)
+
+- **#303 closure pin** — `backend/api/main.py:1012` (POST `/portfolio/holdings` `response_class=Response`) + `test_api.py:546` (`test_add_holding_202_success_is_empty_body_in_spec_and_runtime`). Zero `backend/` hunks since cycle #47 ⇒ pins byte-stable. Closure intact.
+- **openapi.json shape** — `openapi=3.1.0`, `info.version=1.0.0`, `paths=8`, `components.schemas=15`. Hash `286a3a52…315378e`. Steady-state.
+- **DSR audit-log family (post-#513)** — 4 `event=dsr.*` server-side log emissions still outside API surface; no HTTP body/header projection. Reuben-lane (#457 closure). No Nagel watchlist additions.
+- **#316/#317/#348/#416/#423** — all five re-validated above; line refs hold against `67434c2`.
+
+---
+
+### SwiftUI-Window Contract Sweep (new this cycle)
+
+Three product PRs landed in this window. Reviewed each for potential contract candidate:
+
+- **PR #515 (`33ef80a`, closes #260)** — `.isModal` accessibility trait on `PortfolioEditorView` + `HoldingsEditorView` sheet roots; new `SheetAccessibility` helper. Pure SwiftUI a11y. No `@Model` graph change, no protocol introduction, no service-interface mutation, no view-model invariant implying a backend obligation. **No contract candidate.**
+- **PR #517 (`ab0fb33`, closes #415)** — SF-Symbol pairing on 7 status `Text` views in `SettingsView` + `PortfolioEditorView`; new `SettingsAccessibility` glyph-mapping helpers (pure value-level functions/constants). No `@Model` graph change, no protocol introduction, no `ContributionCalculating` touch. **No contract candidate.**
+- **PR #519 (`67434c2`, closes #358)** — Hoist `Save` + `History` buttons in `ContributionResultView` into `.toolbar { @ToolbarContentBuilder resultToolbarContent }` (`.primaryAction` + `.secondaryAction`). Body-level UI structure refactor. No `@Model` graph change, no protocol introduction, no calculator-seam touch. `.accessibilityIdentifier` strings preserved verbatim (`contribution.result.save`, `contribution.result.history`) — UI-test selector contract intact. **No contract candidate.**
+
+Sweep verdict: zero new Nagel candidates from the SwiftUI window.
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** **2** — cycle #39 / PR #503 / #303 (response-body shape) and cycle #45 / PR #513 / #457 (description-only). No new sanctioned change in cycle #48.
+- **Locked-surface-clean-or-sanctioned cycles since #303 (PR #503, cycle #39):** **9** — cycles #40, #41, #42, #43, #44, #45, #46, #47, **#48**. Cycle #48 lands as a **product-PR-quiet cycle on the locked surface** (3 product PRs landed, all SwiftUI/a11y; zero locked-surface hunks).
+- **Unannounced-drift counter:** **0**. Discipline holds **48/48**.
+- **Parity streak at hash `286a3a52…315378e`:** **4 consecutive cycles** (#45, #46, #47, #48).
+
+---
+
+### Findings
+
+Cycle #48 is the cycle where the parallel-history fork Yen has been documenting for three cycles **resolved by fold-in onto the current `main`**. The previously-stranded a11y PR #515 (`33ef80a`, closes #260) plus two fresh PRs — #517 (`ab0fb33`, closes #415, a11y SF-Symbol pairing) and #519 (`67434c2`, closes #358, HIG toolbar hoist) — all landed on the lineage that now leads HEAD. From a Nagel perspective the fold-in is a non-event: every commit on every lineage from the merge-base `0baf956` forward leaves the locked surface untouched, and the openapi.json SHA-256 is byte-identical across the merge-base and both branch tips (`286a3a52…315378e` everywhere).
+
+All three product PRs are pure SwiftUI / accessibility / HIG-toolbar surface. None introduce a new `public` declaration, a new `protocol`, a new `@Model`, or a new `@Reducer`. None touch `ContributionCalculating`, service interfaces, or any data-layer seam. The SwiftUI-window contract sweep returns zero candidates.
+
+Re-verification of all five open drifts (#316/#317/#348/#416/#423) confirms each persists with byte-stable line refs and structural patterns documented in cycles #45/#46/#47. The cycle-#47 enumeration correction for `device_uuid` (6 parameter declarations, not 5) holds at cycle #48; spec is byte-identical.
+
+### Decisions
+
+**NO_OP.** No new filings, no updates to existing filings, no novel watchlist entries. Re-baseline holds at openapi.json SHA-256 `286a3a52…315378e` for the **4th consecutive cycle**.
+
+### Duplicate-Check Proof
+
+Roster sweep at HEAD `67434c2`:
+
+```
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state open --limit 200
+→ 5 issues: #423, #416, #348, #317, #316 (exact carry-forward match, cycles #45/#46/#47/#48)
+
+$ gh issue list --repo yashasg/value-compass --label squad:nagel --state closed --limit 200 --json number --jq 'length'
+→ 25 closed issues (unchanged since cycle #45 closure batch).
+```
+
+Keyword sweep across `squad:nagel` (open + closed full inventory):
+
+1. **`openapi drift`** → 16 hits, all already-tracked filings (5 open + 11 closed); no novel surface. The 5 open match the carry-forward roster exactly. No fork needed.
+2. **`public api breaking`** → 3 hits (#416, #402, #249) — all already-tracked filings (1 open + 2 closed). No new public-Swift surface activity in window (invariant 2 PASS confirms 0 `+public|+protocol|+@Model|+@Reducer` matches).
+3. **`@Model schema`** → 0 hits beyond existing closures (#235/#244/#249/#250/#298/#337/#340) — no new `@Model` graph in window; first `@Reducer` introduction remains pending.
+4. **`@Reducer` / `protocol stability` / `semver` / `deprecation`** → all hits resolve to already-tracked filings or closed issues. No novel deprecation-cadence drift.
+5. **`X-Device-UUID device.uuid header`** → 5 hits (#429 CLOSED, #402 CLOSED, **#348 OPEN**, **#316 OPEN**, #226 CLOSED). The cycle-#47 enumeration (6 `device_uuid` parameter declarations) holds at cycle #48 byte-stable — no novel issue warranted.
+6. **`toolbar primaryAction secondaryAction accessibilityIdentifier`** → 0 hits in Nagel lane. PR #519's `contribution.result.save` + `contribution.result.history` identifiers are preserved verbatim from pre-window state; UI-test selector contract is unchanged. No novel surface.
+7. **`isModal sheet a11y trait`** → 0 hits in Nagel lane. PR #515 introduces `SheetAccessibility` (a11y helper) but no public API, no protocol, no model. Yen-lane (#260 closure). No novel surface.
+8. **`SF Symbol Label systemImage`** → 0 hits in Nagel lane. PR #517 introduces value-level glyph constants in `SettingsAccessibility` (file-level / fileprivate scope); no public API, no protocol. Yen-lane (#415 closure). No novel surface.
+
+**Verdict: NO novel issue to file.** Roster of 5 is exact; all drift channels remain covered by existing tickets.
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP carry-forward** | #423, #416, #348, #317, #316 | All line refs re-validated against `67434c2`; no regression, no expansion, no novel surface |
+| **Banked: parallel-history fork resolved** | n/a (Yen-lane note) | Cycle-#48 is the cycle where the stranded a11y PRs (#260 via PR #515, #415 via PR #517) folded into the current `main` line alongside fresh PR #519 (#358). From Nagel's POV the fold is contract-neutral: spec hash byte-identical at merge-base and both branch tips. Yen owns this divergence-resolution narrative. |
+| **Banked nuance (still in effect)** | #348 | PR #513's 4 docstring mentions of `X-Device-UUID` (openapi.json L511/1082/2067/2099) still amplify #348's adversarial reading surface — re-confirmed at HEAD `67434c2`. Reconcile in resolution PR. |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains 3 product PRs (#515/#517/#519, all iOS-UI/a11y/HIG) plus 14 specialist-history commits. Zero locked-surface activity. SwiftUI-window contract sweep returns zero candidates.
+
+### Roster Snapshot (post-cycle #48)
+
+| # | Title (abbrev) | State | Surface | Re-validated cycles |
+|---|---|---|---|---|
+| **#316** | X-App-Attest as per-op header, not securityScheme | OPEN | OpenAPI security scheme | #40-48 (9 cycles) |
+| **#317** | HoldingOut/AddHoldingRequest bare-number money | OPEN | OpenAPI primitive types | #41-48 (8 cycles) |
+| **#348** | X-Device-UUID undeclared in spec | OPEN | OpenAPI header declaration | #41-48 (8 cycles, PR #513 amplification banked) |
+| **#416** | Blanket Cache-Control/Last-Modified middleware | OPEN | Backend middleware + spec response headers | #43-48 (6 cycles) |
+| **#423** | Open content model across all schemas | OPEN | OpenAPI content model substrate | #44-48 (5 cycles) |
+
+### Forward Watch / Handoff
+
+- **Baseline hash** for cycles #49+: openapi.json SHA-256 `286a3a52eb711a51f4af8895e3787673a4625fb355c282452a0221367315378e` (cycle #45 baseline holds — **4 cycles stable**).
+- **Parallel-history fork resolved** — cycle #48 folded the stranded `33ef80a` (PR #515 / #260) into the active main lineage alongside `ab0fb33` (PR #517 / #415) and `67434c2` (PR #519 / #358). Yen-lane handoff confirmed contract-neutral. Cycle #49+ window selection should anchor on cycle-#48 close (HEAD `67434c2`) going forward — no need to re-thread the b4b961e parallel.
+- **Still waiting** for first sanctioned `paths.*` or `components.schemas.*` *structural* mutation since #303 (PR #503, cycle #39). PR #513 (cycle #45) was description-only; counter stays paused on structural-change vehicles. Likely next: **#317** (Decimal-money normalization on `HoldingOut`/`AddHoldingRequest` — would extend the #461 PatchHoldingRequest pattern to the read/add side) or a batched spec-hygiene PR addressing #423's open-content-model substrate.
+- **#348 resolution scope** — must reconcile (a) header declaration vs docstring rewrite, (b) the 6 `device_uuid` parameter declarations (335/515/898/1086/1268/1465), and (c) the 4 docstring `X-Device-UUID` mentions added by PR #513 (511/1082/2067/2099). Three surfaces, one ticket.
+- **PR #145** (TCA migration) and **#468** (in-app-events scaffolding) remain forward-watch — first `@Reducer` introduction must arrive with explicit Nagel surface review. PR #519's `.toolbar { @ToolbarContentBuilder ... }` is **NOT** a `@Reducer` (it's a SwiftUI 6.0 view-builder attribute, not Composable Architecture); sentinel still pending.
+- **Drift discipline:** **9 consecutive clean-or-sanctioned cycles**, unannounced-drift counter remains **0/48** entering cycle #49. Parity streak at the post-PR-#513 hash: **4 consecutive cycles**.
+
+### Top-3 Next Actions
+
+1. **Watch for #317 vehicle** — Decimal-money normalization on the READ side (`HoldingOut.weight` + 8 indicator fields) and ADD side (`AddHoldingRequest.weight`). Would extend the #461 `PatchHoldingRequest.weight` pattern to symmetric coverage. First structural spec mutation since cycle #39 most likely lands here.
+2. **Watch for #348 vehicle** — either declare `X-Device-UUID` as a spec parameter on the 9 protected operations (and remove the 6 `device_uuid` body/query declarations + 4 docstring mentions), or formally adopt the body/query routing key and remove `X-Device-UUID` from iOS transport. PR #513 increased the cost of leaving this unresolved.
+3. **Sentinel for first `@Reducer` introduction** — PR #145 (TCA migration) is dormant 4+ cycles. When it activates, swift-public-surface invariant must catch the first `@Reducer`/`Store`/`Action`/`State` declarations and gate them against the `ContributionCalculating` seam stability. PR #519's `@ToolbarContentBuilder` is a false-positive on naive `@` greps — sentinel must distinguish SwiftUI view-builder attributes from TCA macros.
+
+(end Nagel cycle #48)
