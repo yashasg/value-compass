@@ -272,6 +272,19 @@ private struct PortfolioDetailContent: View {
         .buttonStyle(.borderedProminent)
         .appMinimumTouchTarget()
         .disabled(!store.snapshot.canCalculate)
+        // #386: WCAG 2.1 SC 3.3.2 / 4.1.2 — the visible
+        // "Warnings must be resolved before calculating." banner at
+        // `portfolio.detail.calculateBlocked` is a separate AT element
+        // from this button, so AT users who focus the disabled button
+        // hear "Calculate, dimmed button" with no programmatic link to
+        // the warning. Driven off the same `canCalculate` flag as the
+        // .disabled(...) modifier so the spoken unblock-reason cannot
+        // drift from the visual disabled state.
+        .accessibilityHint(
+          PortfolioDetailAccessibility.calculateDisabledHint(
+            canCalculate: store.snapshot.canCalculate
+          )
+        )
         .accessibilityIdentifier("portfolio.detail.calculate")
       }
 
@@ -335,5 +348,30 @@ enum PortfolioDetailAccessibility {
     let allocationWord = count == 1 ? "allocation" : "allocations"
     return
       "Calculation complete. Monthly contribution $\(amount). \(count) ticker \(allocationWord) ready."
+  }
+
+  /// Returns the `.accessibilityHint` string for the Portfolio Detail
+  /// → **Calculate** button. Returns the empty string when the button
+  /// is enabled (SwiftUI auto-suppresses empty hints) and a single
+  /// unblock-reason sentence when it is disabled (#386).
+  ///
+  /// Closes the WCAG 2.1 SC 3.3.2 / SC 4.1.2 gap exposed in #386: the
+  /// "Warnings must be resolved before calculating." banner at
+  /// `portfolio.detail.calculateBlocked` is a *separate* AT element
+  /// from the button, so a VoiceOver / Voice Control / Switch Control
+  /// user who focuses the disabled button directly hears `"Calculate,
+  /// dimmed button"` with no programmatic link to the warning. Driven
+  /// off the same `PortfolioDetailFeature.State.snapshot.canCalculate`
+  /// boolean that gates the `.disabled(...)` modifier so the spoken
+  /// unblock-reason cannot drift from the visual disabled state.
+  ///
+  /// - Parameter canCalculate: the
+  ///   ``PortfolioDetailSnapshot/canCalculate`` value. `true` returns
+  ///   `""`; `false` returns the unblock-reason sentence.
+  static func calculateDisabledHint(canCalculate: Bool) -> String {
+    if canCalculate {
+      return ""
+    }
+    return "Resolve warnings in the holdings list to enable."
   }
 }

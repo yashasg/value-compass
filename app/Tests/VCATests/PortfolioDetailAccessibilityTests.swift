@@ -73,4 +73,54 @@ final class PortfolioDetailAccessibilityTests: XCTestCase {
       "Calculation complete. Monthly contribution $0. 0 ticker allocations ready."
     )
   }
+
+  // MARK: - Calculate disabled-button hint (#386)
+
+  func testCalculateDisabledHintIsEmptyWhenCanCalculateIsTrue() {
+    // SwiftUI auto-suppresses an empty `.accessibilityHint(_:)`. The
+    // enabled state must return "" so the button does not narrate
+    // unblock instructions when there is nothing to unblock.
+    XCTAssertEqual(
+      PortfolioDetailAccessibility.calculateDisabledHint(canCalculate: true),
+      ""
+    )
+  }
+
+  func testCalculateDisabledHintNamesHoldingsAsTheUnblockReasonWhenDisabled() {
+    // The visible "Warnings must be resolved before calculating."
+    // banner at `portfolio.detail.calculateBlocked` is a separate AT
+    // element. VoiceOver / Voice Control / Switch Control users who
+    // focus the disabled button directly hear "Calculate, dimmed
+    // button" with no programmatic link to the warning, so the hint
+    // must name the source of the warnings (the holdings list) so the
+    // user knows where to go to fix them.
+    XCTAssertEqual(
+      PortfolioDetailAccessibility.calculateDisabledHint(canCalculate: false),
+      "Resolve warnings in the holdings list to enable."
+    )
+  }
+
+  func testCalculateDisabledHintNamesHoldingsListSurface() {
+    // Pin the verbatim mention of "holdings" because the unblock
+    // route is "tap Edit Holdings to fix the warning". A future
+    // copy edit that drops "holdings" (e.g. "Resolve warnings to
+    // enable.") would leave AT users without a route — the visible
+    // banner only says "warnings", not where to find them.
+    let hint = PortfolioDetailAccessibility.calculateDisabledHint(canCalculate: false)
+    XCTAssertTrue(
+      hint.lowercased().contains("holdings"),
+      "Disabled-state hint should name the holdings surface so AT users have a route to fix the warning."
+    )
+  }
+
+  func testCalculateDisabledHintIsNonEmptyWhenDisabled() {
+    // Defensive: an empty disabled-state hint would silently regress
+    // to the default `"Calculate, dimmed button"` announcement and
+    // recreate the #386 gap. Pin "disabled is always audible".
+    let hint = PortfolioDetailAccessibility.calculateDisabledHint(canCalculate: false)
+    XCTAssertFalse(
+      hint.isEmpty,
+      "Disabled-state hint must not be empty — an empty hint silently restores the #386 'dimmed with no reason' gap."
+    )
+  }
 }
