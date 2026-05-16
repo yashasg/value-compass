@@ -21,6 +21,7 @@ struct PortfolioDetailView: View {
         item: $store.scope(state: \.holdingsEditor, action: \.holdingsEditor)
       ) { editorStore in
         HoldingsEditorView(store: editorStore)
+          .accessibilityAddTraits(SheetAccessibility.sheetContentTraits)
       }
   }
 }
