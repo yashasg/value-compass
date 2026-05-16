@@ -663,6 +663,17 @@ struct HoldingsEditorView: View {
       Label("Add Category", systemImage: "plus")
     }
     .appMinimumTouchTarget()
+    // The toolbar collapses Label to icon-only on iPhone / compact
+    // widths, leaving the "Add Category" text exposed only to
+    // VoiceOver. `.accessibilityShowsLargeContentViewer()` re-surfaces
+    // the Label's title through iOS's long-press large-content tooltip
+    // so users on AX text sizes who do not use VoiceOver can still
+    // read what the glyph represents (#401, HIG — Large Content
+    // Viewer). Applied here on the shared view so both call sites
+    // (`.primaryAction` toolbar item at line 511 and the validation
+    // section's category-add fallback at line 647) inherit the
+    // modifier automatically.
+    .accessibilityShowsLargeContentViewer()
     .accessibilityIdentifier("holdings.category.add")
   }
 

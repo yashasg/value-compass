@@ -139,6 +139,14 @@ private struct PortfolioListContent: View {
       } label: {
         Label("Create Portfolio", systemImage: "plus")
       }
+      // The toolbar collapses Label to icon-only on iPhone / compact
+      // widths, leaving the "Create Portfolio" text exposed only to
+      // VoiceOver. `.accessibilityShowsLargeContentViewer()` re-surfaces
+      // the Label's title through iOS's long-press large-content
+      // tooltip so users on AX text sizes who do not use VoiceOver can
+      // still read what the glyph represents (#401, HIG — Large
+      // Content Viewer).
+      .accessibilityShowsLargeContentViewer()
       .accessibilityIdentifier("portfolio.create")
     }
 
@@ -149,6 +157,9 @@ private struct PortfolioListContent: View {
         } label: {
           Label("Settings", systemImage: "gear")
         }
+        // See `.primaryAction` block above — same icon-only collapse
+        // rule, same Large Content Viewer rationale (#401).
+        .accessibilityShowsLargeContentViewer()
         .accessibilityIdentifier("portfolio.settings")
       }
     }
