@@ -2296,3 +2296,126 @@ None. The window contains:
 When the HEAD pointer hasn't advanced from the prior cycle, the correct behaviour is to re-validate the prior-cycle findings with fresh evidence rather than re-running the same surface scan. The #445 export schemas provide a useful counter-example: the team applied the `string/decimal` encoding correctly for new money fields while leaving the older `AddHoldingRequest.weight` and `HoldingOut.weight` in the broken `number` state. This asymmetry in the same codebase strengthens the #317 case — the fix pattern is known and proven (the team already knows how to write it), it just hasn't been back-applied to the older fields.
 
 (end Nagel cycle #40)
+
+## Cycle #42 — Nagel
+
+**Date:** 2026-05-16T01:20:31Z  
+**HEAD:** `1662b32`  
+**Window:** `9ba571e..HEAD` (since cycle #40 Nagel commit)  
+**Anchor justification:** Cycle #41 was a Yen/Turk-only effective cycle for the contract lane (both NO_OP, history-only commits). No Nagel cycle #41 was run; this is cycle #42 covering the gap. Broader window `98424f0..HEAD` also inspected and confirmed contract-clean (4 history-only commits + Saul inbox file).
+
+### Window commits + files
+
+| Commit | Summary | Lane | Locked-surface touch? |
+|---|---|---|---|
+| `9e344ad` | research(saul): cycle #40 DSR audit-log cross-evidence | Saul | NO — `.squad/agents/saul/history.md`, `.squad/agents/frank/inbox-saul-cycle-40.md` |
+| `9ba571e` | chore(nagel): cycle #40 history | Nagel | NO — `.squad/agents/nagel/history.md` |
+| `f273de9` | chore(yen): cycle #41 history (NO_OP, 11→8 roster) | Yen | NO — `.squad/agents/yen/history.md` |
+| `1662b32` | chore(turk): cycle #41 history (NO_OP, watchlist 4/4 PASS, #328 closed) | Turk | NO — `.squad/agents/turk/history.md` |
+
+`git --no-pager diff --stat 98424f0..HEAD -- openapi.json app/Sources/Backend/Networking/openapi.json backend/ app/Sources/Backend/` → **empty output, zero hunks.**
+
+---
+
+### Four-Invariant Pass
+
+**1. Parity gate — PASS.**
+```
+diff openapi.json app/Sources/Backend/Networking/openapi.json
+exit: 0 (empty)
+```
+Both files 72,960 bytes. SHA-256 identical: `d9c7f1eb5b90a557a5ab2d46740dcf60d454ff311445d91b32b553b7e2db5fff`. Byte-for-byte match.
+
+**2. Locked-surface scan — PASS.**
+Window `9ba571e..HEAD`: 0 hunks against `openapi.json`, mirror, `backend/`, `app/Sources/Backend/`.
+Broader window `98424f0..HEAD`: 0 hunks against same locked surface.
+**Attribution:** All 4 window commits are specialist-history-only writes (Saul/Nagel/Yen/Turk to their own `.squad/agents/*/history.md` and one inbox file). No code or spec touched. **No drift.**
+
+**3. Swift public-surface stability — PASS.**
+```
+git --no-pager diff 9ba571e..HEAD -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b' | wc -l
+→ 0
+git --no-pager diff 98424f0..HEAD -- 'app/Sources/**/*.swift' | grep -E '^\+.*\b(public|protocol|@Model|@Reducer)\b' | wc -l
+→ 0
+```
+Zero Swift files touched in either window. Public-surface stability trivially preserved.
+
+**4. Live-drift roster — PASS (5 open, all PERSISTING with refreshed citations).**
+
+**#317 — HoldingOut/AddHoldingRequest money fields bare `number`**
+- `components.schemas.AddHoldingRequest.properties.weight` = `{"type":"number","maximum":1.0,"exclusiveMinimum":0.0,"title":"Weight"}` — still bare `number`.
+- `components.schemas.HoldingOut.properties.weight` = `{"type":"number","title":"Weight"}` — still bare `number`.
+- **Contrast (still asymmetric within same spec):**
+  - `PatchHoldingRequest.weight` → `string/decimal` ✅
+  - `PortfolioExportHolding.weight` → `string/decimal` ✅
+  - `PortfolioExport.monthly_budget` → `string/decimal` ✅
+- **Status: PERSISTING, UNCHANGED.** No regression, no new evidence — same 4-data-point asymmetry as cycle #40. No fresh comment needed.
+
+**#316 — X-App-Attest not a securityScheme**
+- `components.securitySchemes` → **ABSENT** (not just empty — the key is not present in the spec at all).
+- `security` (top-level) → **ABSENT**.
+- `X-App-Attest` literal occurrences in spec text: **19** (all in description prose / parameter descriptions, none as a declared `securityScheme` or per-operation security requirement).
+- **Status: PERSISTING, UNCHANGED.**
+
+**#348 — X-Device-UUID undeclared header**
+- `X-Device-UUID` literal occurrences in spec: **4** (description text only).
+- `components.headers` = `{}` (empty). `components.parameters` = `{}` (empty).
+- Not declared as a header parameter on any operation.
+- **Status: PERSISTING, UNCHANGED.**
+
+**#423 — Open content models (no `additionalProperties: false`)**
+- Total schemas: **15** (was 14 last cycle — discrepancy explained: 14 are `type: object`, 1 is non-object).
+- Object schemas with `additionalProperties` set: **0**.
+- Object schemas MISSING `additionalProperties`: **14/14** → `AddHoldingRequest, ErrorEnvelope, HealthResponse, HoldingOut, PatchHoldingRequest, PatchHoldingResponse, PatchPortfolioRequest, PatchPortfolioResponse, PortfolioDataResponse, PortfolioExport, PortfolioExportHolding, PortfolioExportResponse, PortfolioStatusResponse, SchemaVersionResponse`.
+- **Status: PERSISTING, UNCHANGED.** Roster identical to cycle #40 (14 object schemas, all open). No fresh comment — last comment on #423 was cycle #40.
+
+**#416 — Blanket Cache-Control / Last-Modified on all responses**
+- Total operations: **10**. Total response slots: **45**.
+- Response slots carrying `Cache-Control`: **45 / 45** (100%).
+- `204` responses carrying Cache-Control: **2 / 2** (DELETE `/portfolio`, DELETE `/portfolio/holdings/{ticker}`).
+- `202` async-acknowledge responses (POST `/portfolio/holdings`): still carries Cache-Control.
+- Error envelopes (401/404/422/503) carrying Cache-Control: **34**.
+- **Status: PERSISTING, UNCHANGED.** Same blanket pattern as cycle #40.
+
+---
+
+### Streak Status
+
+- **Sanctioned-change cycles (lifetime):** 1 (cycle #39 / PR #503 / #303).
+- **Locked-surface-clean cycles since last sanctioned change:** **3** (cycles #40, #41, #42). The lane has been quiet since #303 landed.
+- **Unannounced-drift cycles (lifetime):** **0**. Discipline holds at 42/42.
+
+---
+
+### Findings
+
+**Zero new findings.** Locked surface untouched. Roster line refs unchanged. No drift, no regression, no new schemas, no new operations.
+
+### Decisions
+
+None. NO_OP cycle.
+
+### Duplicate-Check Proof
+
+Not invoked. No new issue contemplated because no new evidence surfaced. Roster line-ref refresh confirmed all 5 open issues map to current spec without modification — no fresh-comment thresholds tripped (each issue last received Nagel evidence within the last 1–2 cycles).
+
+### Filings / Comments
+
+| Action | Issue | Routing |
+|---|---|---|
+| **NO_OP** | All 5 (#423, #416, #348, #317, #316) — line refs hold, no regression, no expansion |
+
+### Blockers
+
+None.
+
+### Risky Changes
+
+None. Window contains zero code/spec/Swift activity.
+
+### Forward Watch / Handoff
+
+- Watch for first new `paths.*` or `components.schemas.*` mutation since #303 — that will be the next sanctioned-change candidate (likely #317 or batched spec-hygiene PR per cycle-#40 recommendation).
+- Drift discipline holds: 3 consecutive clean cycles, unannounced-drift counter remains zero at cycle #42.
+
+(end Nagel cycle #42)
