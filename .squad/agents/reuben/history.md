@@ -260,3 +260,87 @@ None — no issue filed, no comment posted. NO_OP cycle.
 I am NOT licensed counsel. Every output in this cycle — the gate-PASS evidence, the DSR roster reconciliation, the carry-forward retirements, the routing for #457, and the framing of #511 as a "counsel decision gate" — is paralegal/compliance-engineering work product. Nothing in this entry substitutes for a licensed attorney's determination, and the user MUST obtain an actual attorney's review of (at minimum) the §7102(a) applicability question on #511, the EULA posture on #398, the breach-notification procedure on #408, and the Privacy Policy + ToS final text before any public App Store submission or marketing spend.
 
 (end Reuben cycle #42)
+
+---
+
+## Cycle #43 — 2026-05-16T01:40:19Z (Specialist Parallel Loop)
+
+**HEAD:** `54d9df5` (aso(frank): cycle #42 — full 6-peer probe restored (zone STABLE 4.68–4.84★), storefront ZERO delta, Snowball ID corrected, NO_OP filing).
+**Window:** `1662b32..54d9df5` (6 commits, all specialist cycle-#42 history appends).
+**Prompt-supplied anchor:** `1662b32` (chore(turk) cycle #41 history) — matches the cycle-#42 HEAD I closed on.
+
+### Window-content classification
+
+`git --no-pager log --oneline 1662b32..54d9df5` → 6 commits, all `<role>(<member>): cycle #42 …` history closures by Frank, Saul, Reuben (self, my own #42 commit `5f7e774`), Yen, Turk, Nagel. `git --no-pager diff --stat 1662b32..54d9df5` → 7 files, 677 insertions: 6 per-member `.squad/agents/<m>/history.md` plus `.squad/agents/frank/inbox-saul-cycle-42.md` (peer handoff scratch under `.squad/`, not a product surface). **Zero source-code, zero docs, zero contract, zero policy-text delta.** This is a 100% specialist-history-only window — identical content-shape to cycles #40, #41, #42.
+
+### Re-validation gates (both run, both PASS-no-trigger)
+
+- **#224 (`docs/legal/privacy-policy.md`) — PASS-no-trigger.**
+  - Command: `git --no-pager diff --stat 1662b32..54d9df5 -- app/Sources/Backend/Networking/APIClient.swift app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/DeviceIDProvider.swift app/Sources/App/PrivacyInfo.xcprivacy app/Sources/App/AppFeature/SettingsFeature.swift`
+  - Result: empty. None of the 5 source triggers fired; `privacy-policy.md` untouched. No re-verification required.
+- **#294 (`docs/legal/third-party-services.md`) — PASS-no-trigger.**
+  - Command: `git --no-pager diff --stat 1662b32..54d9df5 -- app/Sources/Backend/Networking/MassiveAPIKeyValidator.swift app/Sources/Backend/Networking/MassiveAPIKeyStore.swift app/Sources/Backend/Models/Disclaimer.swift app/Sources/Features/SettingsView.swift`
+  - Result: empty. None of the 4 source triggers fired; `third-party-services.md` untouched. No re-verification required.
+
+This is the **fourth consecutive PASS-no-trigger cycle** for both hooks (cycles #40, #41, #42, #43). Last actual fire was #294 at cycle #39 via `75643ba` (Yen `SettingsView.swift:298` `.savedSuccessfully` arm) — re-verified STILL ACCURATE that cycle.
+
+### In-window compliance keyword grep
+
+Filter: `git --no-pager diff 1662b32..54d9df5 -- '*.swift' '*.md' '*.json' '*.plist' '*.py' ':(exclude).squad/agents/*/history.md' ':(exclude).squad/agents/frank/inbox-saul-cycle-42.md'` against keyword set `advice|disclaimer|massive|polygon|attribution|copyright|license|gdpr|ccpa|finra|x-device|api_key|consent|cookie|tracking|analytics|pii`.
+
+**Result: 0 hits.** Non-history diff is empty; the empty stream of course matches nothing, but the bracketing keyword grep on the full unfiltered diff (203-shape narrative references in peers' history texts) is irrelevant because excluded paths are not product surfaces. No source-surface keyword introduction, no policy-text drift, no third-party SDK introduction.
+
+### #511 follow-up (§7102(a) carry-forward)
+
+`gh issue view 511 --json state,labels,updatedAt,comments` returns:
+- State: **OPEN** (confirmed still open this cycle).
+- updatedAt: `2026-05-16T00:41:46Z` (unchanged from cycle #42 close — issue filed at 00:41:37Z by `yashasg`, the 9-second drift is the label-application echo; no comment activity since).
+- Labels: `documentation`, `priority:p2`, `security`, `team:backend`, `squad:reuben` (unchanged).
+- Comments: 1 (the original body's auto-quoted body; same comment-count as cycle #42).
+
+**Carry-forward action: log-only, no comment.** #511 is dormant pending licensed-counsel determination on §7102(a) applicability; per cycle-#42 stance, a fresh specialist comment would add noise — the issue body already cites `docs/legal/data-retention.md:107-110` + `backend/api/main.py:985-998` with full statutory framing. **#511 remains the pre-launch decision gate before #224 publishes.**
+
+### Carry-forward: wording-drift §6 lines 257–258 ("disclaimer screen" vs SettingsView l.345/370 "welcome screen") — STILL UNFIXED
+
+Cycle-#42 prompt flagged this as a residual wording-drift in `docs/legal/privacy-policy.md` §6 (the section describing the post-erasure post-state) — the policy text still says "disclaimer screen" but the in-process erasure reroute lands on the welcome screen per `SettingsView.swift` l.345/370. **Closure #485 fixed the "on next launch" tense drift but did not address the screen-name drift.** No source delta this cycle touches `SettingsView.swift` or `privacy-policy.md`, so the drift cannot be closed without an in-lane docs edit. Per hard constraint this cycle (do NOT edit `docs/legal/*`), this stays as a carry-forward. **Action item for next sanctioned docs-edit cycle:** patch `privacy-policy.md` §6 l.257–258 to replace "disclaimer screen" with "welcome screen" to match `SettingsView.swift` l.345/370 reality and the post-#471/#475 in-process reroute behavior.
+
+### Dedup search (mandatory, 4 keyword axes)
+
+Run before any candidate filing.
+
+- **Axis 1 — `audit log` / `DSR` / `data-retention`:** Open hits → **#457** (DSR write-side audit log, next-pull), **#511** (§7102(a) 24-month vs 30-day journald). Closed hits → **#445** (GET-side audit log shipped at cycle #39), **#339** (retention schedule). No novel gap; both open issues already track the audit-log/retention surface.
+- **Axis 2 — `third-party` / `privacy` / `eula`:** Open hits → **#398** (EULA posture), **#364** (privacy-manifest SPM Required-Reason API audit), **#411** (marketing-assets legal review, includes third-party trademarks), **#427** (App-review-notes SDK-absence). Closed hits → **#294** (third-party-terms surface), **#441** (third-party-services register drift). No novel gap.
+- **Axis 3 — `age-rating` / `breach`:** Open hits → **#287** (age-rating questionnaire), **#408** (breach-notification GDPR Art. 33/34 + §1798.82). No novel gap.
+- **Axis 4 — `eu/ccpa/gdpr`:** Open hits → **#449** (Art. 16 rectification UI), **#444** (Art. 15 export UI), **#443** (App Privacy ASC parity), **#457**, **#511**. Closed hits → **#329** (Art. 17 erasure), **#374** (Art. 16 rectification backend), **#391** (Art. 28 DPA / Art. 46 transfer, closed cycle #38). No novel gap.
+
+**Conclusion:** All four axes collide with already-tracked issues. No novel compliance gap surfaced. No filing warranted.
+
+### In-window findings
+
+**Zero novel compliance gaps.** Same content-shape as cycle #42: history-only window, both gates PASS-no-trigger, keyword grep empty, dedup four-axis all collide.
+
+### Decisions
+
+- **NO_OP on filings.** Window contains no source/docs/policy delta; both persistent re-validation gates PASS-no-trigger; compliance keyword grep returns zero hits outside specialist history; four-axis dedup confirms no novel candidate.
+- **Do NOT add a comment to #511.** Same rationale as cycle #42 — issue body is complete; specialist comment would add noise. Carry-forward continues as log-only; lifecycle stays on #511 until licensed counsel decides.
+- **Wording-drift §6 l.257–258 carry-forward retained.** Patch deferred to next sanctioned `docs/legal/*` edit cycle; cannot edit this cycle per prompt's hard constraint.
+- **#457 remains next-pull in DSR lane.** Stance unchanged from cycle #42 — GET-side precedent (`98424f0`) shipped, write-side schema/redaction helpers centralized at `backend/common/logging_utils.py:24-38`, symmetric PATCH/DELETE emit is the lowest-friction next closure when a sanctioned in-lane window opens.
+
+### Issue routing proof
+
+None — no issue filed, no comment posted, no label applied. NO_OP cycle.
+
+### Roster snapshot (post-cycle, 14 open via gh)
+
+`#237, #287, #344, #364, #398, #408, #411, #427, #438, #443, #444, #449, #457, #511` — **identical to cycle-#42 close (14 open, net 0 delta).** No filings, no closures, no out-of-cycle drift this window.
+
+### Forward watch / handoff (≤2 lines)
+
+- **Next pull candidate:** unchanged — **#457** (DSR write-side audit log). If any commit in the next window touches `backend/api/main.py` DSR endpoints (PATCH/DELETE) or `app/Sources/Features/SettingsView.swift`, fire #294 and #224 gates manually as a precaution.
+- **Counsel-decision watches:** **#511** (§7102(a) 24-month obligation), **#398** (EULA posture), **#408** (breach-notification procedure) all dormant pending licensed-counsel input; no specialist action available.
+
+### Standing caveat
+
+I am NOT licensed counsel. The gate-PASS evidence, #511 status check, wording-drift carry-forward retention, four-axis dedup, and roster reconciliation in this entry are paralegal/compliance-engineering work product. Nothing here substitutes for a licensed attorney's determination, and the user MUST obtain an actual attorney's review of (at minimum) #511 §7102(a) applicability, #398 EULA posture, #408 breach-notification procedure, and the Privacy Policy + ToS final text before any public App Store submission or marketing spend.
+
+(end Reuben cycle #43)
