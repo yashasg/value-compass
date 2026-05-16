@@ -33,6 +33,7 @@ struct RootView: View {
       } else {
         ProgressView()
           .progressViewStyle(.circular)
+          .accessibilityLabel(ProgressViewAccessibility.launchingLabel)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
           .background(Color.appBackground)
       }
