@@ -50,8 +50,34 @@ private struct ContributionHistoryContent: View {
                 ContributionHistoryRow(record: record)
               }
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button("Delete", role: .destructive) {
+                Button(
+                  ContributionHistoryRowContextActions.delete.title,
+                  role: .destructive
+                ) {
                   store.send(.deleteTapped(record: record))
+                }
+              }
+              // Mirror the `.swipeActions` Delete as a `.contextMenu`
+              // entry so pointer users (right-click / Control-click on
+              // iPad with trackpad, mouse, or Magic Keyboard) and
+              // long-press users on touch reach the same per-row
+              // destructive action. HIG → *Context menus*: "When you
+              // provide a context menu for a list row, use the same
+              // actions you offer with swipe gestures so that people
+              // who can't perform a swipe gesture — for example, when
+              // using a pointer — can still access the actions." (#341)
+              //
+              // Pulls title, icon, and destructive role from the pure
+              // `ContributionHistoryRowContextActions` catalog so the
+              // swipe and context-menu Delete strings cannot drift;
+              // `RowContextActionsTests` pins the catalog.
+              .contextMenu {
+                Button(role: .destructive) {
+                  store.send(.deleteTapped(record: record))
+                } label: {
+                  Label(
+                    ContributionHistoryRowContextActions.delete.title,
+                    systemImage: ContributionHistoryRowContextActions.delete.systemImage)
                 }
               }
               // Mirror every `.swipeActions` button as a semantic
@@ -64,7 +90,7 @@ private struct ContributionHistoryContent: View {
               // existing swipe-mirror. WCAG 2.5.1 (Pointer Gestures):
               // any single-point gesture-only path must have an
               // equivalent non-gesture alternative (#285).
-              .accessibilityAction(named: Text("Delete")) {
+              .accessibilityAction(named: Text(ContributionHistoryRowContextActions.delete.title)) {
                 store.send(.deleteTapped(record: record))
               }
               .accessibilityIdentifier("contribution.history.record")
