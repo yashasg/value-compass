@@ -118,3 +118,53 @@ Value Compass is a local-first iOS/iPadOS app for **DIY investors who want to pr
 - **No marketing URL, support URL, or privacy policy URL** declared anywhere — all three are required App Store Connect fields. Reuben + Livingston/yashasg need to provision these.
 - **No app icon specification or location** referenced in the spec — required for both the binary and the storefront.
 - **Final UI freeze date relative to TCA migration (#145)** — affects whether app preview video and screenshots can be captured before or after the migration lands. If we shoot pre-#145 and the navigation/animations change, we redo the video.
+
+---
+
+## Cycle #42 — 2026-05-16T01:20Z — Specialist Parallel Loop
+
+**HEAD:** `1662b32` · **Window:** `98424f0` → `1662b32` (cycles #40 + #41 narrative; zero source-tree commits).
+
+**Storefront-surface invariants scan:** `git diff 98424f0..HEAD -- docs/aso/ app/Sources/Features/SettingsView.swift app/Sources/App/PrivacyInfo.xcprivacy app/Sources/App/Info.plist app/Sources/Assets app/run.sh` → **EMPTY**. Full-tree window touches `.squad/agents/frank/inbox-saul-cycle-40.md` + four specialist history files only. **Classification: 100% storefront-INVISIBLE.** Welcome-screen footer canonical (`SettingsView.swift` l.345/370) UNTOUCHED. No screenshot refresh, no preview re-shoot, no metadata revision triggered.
+
+**Peer-set probe — FULL 6-PEER (cadence restored, cycle-#40 partial retried & SUCCEEDED).**
+
+Raw: `curl -sS 'https://itunes.apple.com/lookup?id=1488720155,6463484375,1288676542,328412701,1071915644,1001257338&country=us'` → `resultCount=6`, all peers live. iTunes egress fully open.
+
+| Peer | trackId | Cycle #37 baseline | Cycle #42 live | Δ | Version |
+|---|---|---|---|---|---|
+| Stock Events (anchor) | 1488720155 | 4.81 / 2087 | **4.80546 / 2087** | byte-identical (6+ cycles stable #33→#37→#39→#42) | v9.35.4 (2026-04-30) |
+| Snowball Analytics | **6463484375** (new) | 4.84 / 2045 | **4.84059 / 2045** | STABLE | v36.0 (2026-05-13) |
+| Delta by eToro | 1288676542 | 4.71 / 11373 | **4.70737 / 11373** | STABLE | v2026.1.1 (2026-04-27) |
+| Yahoo Finance | 328412701 | 4.75 / 617900 | **4.75152 / 617974** | STABLE, +74 reviews | v26.9.2 (2026-05-15, fresh) |
+| M1 Finance | 1071915644 | 4.68 / 72549 | **4.68281 / 72549** | STABLE | v2026.5.2 (2026-05-12) |
+| Empower (Personal Capital lineage) | 1001257338 | 4.78 / 381493 | **4.77663 / 381624** | STABLE (−0.003 = nil at n=381K), +131 reviews | v2026.05.13(2603) (2026-05-14, fresh) |
+
+**Aggregate verdict:** Peer-zone 4.68–4.84★ — **identical band to cycle #37, six weeks zero rating drift**. Three peers cut new versions in-window (Yahoo / M1 / Empower) with **zero rating impact** — no scandal, no virality, no release-driven surge. The four mid-cap peers (Stock Events, Snowball, Delta, M1) had **literally zero new reviews in 2+ weeks**. Remarkably quiet competitive surface. No copy/screenshot/preview revision warranted from market signal.
+
+**⚠️ Methodology correction — Snowball Analytics track ID:** Legacy ID `1407781015` (cited in cycle-#39 Top Action #1 and Saul's cycle-#40 inbox) returns `resultCount=0` (DEAD). Live Snowball Analytics now lives at `6463484375` — same name, same publisher ("Snowball Analytics" by "Snowball Analytics"), Finance, US storefront. Verified independently via `iTunes /search?term=Snowball Analytics dividend` (new ID is first result). Cycle-#37 baseline value (4.84★/2,045) IS correct — only the ID reference was stale. **Instrument repair, not a market signal — no issue filing warranted.** Recommended swap notified to Saul; I adopt `6463484375` as canonical from cycle #43 onward.
+
+**Saul-handoff intake (cycle-#40 inbox at `.squad/agents/frank/inbox-saul-cycle-40.md`):** Absorbed. Zero storefront-surface delta in window confirmed (same verdict). Yahoo +74 partial-probe read independently reproduced (and held — no further drift since #40). Wording-drift Reuben-owned carry-forward reaffirmed. #322 7th-commitment-candidate (DSR audit-log) available if/when Danny approves the commitments frame — no storefront-copy change warranted this cycle.
+
+**Dedup sweep (15 ASO domain keywords vs 27-issue Frank roster):** `storefront, copy, screenshot, keyword, subtitle, aso, positioning, landing, metadata, marketing, preview-video, CPP, version-notes, promotional-text, app-privacy` →
+- storefront → #220 (source of truth); copy → #261/#327/#342 + frame caption issues #362/370/387/400/409/431/442;
+- screenshot → #246/#284/#292 + 7 frame issues; keyword → #245/#220; subtitle → #377/#245/#220; aso → roster-level (all 27 are `aso(...)`);
+- positioning → Saul's lane (#377 partial); landing → N/A for iOS; metadata → #220; marketing → #351 (Marketing URL);
+- preview-video → #251; CPP → #390; version-notes → #261/#270; promotional-text → #342; app-privacy → #353.
+
+**Zero novel candidates.** All keywords either collide with existing slots, are owned by Saul (positioning), or N/A (landing).
+
+**Roster live-verified:** `gh issue list --label squad:frank --state open --limit 200 --json number --jq 'length'` → **27**. STABLE vs cycle #39 close. Zero new filings.
+
+**Saul handoff written FIRST (cycle-#38 lesson):** `.squad/agents/saul/inbox-frank-cycle-42.md` (8,640 bytes, verified on disk pre-narrative). Contents: peer-probe table with raw curl, methodology correction on Snowball ID, storefront-invariant classification, wording-drift carry-forward, #286/#322 status, roster reconciliation.
+
+**Cycle outcome: NO_OP on issue filing.** Storefront-surface ZERO delta + peer-zone STABLE + dedup-sweep ZERO novel = no Frank-side filing warranted. Three pieces of forward-value produced this cycle: (1) cadence restored — full 6-peer probe re-executed successfully (closed the cycle-#40 partial gap); (2) Snowball ID methodology repair (Saul to adopt swap; I adopt cycle #43+); (3) confirmed 6+ cycle Stock Events anchor parity + 6-week peer-zone rating stability.
+
+**Forward watch (cycle #43):**
+- Adopt Snowball `6463484375` as canonical probe ID; legacy `1407781015` retired.
+- Single-anchor Stock Events probe on cycle #43 (cadence: every cycle).
+- Next full 6-peer probe due cycle #45 (every-3rd cadence: #42 → #45).
+- Wording-drift carry-forward continues (Reuben-owned).
+- If Danny surfaces v1.0 description-copy decision, evaluate #322 7th-commitment-candidate fold-in.
+
+(end Frank cycle #42)
