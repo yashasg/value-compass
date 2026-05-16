@@ -21,10 +21,39 @@ Runs as systemd service: **`vca-api.service`** (see `backend/infra/systemd/`).
 All responses set:
 
 ```
-Cache-Control: max-age=3600
-Last-Modified: <UTC timestamp>
 X-Min-App-Version: <minimum supported iOS app version>
 ```
+
+`Cache-Control` is emitted per (method, path, status) by an explicit
+policy table in `api/main.py::_CACHE_POLICY` so error envelopes are
+never edge-cached and personalised reads never spill to a shared cache
+(see issue #416). The same policy is consulted by `api_error_handler`
+when it emits an `ApiError` envelope, so the wire-level header for a
+404 / 503 on a personalised route matches the directive advertised in
+OpenAPI for that operation (no drift between docs and runtime):
+
+| Operation                             | 200 / 202 / 204                                | All other statuses |
+|---------------------------------------|------------------------------------------------|--------------------|
+| `GET /health`                         | `no-store`                                     | `no-store`         |
+| `GET /schema/version`                 | `public, max-age=3600`                         | `no-store`         |
+| `GET /portfolio/status`               | `public, max-age=60, stale-while-revalidate=60`| `no-store`         |
+| `GET /portfolio/data`                 | `private, no-store`                            | `private, no-store`|
+| `GET /portfolio/export`               | `private, no-store`                            | `private, no-store`|
+| `POST /portfolio/holdings`            | `no-store`                                     | `no-store`         |
+| `PATCH /portfolio`                    | `private, no-store`                            | `private, no-store`|
+| `PATCH /portfolio/holdings/{ticker}`  | `private, no-store`                            | `private, no-store`|
+| `DELETE /portfolio/holdings/{ticker}` | `no-store`                                     | `no-store`         |
+| `DELETE /portfolio`                   | `no-store`                                     | `no-store`         |
+
+`Last-Modified` is set only by `GET /portfolio/status` 200, sourced from
+`StockCache.last_modified` (the resource time, not request-handling
+time — RFC 7232 §2.2). Every other operation omits the header rather
+than fake an always-now() validator.
+
+`Retry-After` (RFC 7231 §7.1.3) is set on every `ApiError` whose
+envelope carries `retry_after_seconds`, mirroring the body field on the
+canonical wire header so Cloudflare and `URLSession` honour the same
+retry signal.
 
 ## Error Responses
 
