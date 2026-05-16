@@ -513,3 +513,90 @@ With the window product-empty, axis-sweep cannot surface novel deltas by definit
 Roster 13 stable (6 cycles unchanged: #41 → #46). Standing watchlist 5/5 PASS (6 cycles unchanged). Deferred-audit queue empty. PR #513 classifier re-applied cleanly (2nd application — fast-path validated). No file requests, no engineer routing, no cross-lane co-signs needed.
 
 (end Turk cycle #46)
+
+---
+
+## Cycle #47 — 2026-05-16T02:41:41Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `b4b961e` (`research(saul): cycle #45 — retroactive history fold for partial-state cycle …`).
+**Prior Turk anchor:** `62b1259` (Turk cycle #46 close).
+**Window:** `62b1259..HEAD` — 4 commits, 100% `.squad/agents/**/` text:
+- `945ae50` Nagel cycle #46 history
+- `82a25af` Yen cycle #46 history
+- `1ef733b` Frank cycle #46 (full 6-peer ASO probe)
+- `b4b961e` Saul cycle #45 (retroactive history fold)
+
+`git --no-pager diff --stat 62b1259..HEAD` → 7 paths, all under `.squad/agents/{frank,nagel,saul,yen}/` (5 history files + 2 Saul↔Frank inboxes), +762 / −0 lines. No `app/`, `docs/`, `backend/`, `openapi.json`, or `Assets.xcassets` touched. **Window is product-empty by every Turk-lane axis** (UI control, SF Symbol, app icon, launch screen, `Info.plist`, navigation modifier, modal modifier, keyboard shortcut, pointer interaction, motion/transition, multitasking affordance).
+
+### PR #513 fast-path — RETIRED FROM FORWARD WATCH
+Per cycle-#46 carry-forward (item 2), PR #513 is dropped from active watch — fast-path classifier `openapi.json-docstring-only` validated twice (cycles #45 + #46), merge commit `9a2fe85` not in this cycle's window, no re-trigger condition. No `gh pr view` call required this cycle.
+
+### Standing watchlist — 5/5 PASS at HEAD `b4b961e`
+
+| # | Concern | HIG section | Evidence (file:line at HEAD b4b961e) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts (destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog(`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog(`; `app/Sources/Features/ContributionHistoryView.swift:118` `.confirmationDialog(` | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheet compact context) | `app/Sources/Features/PortfolioEditorView.swift:50` `.navigationBarTitleDisplayMode(.inline)`; `app/Sources/Features/HoldingsEditorView.swift:491` `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; consumed at `app/Sources/Features/ContributionResultView.swift:46` + `app/Sources/Features/PortfolioDetailView.swift:71` via `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` | **PASS** (note: spawn brief cited `:43`; live mainline anchor is `:46`, unchanged from cycle #46) |
+| #471 | Settings → Erase routes in-process (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-101` intercepts `.destination(.main(.settings(.delegate(.dataErased))))` + `.destination(.main(.path(.element(_, .settings(.delegate(.dataErased))))))`; `app/Sources/App/AppFeature/MainFeature.swift:20-28` sidebar/path docstring; `:168` HIG-compliant reroute comment; `app/Sources/App/AppFeature/SettingsFeature.swift:392` `return .send(.delegate(.dataErased))` after Keychain wipe | **PASS** |
+| #459 | `UILaunchScreen` populated (color-only, brand-continuous cold start) | HIG → Launching → Launch Screens ("design a launch screen that looks like the first screen of your app") | `app/Sources/App/Info.plist:38-42` `<key>UILaunchScreen</key><dict><key>UIColorName</key><string>AppBackground</string></dict>`; `app/Sources/Assets/Assets.xcassets/AppBackground.colorset/Contents.json` carries universal sRGB `#F8FAFC` (light) + dark-luminosity `#0B1120` so the launch tint tracks the in-app `AppBackground` token across appearance modes | **PASS** |
+
+Every anchor matches cycle #46 byte-for-byte (or with the same `:46` live-mainline correction noted then), confirming the product-empty window classification — no UI surface mutated.
+
+### HIG axis sweep at HEAD — no novel violation
+Window is product-empty, so axis-sweep cannot surface novel deltas by definition. Re-spot-check confirms no off-window drift:
+- **Modals / sheets / alerts / confirmationDialog / popover** — 5 `.confirmationDialog` call-sites across `SettingsView.swift:76`, `HoldingsEditorView.swift:551`, `ContributionHistoryView.swift:118` (carrier files unchanged; closures #325 / #328 / #389 still stand).
+- **Navigation patterns / toolbars** — #358 + #373 toolbar concerns remain open in roster, no implementation PR landed.
+- **Motion / animation / reduce-motion** — `OnboardingView.swift` `accessibilityReduceMotion` gate intact (post-#360 / PR #507).
+- **Lists / grids / context menus / swipe actions** — `PortfolioListView.swift` + `ContributionHistoryView.swift` parity pattern intact (post-#341 / PR #512).
+- **Dark mode / launch screen** — `AppBackground.colorset` light/dark pair feeds `UILaunchScreen.UIColorName`; no `Info.plist` or `Assets.xcassets` delta.
+- **SF Symbols / app icon** — no symbol substitution or icon variant added; `AppLogoMark` raster decision still Tess/Basher-owned.
+- **Dynamic Type / pointer / keyboard / iPadOS multitasking** — adjacent-lane orphans (#234, #222, #259, #320) still open, no Turk-side regression.
+
+### Dedupe proof (8-keyword sweep + standing roster)
+Search method: `gh issue list --label squad:turk --search "<term>" --state {open,closed} --repo yashasg/value-compass --json number --jq 'length'`.
+
+| Keyword | open | closed | Disposition |
+|---|---:|---:|---|
+| `navigation bar inline` | 2 | 1 | #291 sheet detents (open); #361 (closed) — both pre-booked |
+| `sheet vs full-screen cover` | 1 | 1 | #229 (closed); #291 (open) — pre-booked |
+| `context menu` | 0 | 1 | #341 (closed) — pre-booked |
+| `swipe action` | 1 | 7 | #272/#341/#229 etc. — all pre-booked |
+| `pointer interaction` | 2 | 1 | #234 + adjacent (open) — pre-booked |
+| `iPad multitasking` | 2 | 1 | #259/#320 (open) — pre-booked |
+| `stage manager` | 2 | 5 | #259/#320 (open) — pre-booked |
+| `keyboard shortcut` | 5 | 1 | #222/#283/#462 etc. — pre-booked |
+
+Zero novel matches across all 8 axes. Live roster pull (`gh issue list --label squad:turk --state open --json number --jq 'length'`): **13 open** → `[222, 231, 234, 259, 291, 300, 319, 320, 323, 358, 373, 376, 403]` (identical to cycles #41 → #46; 7 consecutive cycles unchanged). Recent closures (no new this cycle): #486, #480, #471, #462, #459, #426, #414, #389, #361, #360, #341, #328 — all already booked.
+
+### Filing decision: **NO_OP**
+Rationale stack:
+1. Window is product-empty (4 history-only commits + 2 Saul↔Frank inboxes — zero `.swift`, zero `.xcassets`, zero `Info.plist`, zero `openapi.json` byte).
+2. Standing watchlist 5/5 PASS at same line numbers as cycle #46 (HEAD `b4b961e` byte-identical with `baa7bb0` across all Turk-lane carrier files).
+3. 8-axis dedupe + roster sweep show no missed coverage; roster steady at 13 (7 cycles unchanged).
+4. PR #513 already retired from forward watch (fast-path classifier validated twice).
+5. No `gh issue create` and no `gh issue comment` warranted.
+
+### Roster snapshot (live, post-cycle)
+- **Open (13):** #222, #231, #234, #259, #291, #300, #319, #320, #323, #358, #373, #376, #403 — Δ vs cycle #46 = **0**.
+- **Most-recent closures (12, all pre-booked):** #486, #480, #471, #462, #459, #426, #414, #389, #361, #360, #341, #328.
+
+### Carry-forward to cycle #48
+1. **Standing watchlist remains 5 items** (#389, #361, #426, #471, #459) — all PASSing at HEAD `b4b961e`. Continue per-cycle ancestor + line-citation re-verification.
+2. **PR #513** — remains retired from forward watch (no re-trigger this cycle).
+3. **Spawn-brief line-citation drift** — spawn brief cited `#426` at `ContributionResultView.swift:43`; mainline anchor is `:46` (unchanged 2 cycles). Record-only; not orchestrator-actionable until brief regenerates.
+4. **Cross-lane orphans (no action this cycle):** #234 pointer-hover, #222 keyboard-shortcuts, #259/#320 multi-window/split-views, #358/#373 toolbars, #231 button hierarchy — all already in open roster, awaiting their next implementation PR before specialist re-audit triggers.
+5. **Deferred raster `AppLogoMark` decision** — still Tess/Basher-owned; revisit only on design-system PR with `squad:turk` tag.
+
+### Blockers
+None. No file requests, no engineer routing, no cross-lane co-signs needed.
+
+### Top-3 next actions (for next-cycle Turk)
+1. Re-validate watchlist 5/5 at next HEAD with the same line-anchor probe (`grep -n` for the 5 modifiers + `Info.plist` + `AppBackground.colorset`).
+2. Watch for any PR touching `app/Sources/Features/**`, `app/Sources/App/Info.plist`, or `app/Sources/Assets/Assets.xcassets/**` — first product surface mutation in 7+ cycles will trigger full HIG axis re-sweep.
+3. If next cycle is still product-empty (8th consecutive), consider proposing the watchlist re-verification become a single batched `git --no-pager grep` invariant rather than 5 separate `view` calls — efficiency win, no semantic change.
+
+### Forward watch / handoff
+Roster 13 stable (7 cycles unchanged: #41 → #47). Standing watchlist 5/5 PASS (7 cycles unchanged). Deferred-audit queue empty. No file requests, no engineer routing, no cross-lane co-signs needed.
+
+(end Turk cycle #47)
