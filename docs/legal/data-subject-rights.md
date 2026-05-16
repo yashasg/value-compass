@@ -73,10 +73,15 @@ portfolio. Stamps `last_seen_at` on success so a DSR call alone keeps
 the row out of the retention purge documented in
 [`data-retention.md`](data-retention.md).
 
-A successful export also emits a structured `vca.api` INFO line
-(`event=dsr.export.portfolio device_uuid_suffix=…abcd portfolio_id=<uuid>
-holdings_count=N`) so a supervisory inspection (GDPR Art. 5(2) +
-11 CCR §7102(a)) can demonstrate the request was honored. The line is
+A successful export also emits a structured `vca.api` INFO line of
+the form
+
+```
+event=dsr.export.portfolio device_uuid_suffix=…abcd portfolio_id=<uuid> holdings_count=N
+```
+
+so a supervisory inspection (GDPR Art. 5(2) + 11 CCR §7102(a)) can
+demonstrate the request was honored. The line is
 redacted to the last-4 hex characters of the device UUID via
 `backend/common/logging_utils.py::redact_device_uuid` and inherits the
 30-day journald retention floor — see the "DSR-fulfillment audit log"

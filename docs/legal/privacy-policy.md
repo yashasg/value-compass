@@ -308,14 +308,23 @@ statutory window (30 days under GDPR Art. 12(3); 45 days under CCPA
 ask only for the `X-Device-UUID` displayed under Settings → About →
 Device ID — we do not request government identification.
 
-When we honor a request under any of the rights above, our backend
-records a structured log entry (redacted to the last-4 hex characters
-of the device identifier, never the raw value) so we can demonstrate
-to a supervisory authority on inspection that the request was honored
+When we honor a request that exercises one of the backend-mediated
+rights above — access / portability via `GET /portfolio/export`,
+rectification via `PATCH /portfolio` or
+`PATCH /portfolio/holdings/{ticker}`, ticker-typo correction via
+`DELETE /portfolio/holdings/{ticker}`, or full-account erasure via
+`DELETE /portfolio` — our backend records a structured `event=dsr.*`
+INFO log entry (redacted to the last-4 hex characters of the device
+identifier, never the raw value) so we can demonstrate to a
+supervisory authority on inspection that the request was honored
 (GDPR Art. 5(2) accountability; CCPA Regulations 11 CCR §7102(a)
 records-of-requests-honored). The log entry never contains the
-rectified or deleted personal-data values themselves. The retention
-window for this record is documented in
+rectified or deleted personal-data values themselves. Rights you
+exercise entirely on-device — for example, restricting or objecting
+to the only off-device flow by removing the Massive API key in
+Settings — do not transit the backend and therefore produce no
+server-side audit-log entry. The retention window for the audit-log
+record is documented in
 [`docs/legal/data-retention.md`](data-retention.md) under the
 "DSR-fulfillment audit log" row.
 

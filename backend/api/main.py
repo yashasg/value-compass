@@ -58,7 +58,7 @@ from pydantic import (
     WithJsonSchema,
     model_validator,
 )
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -1542,9 +1542,21 @@ def delete_portfolio(
 
     # Snapshot the audit-log fields BEFORE the ORM-level delete so the
     # log line can be emitted post-commit even after the row + cascaded
-    # holdings have been removed from the session.
+    # holdings have been removed from the session. The cascaded-row
+    # count is taken via ``SELECT COUNT(*)`` scoped to ``portfolio.id``
+    # (rather than ``len(portfolio.holdings)``) so populating a single
+    # audit field does not force the ORM to hydrate every ``Holding``
+    # row into memory on large accounts — the count stays O(1) memory
+    # and a single index scan on the DB side.
     portfolio_id = portfolio.id
-    holdings_count = len(portfolio.holdings)
+    holdings_count = (
+        db.scalar(
+            select(func.count(Holding.id)).where(
+                Holding.portfolio_id == portfolio_id
+            )
+        )
+        or 0
+    )
 
     db.delete(portfolio)
     _commit_or_503(db, "portfolio erasure commit")
