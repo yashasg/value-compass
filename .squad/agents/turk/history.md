@@ -164,3 +164,60 @@ Value Compass is a **local-first iOS/iPadOS app** that helps a single user pract
 
 ### New learning
 When a PR merges on GitHub between orchestrator anchor and cycle spawn but the merge commit hasn't been pulled into the local worktree, `gh issue list` will report the issue as closed while `git diff` against the orchestrator anchor will show no code delta. Reconcile both views explicitly — count the closure against the GitHub-side roster, but defer code-side regression audit to the next cycle when the merge commit enters HEAD.
+
+---
+
+## Cycle #42 — 2026-05-16T01:20:31Z (Specialist Parallel Loop)
+
+**HEAD at cycle spawn:** `1662b32` (`chore(turk): cycle #41 history`).
+
+**Window picked:** `1662b32..HEAD` — Turk's prior-cycle anchor → HEAD. Rationale: chose the tightest evidence-backed window. The orchestrator-anchor window `98424f0..HEAD` was also considered; it contains 4 commits but all are `.squad/agents/{saul,nagel,yen,turk}/history.md` appends — already audited for code impact at cycle #41. No need to re-scan.
+
+### Window scan — EMPTY (0 commits)
+- `git --no-pager log 1662b32..HEAD --oneline` → empty.
+- `git --no-pager diff --stat 1662b32..HEAD` → empty.
+- HEAD is exactly at `1662b32` (Turk's own cycle #41 commit). No UI / `Info.plist` / `Assets.xcassets` / SF Symbol delta to classify.
+
+### Off-window GitHub-side movement (roster reconciliation, not window-audit)
+Two PRs merged on `origin/main` between cycle #41 spawn and cycle #42 spawn, but their merge commits are **not yet ancestors of local HEAD** (`git merge-base --is-ancestor` returns false for both):
+- **PR #512** `hig(context-menus): mirror swipe Edit/Delete as .contextMenu on PortfolioList + ContributionHistory rows (closes #341)` — merged 2026-05-16T01:03:06Z, merge commit `ec23e07`. → closed #341.
+- **PR #507** `hig(motion): animate OnboardingView disclaimer→setup-intro swap with forward-navigation transition (closes #360)` — merged 2026-05-16T00:53:25Z, merge commit `2e69ed0`. → closed #360.
+- Cycle #41's deferred audit (PR #509 `f5cba10` — ContributionResultView inline 'Saved' badge) is **still off-HEAD** (`git merge-base --is-ancestor f5cba107 HEAD` = false). No code-side regression audit possible this cycle either.
+
+### Roster reconciliation — 15 → 13 (delta −2)
+- Cycle #41 close: 15 open `squad:turk`. Live `gh issue list --label squad:turk --state open --limit 200` → 13 open.
+- **Closed in window:** #341 (PR #512, completed), #360 (PR #507, completed) — confirmed via `gh issue view {n} --json closedAt,stateReason`.
+- **Remaining 13 open:** #222, #231, #234, #259, #291, #300, #319, #320, #323, #358, #373, #376, #403.
+
+### Four-issue regression watchlist — 4/4 PASS at HEAD `1662b32`
+
+| # | Concern | HIG section | Evidence (file:line at HEAD 1662b32) | Result |
+|---|---|---|---|---|
+| #389 | Destructive delete uses `.confirmationDialog` (not `.alert`) | HIG → Alerts ("use alerts sparingly"; destructive confirmations belong in confirmation dialogs / action sheets) | `app/Sources/Features/SettingsView.swift:76` `.confirmationDialog(`; `app/Sources/Features/HoldingsEditorView.swift:551` `.confirmationDialog(`; companion site `app/Sources/Features/ContributionHistoryView.swift:92` `.confirmationDialog(` (PR #488 closure) | **PASS** |
+| #361 | Sheet roots pinned to `.inline` title | HIG → Navigation Bars (sheets present compact context; inline title preserves vertical space) | `app/Sources/Features/PortfolioEditorView.swift:50` + `HoldingsEditorView.swift:491` both `.navigationBarTitleDisplayMode(.inline)` | **PASS** |
+| #426 | `readableContentMaxWidth` cap on iPad detail body | HIG → Layout (cap measure at readable width on wide canvases) | `app/Sources/App/DesignSystem.swift:31` `static let readableContentMaxWidth: CGFloat = 600`; consumed at `ContributionResultView.swift:43` + `PortfolioDetailView.swift:71` via `.frame(maxWidth: AppLayoutMetrics.readableContentMaxWidth, alignment: .leading)` | **PASS** |
+| #471 | Settings → Erase All My Data reroutes **in-process** (no force-quit instruction) | HIG → Launching → Quitting ("never tell people to quit or relaunch") | `app/Sources/App/AppFeature/AppFeature.swift:100-101` intercepts both `.destination(.main(.settings(.delegate(.dataErased))))` and the `MainFeature.path` element variant; `MainFeature.swift:25-27` + `:168` doc-confirm path-scoped propagation (PR #482 #480 closure); `SettingsFeature.swift:392` emits `.send(.delegate(.dataErased))` after Keychain wipe (file moved to `app/Sources/App/AppFeature/SettingsFeature.swift` since spawn-prompt citation — same evidence, current path) | **PASS** |
+
+### Adjacent HIG-surface regression scan — N/A in window
+- Window diff is empty (0 commits). No new `.confirmationDialog`, `.alert`, `.sheet`, `.fullScreenCover`, `.navigationBarTitleDisplayMode`, `.toolbar`, SF Symbol substitution, app-icon variant, launch screen change, or `Info.plist` mutation introduced. Confirmed by inspection.
+
+### Dedup search — N/A (no candidate finding)
+No new finding to file: window is empty, watchlist 4/4 PASS, no adjacent code mutation to scan. Per cycle #41 carry-forward, the deferred `ContributionResultView` post-PR-#509 audit (Label-shape / Dynamic Type / `AccessibilityNotification.Announcement` co-sign with Yen) is **still deferred** because merge commit `f5cba107` has not entered local HEAD.
+
+### Filing decision: **NO_OP**
+- Rationale: zero code delta in window; watchlist 4/4 PASS; two off-HEAD closures (#341, #360) provide roster movement only, no Turk-lane regression evidence; one deferred audit (PR #509 → #328) still awaiting HEAD advance.
+
+### Carry-forward to cycle #43
+1. **Post-PR-#509 audit (still deferred):** Re-audit `ContributionResultView` once merge commit `f5cba107` enters local HEAD. Verify the new "Saved" badge is `Label`-shaped (icon + text, not color-only), respects Dynamic Type, and is announced via `AccessibilityNotification.Announcement` — HIG → Feedback ("communicate state changes without interrupting"). Co-sign with Yen.
+2. **Post-PR-#512 audit (new this cycle):** Once `ec23e07` enters HEAD, verify the new `.contextMenu` on `PortfolioListView` + `ContributionHistoryView` rows mirrors `.swipeActions` semantics (Edit + Delete with destructive role), is reachable via pointer hover + long-press, and doesn't break pre-existing pointer-interaction work pending in #234 — HIG → Context Menus ("mirror swipe actions; provide consistent affordance across pointer and touch").
+3. **Post-PR-#507 audit (new this cycle):** Once `2e69ed0` enters HEAD, verify the `OnboardingView` disclaimer→setup-intro transition uses a forward-direction motion (push/asymmetric slide), respects `accessibilityReduceMotion`, and doesn't conflict with the disclaimer-as-gate `fullScreenCover` pattern (#124) — HIG → Motion ("use motion to clarify navigation; honor Reduce Motion").
+4. Watchlist remains 4 items (#389, #361, #426, #471) — all PASSing. Continue per-cycle.
+5. Deferred raster `AppLogoMark` decision: still Tess/Basher-owned; revisit only if a design-system issue tagging `squad:turk` is filed.
+
+### New learning
+Off-HEAD merges accumulate when the local worktree's `main` lags origin between cycles. Track them by roster movement (gh-side) but defer code-side regression audit until the merge commit becomes an ancestor of HEAD — verified with `git merge-base --is-ancestor <merge-oid> HEAD`. This avoids citing line numbers against a tree we haven't seen, and avoids double-counting closures when the worktree finally catches up.
+
+### Forward watch / handoff
+Pipeline of 3 deferred post-merge audits (PR #509, #512, #507) — all stalled on local HEAD advance. Watchlist intact. No file requests.
+
+(end Turk cycle #42)
